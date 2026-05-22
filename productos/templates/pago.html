@@ -1,0 +1,48 @@
+{% load moneda %}
+<h2>💳 Pago del pedido</h2>
+
+<p><b>Orden:</b> {{ pedido.numero_orden }}</p>
+<p><b>Total:</b> ${{ pedido.total|moneda }}</p>
+
+<hr>
+
+<h3>Opciones de pago</h3>
+
+<div style="background:#f9f9f9; padding:15px; border-radius:8px;">
+
+<p><b>📱 Nequi:</b> 3164826000</p>
+<p><b>🏦 Transferencia:</b> Bancolombia</p>
+
+<br>
+
+<p style="color:#555;">
+Después de pagar, envía el comprobante por WhatsApp.
+</p>
+
+<a href="https://wa.me/573215280610?text=Hola,%20ya%20realicé%20el%20pago%20del%20pedido%20{{ pedido.numero_orden }}"
+style="
+background:#25D366;
+color:white;
+padding:10px 15px;
+border-radius:6px;
+text-decoration:none;
+display:inline-block;
+margin-top:10px;
+">
+📲 Enviar comprobante
+</a>
+
+<br><br>
+
+<a href="{% url 'confirmar_pago' pedido.id %}" style="
+background:green;
+color:white;
+padding:10px 15px;
+border-radius:6px;
+text-decoration:none;
+display:inline-block;
+">
+✅ Ya pagué
+</a>
+
+</div>

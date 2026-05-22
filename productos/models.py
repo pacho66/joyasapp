@@ -1,0 +1,334 @@
+from django.db import models
+from django.utils import timezone
+from django.contrib.auth.models import User
+from django.utils.text import slugify
+import uuid
+
+class Perfil(models.Model):
+    PLANES = [
+    ('basico', 'Básico'),
+    ('pro', 'Pro'),
+    ('premium', 'Premium'),
+]
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='perfil'
+    )
+    # EMPRESA
+    nombre_tienda = models.CharField(max_length=120)
+    logo = models.ImageField(upload_to='logos/', blank=True, null=True)
+    color_primario = models.CharField(max_length=7, default='#28a745')
+    color_secundario = models.CharField(max_length=7, default='#000000')
+
+    # CONTACTO
+    whatsapp = models.CharField(max_length=20)
+    email_empresa = models.EmailField(blank=True, null=True)
+
+    # DIRECCIÓN
+    direccion = models.CharField(max_length=200, blank=True, null=True)
+    ciudad = models.CharField(max_length=100, blank=True, null=True)
+
+    # REDES
+    instagram = models.CharField(max_length=150, blank=True, null=True)
+    facebook = models.CharField(max_length=150, blank=True, null=True)
+    tiktok = models.CharField(max_length=150, blank=True, null=True)
+
+    # FACTURACIÓN
+    nit = models.CharField(max_length=50,blank=True,null=True,verbose_name="NIT")
+
+    # PLAN SaaS
+    plan = models.CharField(max_length=20,choices=PLANES,default='basico')
+
+    activa = models.BooleanField(default=True)
+
+    plan_vence = models.DateField(default=timezone.localdate)
+
+    # DISEÑO
+    color_principal = models.CharField(max_length=20,default="#000000",verbose_name="Color principal")
+
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+
+    def __str__(self):
+        return f"{self.user.username} - {self.nombre_tienda}"   
+
+class Categoria(models.Model):
+    nombre = models.CharField(max_length=100)
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+
+    def __str__(self):
+        return self.nombre
+
+
+class Producto(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    nombre = models.CharField(max_length=200)
+    slug = models.SlugField(
+    max_length=220,
+    unique=True,
+    blank=True,
+    null=True
+)
+    referencia = models.CharField(
+    max_length=50,
+    unique=True,
+    blank=True,
+    null=True,
+    verbose_name="SKU"
+)
+    descripcion = models.TextField()
+    categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE)
+    destacado = models.BooleanField(default=False)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    stock = models.PositiveIntegerField(default=0)
+    color = models.CharField(max_length=50, null=True, blank=True)
+    talla = models.CharField(max_length=50, null=True, blank=True)
+    colores_disponibles = models.JSONField(default=list, blank=True)
+    tallas_disponibles = models.JSONField(default=list, blank=True)
+    imagen_principal = models.ImageField(upload_to='productos/', blank=True, null=True)
+    video = models.FileField(upload_to='productos/videos/', blank=True, null=True)
+    certificado = models.FileField(upload_to='certificados/', blank=True, null=True)
+    tipo_venta = models.CharField(max_length=20,choices=[('unidad', 'Por unidad'), ('gramo', 'Por gramos')],default='unidad')
+    peso_producto = models.DecimalField(max_digits=6,decimal_places=2,null=True,blank=True,help_text="Peso del producto en gramos")
+    precio_detal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    precio_semimayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    precio_mayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cantidad_mayorista = models.IntegerField(default=6)
+    # 🔥 PRECIOS POR GRAMO
+    precio_por_gramo_detal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    precio_por_gramo_semimayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    precio_por_gramo_mayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    # 🔥 LÓGICA CENTRAL (LA IMPORTANTE)
+    def precio_por_cantidad(self, cantidad):
+
+    # 🔵 VENTA POR GRAMOS
+        if self.tipo_venta == 'gramo':
+
+            if not self.peso_producto:
+                return 0  # seguridad
+
+            total_gramos = cantidad * self.peso_producto
+
+            if total_gramos >= 12:
+                return self.precio_por_gramo_mayor or 0
+            elif total_gramos >= 6:
+                return self.precio_por_gramo_semimayor or 0
+            else:
+                return self.precio_por_gramo_detal or 0
+
+    # 🟡 VENTA POR UNIDAD
+        else:
+
+            if cantidad >= 12:
+                return self.precio_mayor
+            elif cantidad >= 6:
+                return self.precio_semimayor or self.precio_detal
+            else:
+                return self.precio_detal
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.nombre)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.nombre
+
+
+class ProductoImagen(models.Model):
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='imagenes')
+    imagen = models.ImageField(upload_to='productos/galeria/')
+
+    def __str__(self):
+        return f"Imagen de {self.producto.nombre}"
+
+class ProductoVariante(models.Model):
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='variantes')
+    color = models.CharField(max_length=50, null=True, blank=True)
+    talla = models.CharField(max_length=50, null=True, blank=True)
+    stock = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.producto.nombre} - {self.color or ''} {self.talla or ''}"    
+
+
+class CarritoItem(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    variante = models.ForeignKey(ProductoVariante, null=True, blank=True, on_delete=models.CASCADE)
+    cantidad = models.PositiveIntegerField(default=1)
+    session_key = models.CharField(max_length=40)
+    fecha_creacion = models.DateTimeField(default=timezone.now)
+    color = models.CharField(max_length=50, null=True, blank=True)
+    talla = models.CharField(max_length=50, null=True, blank=True)
+
+    def subtotal(self):
+        precio = self.producto.precio_por_cantidad(self.cantidad)
+
+        if self.producto.tipo_venta == 'gramo':
+            total_gramos = self.cantidad * (self.producto.peso_producto or 1)
+            return total_gramos * precio
+
+        return self.cantidad * precio
+
+    def precio_aplicado(self):
+        return self.producto.precio_por_cantidad(self.cantidad)
+
+    def ahorro(self):
+        if self.producto.tipo_venta == 'gramo':
+            total_gramos = self.cantidad * (self.producto.peso_producto or 1)
+            return (self.producto.precio_por_gramo_detal - self.precio_aplicado()) * total_gramos
+
+        return (self.producto.precio_detal - self.precio_aplicado()) * self.cantidad
+
+    def __str__(self):
+        return f"{self.cantidad} x {self.producto.nombre}"
+
+class Cliente(models.Model):
+
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    nombre = models.CharField(max_length=100)
+    telefono = models.CharField(max_length=20, unique=True)
+    email = models.EmailField(blank=True, null=True)
+
+    ciudad = models.CharField(max_length=100, blank=True, null=True)
+    direccion = models.CharField(max_length=255, blank=True, null=True)
+
+    # 💎 CLASIFICACIÓN
+    tipo_cliente = models.CharField(
+        max_length=20,
+        choices=[
+            ('detalle', 'Detal'),
+            ('vip', 'VIP'),
+            ('mayorista', 'Mayorista'),
+            ('distribuidor', 'Distribuidor'),
+        ],
+        default='detalle'
+    )
+
+    # 💰 DESCUENTO AUTOMÁTICO
+    porcentaje_descuento = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0
+    )
+
+    # 📊 CONTROL
+    total_compras = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    numero_pedidos = models.IntegerField(default=0)
+
+    ultima_compra = models.DateTimeField(null=True, blank=True)
+
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.nombre} - {self.telefono}"
+    
+class Pedido(models.Model):
+
+    # 🔹 IDENTIFICACIÓN
+    usuario = models.ForeignKey(User,on_delete=models.CASCADE,null=True,blank=True)
+
+    tienda = models.ForeignKey(Perfil, on_delete=models.CASCADE, null=True, blank=True)
+
+    numero_orden = models.CharField(max_length=20, unique=True)
+
+    token_publico = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    cliente = models.ForeignKey('Cliente',on_delete=models.SET_NULL,null=True,blank=True)
+
+    # 🔹 CLIENTE
+    cliente_nombre = models.CharField(max_length=100, blank=True, null=True)
+    cliente_nit = models.CharField(max_length=50, blank=True, null=True)
+    cliente_direccion = models.CharField(max_length=200, blank=True, null=True)
+    cliente_telefono = models.CharField(max_length=20, blank=True, null=True)
+    cliente_email = models.EmailField(blank=True, null=True)
+    cliente_ciudad = models.CharField(max_length=100, blank=True, null=True)
+
+    # 🔹 ESTADO Y TIPO
+    ESTADOS = [('pendiente', 'Pendiente'),('pagado', 'Pagado'),('enviado', 'Enviado'),('vencido', 'Vencido'),]
+    estado = models.CharField(max_length=20,choices=ESTADOS,default='pendiente')
+    es_credito = models.BooleanField(default=False)
+    TIPO_PAGO = (('contado', 'Contado'),('credito', 'Crédito'),)
+    tipo_pago = models.CharField(max_length=10,choices=TIPO_PAGO,default='contado')
+    saldo_pendiente = models.DecimalField(max_digits=12,decimal_places=2,default=0)
+    fecha_limite = models.DateField(null=True,blank=True)
+    fecha_pago = models.DateField(null=True, blank=True)
+
+    # 🔹 IMPUESTOS Y DESCUENTOS
+    aplica_iva = models.BooleanField(default=False)  # 👈 ESTE AGREGAS
+    es_retenedor = models.BooleanField(default=False)
+    descuento_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    porcentaje_descuento = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    tipo_envio = models.CharField(
+        max_length=20,
+        choices=[
+        ('recogida', 'Recogida en tienda'),
+        ('domicilio', 'Domicilio'),
+        ('transportadora', 'Transportadora'),
+    ],
+        default='recogida'
+)
+
+    costo_envio = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    direccion_envio = models.CharField(max_length=255, blank=True, null=True)
+    ciudad_envio = models.CharField(max_length=100, blank=True, null=True)
+
+    # 🔹 TOTAL
+    total = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return self.numero_orden
+
+class Abono(models.Model):
+    pedido = models.ForeignKey(
+        Pedido,
+        on_delete=models.CASCADE,
+        related_name='abonos'
+    )
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    fecha = models.DateField(auto_now_add=True)
+
+    def _str_(self):
+        return f"Abono {self.monto} - Pedido {self.pedido.numero_orden}"
+
+class PedidoItem(models.Model):
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+    pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='items')
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    variante = models.ForeignKey(ProductoVariante, null=True, blank=True, on_delete=models.CASCADE)
+    cantidad = models.PositiveIntegerField()
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    descuento = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    iva = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    retefuente = models.DecimalField(max_digits=12, decimal_places=2, default=0)  
+    total_final = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    def calcular_subtotal(self):
+        return self.cantidad * self.precio  
+
+class Gasto(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    nombre = models.CharField(max_length=150)
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    def _str_(self):
+        return f"{self.nombre} - {self.monto}"

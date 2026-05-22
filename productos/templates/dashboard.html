@@ -1,0 +1,439 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+:root{
+    --azul:#0d6efd;
+    --verde:#198754;
+    --naranja:#fd7e14;
+    --morado:#6f42c1;
+    --gris:#343a40;
+    --fondo:#f6f8fb;
+    --texto:#212529;
+    --muted:#6c757d;
+    --blanco:#ffffff;
+    --borde:#e9ecef;
+}
+
+body{
+    background:var(--fondo);
+}
+
+.container-dashboard{
+    max-width:1250px;
+    margin:auto;
+    padding:20px;
+    font-family:Arial,sans-serif;
+}
+
+.topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+}
+
+.titulo{
+    font-size:28px;
+    margin:0;
+    color:var(--texto);
+}
+
+.sub{
+    color:var(--muted);
+    font-size:14px;
+    margin-top:4px;
+}
+
+.grid-metricas{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+    gap:14px;
+    margin-bottom:22px;
+}
+
+.card{
+    background:var(--blanco);
+    border-radius:14px;
+    padding:16px;
+    border:1px solid var(--borde);
+    box-shadow:0 6px 18px rgba(0,0,0,.04);
+}
+
+.card h4{
+    margin:0;
+    font-size:13px;
+    color:var(--muted);
+    font-weight:600;
+}
+
+.card h2{
+    margin:8px 0 0;
+    font-size:24px;
+    color:var(--texto);
+}
+
+.botones{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:20px;
+}
+
+.btn{
+    text-decoration:none;
+    color:#fff;
+    padding:10px 14px;
+    border-radius:10px;
+    font-size:14px;
+    font-weight:700;
+    transition:.2s;
+}
+
+.btn:hover{
+    opacity:.92;
+    transform:translateY(-1px);
+}
+
+.azul{background:var(--azul);}
+.verde{background:var(--verde);}
+.naranja{background:var(--naranja);}
+.morado{background:var(--morado);}
+.gris{background:var(--gris);}
+
+.seccion{
+    background:var(--blanco);
+    padding:18px;
+    border-radius:14px;
+    border:1px solid var(--borde);
+    box-shadow:0 6px 18px rgba(0,0,0,.04);
+    margin-bottom:20px;
+}
+
+.seccion h3{
+    margin:0 0 14px 0;
+    font-size:18px;
+    color:var(--texto);
+}
+
+.filtros{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+}
+
+.filtros a{
+    text-decoration:none;
+    background:#eef2f7;
+    color:#222;
+    padding:8px 12px;
+    border-radius:8px;
+    font-size:14px;
+}
+
+.table-wrap{
+    overflow-x:auto;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:650px;
+}
+
+th,td{
+    padding:11px;
+    border-bottom:1px solid #f1f1f1;
+    text-align:left;
+    font-size:14px;
+}
+
+th{
+    background:#fafafa;
+    color:#555;
+}
+
+.badge{
+    padding:6px 10px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:700;
+}
+
+.ok{background:#e9f7ef;color:#198754;}
+.pen{background:#fff3cd;color:#856404;}
+.can{background:#fdeaea;color:#b02a37;}
+
+.whatsapp{
+    background:#25D366;
+    color:#fff;
+    text-decoration:none;
+    padding:7px 10px;
+    border-radius:8px;
+    font-size:13px;
+    font-weight:700;
+}
+
+@media(max-width:768px){
+
+    .container-dashboard{
+        padding:14px;
+    }
+
+    .titulo{
+        font-size:22px;
+    }
+
+    .card h2{
+        font-size:19px;
+    }
+
+    .btn{
+        font-size:13px;
+        padding:9px 12px;
+    }
+}
+</style>
+
+<div class="container-dashboard">
+
+<!-- ENCABEZADO -->
+<div class="topbar">
+
+<div>
+<h1 class="titulo">📊 Dashboard</h1>
+
+<div style="text-align:center; margin:20px;">
+    <a href="{% url 'lista_gastos' %}" style="
+        background:#dc3545;
+        color:white;
+        padding:10px 15px;
+        border-radius:8px;
+        text-decoration:none;
+    ">
+        📊 Ver gastos
+    </a>
+</div>
+
+<div class="sub">Control total de tu negocio</div>
+</div>
+
+<a href="{% url 'dashboard' %}?tipo=morosos" style="text-decoration:none;">
+    
+    {% if morosos_count > 0 %}
+<a href="{% url 'dashboard' %}?tipo=morosos" style="text-decoration:none;">
+    
+    <div style="
+        background:#ff4d4d;
+        color:white;
+        padding:12px;
+        margin-top:10px;
+        border-radius:10px;
+        font-weight:bold;
+        transition:0.3s;
+        cursor:pointer;
+    " 
+    onmouseover="this.style.transform='scale(1.02)'" 
+    onmouseout="this.style.transform='scale(1)'">
+        
+        ⚠️ {{ morosos_count }} clientes en mora — Ver cartera
+
+    </div>
+
+</a>
+{% endif %}
+
+<a href="{% url 'estadisticas' %}" class="btn azul">📈 Estadísticas</a>
+
+<a href="{% url 'ganancias' %}" class="btn verde">💰 Ganancias</a>
+
+<a href="{% url 'inventario' %}" class="btn naranja">📦 Inventario</a>
+
+<a href="{% url 'whatsapp_segmento' %}?tipo=vip" class="btn morado">📲 WhatsApp VIP</a>
+
+<a href="{% url 'configurar_negocio' %}" class="btn gris">⚙️ Configurar</a>
+
+<a href="{% url 'modificar_banner' %}" class="btn gris">
+🖼️ Modificar Banner
+</a>
+</div>
+
+</div>
+
+<!-- MÉTRICAS -->
+<div class="grid-metricas">
+
+<div class="card">
+<h4>💰 Ventas Hoy</h4>
+<h2>${{ total_hoy|floatformat:0 }}</h2>
+</div>
+
+<div class="card">
+<h4>💰 Ventas Ayer</h4>
+<h2>${{ total_ayer|floatformat:0 }}</h2>
+</div>
+
+<div class="card">
+<h4>💰 Total General</h4>
+<h2>${{ total_general|floatformat:0 }}</h2>
+</div>
+
+<div class="card">
+<h4>📦 Pedidos Hoy</h4>
+<h2>{{ pedidos_hoy }}</h2>
+</div>
+
+<div class="card">
+<h4>📦 Pedidos Totales</h4>
+<h2>{{ total_pedidos }}</h2>
+</div>
+
+<div class="card">
+<h4>👥 Clientes</h4>
+<h2>{{ total_clientes }}</h2>
+</div>
+
+<div class="card">
+<h4>💎 Clientes VIP</h4>
+<h2>{{ clientes_vip }}</h2>
+</div>
+
+<div class="card">
+<h4>💵 Ticket Promedio</h4>
+<h2>${{ ticket_promedio|floatformat:0 }}</h2>
+</div>
+
+</div>
+
+<!-- ACCIONES -->
+<div class="botones">
+
+<a href="{% url 'estadisticas' %}" class="btn azul">📈 Estadísticas</a>
+
+<a href="{% url 'ganancias' %}" class="btn verde">💰 Ganancias</a>
+
+<a href="{% url 'inventario' %}" class="btn naranja">📦 Inventario</a>
+
+<a href="{% url 'whatsapp_segmento' %}?tipo=vip" class="btn morado">📲 VIP</a>
+
+</div>
+
+<!-- FILTROS -->
+<div class="seccion">
+
+<h3>🎯 Filtrar Clientes</h3>
+
+<div class="filtros">
+<a href="?tipo=vip">💎 VIP</a>
+<a href="?tipo=nuevos">🆕 Nuevos</a>
+<a href="?tipo=dormidos">😴 Dormidos</a>
+<a href="?">🔄 Todos</a>
+</div>
+
+</div>
+
+<!-- CLIENTES -->
+<div class="seccion">
+
+<h3>👥 Clientes</h3>
+
+{% for cliente in clientes_filtrados %}
+    <div>
+        {{ cliente.nombre }}
+
+        <a href="{% url 'cobrar_cliente' cliente.id %}" 
+           class="btn btn-danger">
+            💬 Cobrar
+        </a>
+
+    </div>
+{% endfor %}
+
+<div class="table-wrap">
+<table>
+
+<tr>
+<th>Nombre</th>
+<th>Teléfono</th>
+<th>Total Compras</th>
+<th>Acción</th>
+</tr>
+
+{% for cliente in clientes_filtrados %}
+<tr>
+<td>{{ cliente.nombre }}</td>
+<td>{{ cliente.telefono }}</td>
+<td>${{ cliente.total_compras|floatformat:0 }}</td>
+<td>
+<a class="whatsapp"
+href="https://wa.me/57{{ cliente.telefono }}">
+WhatsApp
+</a>
+</td>
+</tr>
+{% empty %}
+<tr>
+<td colspan="4">No hay clientes</td>
+</tr>
+{% endfor %}
+
+</table>
+</div>
+
+</div>
+
+<!-- PEDIDOS -->
+<div class="seccion">
+
+<h3>📦 Pedidos Recientes</h3>
+
+<div class="table-wrap">
+<table>
+
+<tr>
+<th>Orden</th>
+<th>Total</th>
+<th>Estado</th>
+<th>Factura</th>
+</tr>
+
+{% for pedido in pedidos_recientes %}
+<tr>
+<td>{{ pedido.numero_orden }}</td>
+<td>${{ pedido.total|floatformat:0 }}</td>
+
+<td>
+{% if pedido.estado == 'pagado' %}
+<span class="badge ok">Pagado</span>
+{% elif pedido.estado == 'pendiente' %}
+<span class="badge pen">Pendiente</span>
+{% else %}
+<span class="badge can">{{ pedido.estado }}</span>
+{% endif %}
+</td>
+
+<td>
+<a class="btn azul"
+style="padding:6px 10px;font-size:12px;"
+href="{% url 'detalle_pedido' pedido.id %}">
+Ver
+</a>
+</td>
+
+</tr>
+{% empty %}
+<tr>
+<td colspan="4">No hay pedidos</td>
+</tr>
+{% endfor %}
+
+</table>
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

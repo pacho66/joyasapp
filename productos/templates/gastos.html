@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div style="max-width:900px; margin:auto; padding:20px;">
+
+    <!-- 🔙 DASHBOARD -->
+    <div style="text-align:right; margin-bottom:10px;">
+        <a href="{% url 'dashboard' %}" style="
+            background:#333;
+            color:white;
+            padding:8px 12px;
+            border-radius:6px;
+            text-decoration:none;
+        ">
+            📊 Dashboard
+        </a>
+    </div>
+
+    <h1 style="text-align:center; margin-bottom:20px;">💸 Gestión de Gastos</h1>
+
+    <!-- ✅ MENSAJES -->
+    {% if messages %}
+        {% for message in messages %}
+            <div style="
+                background:#d4edda;
+                padding:10px;
+                border-radius:8px;
+                margin-bottom:10px;
+                text-align:center;
+            ">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div style="text-align:center; margin:20px;">
+    <a href="{% url 'lista_gastos' %}">
+        📊 Ver gastos
+        </a>
+    </div>
+
+    <!-- 🧾 FORMULARIO -->
+    <div style="
+        max-width:500px;
+        margin:auto;
+        background:#ffffff;
+        padding:20px;
+        border-radius:12px;
+        box-shadow:0 2px 10px rgba(0,0,0,0.1);
+    ">
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div style="margin-bottom:10px;">
+                {{ form.nombre.label_tag }}
+                {{ form.nombre }}
+            </div>
+
+            <div style="margin-bottom:10px;">
+                {{ form.monto.label_tag }}
+                {{ form.monto }}
+            </div>
+
+            <button type="submit" style="
+                width:100%;
+                padding:12px;
+                background:#f44336;
+                color:white;
+                border:none;
+                border-radius:8px;
+                font-weight:bold;
+                cursor:pointer;
+            ">
+                ➕ Agregar Gasto
+            </button>
+        </form>
+
+    </div>
+
+    <!-- 📋 LISTADO -->
+    <h2 style="margin-top:40px; text-align:center;">📋 Historial de Gastos</h2>
+    <h3 style="text-align:center; margin-top:20px;">
+    💰 Total Gastos: ${{ total_gastos|floatformat:0 }}
+    </h3>
+
+    <table style="
+        width:100%;
+        margin-top:15px;
+        border-collapse:collapse;
+        background:white;
+        border-radius:10px;
+        overflow:hidden;
+        box-shadow:0 2px 8px rgba(0,0,0,0.1);
+    ">
+        <tr style="background:#f1f1f1;">
+            <th style="padding:10px;">Nombre</th>
+            <th style="padding:10px;">Monto</th>
+            <th style="padding:10px;">Fecha</th>
+        </tr>
+
+        {% for g in gastos %}
+        <tr style="text-align:center; border-top:1px solid #eee;">
+            <td style="padding:10px;">{{ g.nombre }}</td>
+            <td style="padding:10px;">${{ g.monto|floatformat:0 }}</td>
+            <td style="padding:10px;">{{ g.fecha|date:"d M Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="3" style="padding:15px; text-align:center;">
+                No hay gastos registrados
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+</div>
+
+{% endblock %}

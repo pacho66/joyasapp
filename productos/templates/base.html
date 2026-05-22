@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {% load static %}
+
+    <title>PG Joyas González</title>
+    <style>
+.redes{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+.redes a{
+    margin:0 10px;
+    text-decoration:none;
+    font-weight:bold;
+    color:#333;
+}
+
+
+        /* MENÚ */
+nav {
+    background: #f8f8f8;
+    padding: 10px 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+nav ul {
+    list-style: none;
+    display: flex;
+    gap: 15px;
+}
+nav ul li a {
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+}
+nav ul li a:hover {
+    color: #25D366;
+}
+
+/* BOTÓN WHATSAPP */
+#whatsapp-flotante {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #25D366;
+    color: white;
+    padding: 14px 20px;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: bold;
+    text-decoration: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 9999;
+    transition: all 0.3s ease;
+}
+
+#whatsapp-flotante:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.4);
+}
+
+/* BOTÓN HAMBURGUESA */
+.menu-toggle{
+    display:none;
+    background:#25D366;
+    color:white;
+    padding:12px;
+    text-align:center;
+    font-weight:bold;
+    border-radius:8px;
+    cursor:pointer;
+    margin-bottom:10px;
+}
+
+.buscador{
+    margin-top:10px;
+}
+
+.header-logo{
+    text-align:center;
+    background:#000;
+    color:white;
+    padding:15px;
+    font-size:22px;
+    font-weight:bold;
+}
+
+/* Menú fijo */
+nav{
+    position:sticky;
+    top:0;
+    z-index:999;
+    background:#f8f8f8;
+}
+
+/* Banner */
+.banner-top{
+    background:#25D366;
+    color:white;
+    text-align:center;
+    padding:10px;
+    font-weight:bold;
+}
+
+
+/* RESPONSIVE CELULAR */
+@media (max-width:768px){
+
+    .header-logo{
+    text-align:center;
+    background:#000;
+    color:white;
+    padding:15px;
+    font-size:20px;
+    font-weight:bold;
+    }
+
+    .header-logo img{
+    display:block;
+    margin:0 auto 5px auto;
+    }
+
+    .banner-top{
+        font-size:14px;
+        padding:8px;
+    }
+
+
+
+    .menu-toggle{
+        display:block;
+    }
+
+    nav{
+        padding:10px;
+    }
+
+    nav ul{
+        display:none;
+        flex-direction:column;
+        gap:10px;
+        padding:0;
+        margin:0;
+    }
+
+    nav ul.show{
+        display:flex;
+    }
+
+    nav ul li{
+        width:100%;
+    }
+
+    nav ul li a{
+        display:block;
+        background:#ffffff;
+        padding:10px;
+        border-radius:8px;
+        text-align:center;
+    }
+
+    .buscador input,
+    .buscador button{
+        width:100%;
+        padding:10px;
+        margin-top:8px;
+        box-sizing:border-box;
+    }
+}
+</style>
+
+</head>
+<body>
+<div class="header-logo">
+    <img src="{% static 'img/logo.png' %}" style="max-height:60px;">
+    <div>PG Joyas González</div>
+</div>
+
+<!-- MENÚ AUTOMÁTICO DE CATEGORÍAS -->
+<nav>
+
+    <!-- Botón hamburguesa -->
+    <div class="menu-toggle" onclick="toggleMenu()">
+        ☰ Menú
+    </div>
+
+    <ul id="menu-lista">
+        <li><a href="{% url 'inicio' %}">Inicio</a></li>
+
+        {% for categoria in categorias_menu %}
+            <li>
+                <a href="{% url 'productos_por_categoria' categoria.id %}">
+                    {{ categoria.nombre }}
+                </a>
+            </li>
+        {% endfor %}
+
+        <li>
+            <a href="{% url 'ver_carrito' %}">
+                🛒 Carrito ({{ cantidad_carrito }})
+            </a>
+        </li>
+
+    </ul>
+
+    <form action="{% url 'buscar_productos' %}" method="GET" class="buscador">
+        <input type="text" name="q" placeholder="🔎 Buscar productos..." required>
+        <button type="submit">Buscar</button>
+    </form>
+
+</nav>
+<div class="banner-top">
+    🎉 Envío gratis desde $150.000 | Compra segura por WhatsApp
+</div>
+
+{% block content %}
+{% endblock %}
+
+    💬
+<!-- Botón flotante WhatsApp -->
+<a href="#" id="whatsapp-flotante" target="_blank">
+    📱 WhatsApp - <span id="whatsapp-info">0 productos - $0</span>
+</a>
+<script>
+function toggleMenu(){
+ document.getElementById("menu-lista").classList.toggle("show");
+}
+</script>
+
+</body>
+</html>

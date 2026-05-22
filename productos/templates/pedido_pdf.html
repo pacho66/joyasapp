@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    font-size:12px;
+    color:#333;
+}
+
+.header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:15px;
+}
+
+.logo img{
+    max-height:60px;
+}
+
+.info{
+    text-align:right;
+    font-size:11px;
+    line-height:1.5;
+}
+
+.titulo{
+    text-align:center;
+    font-size:18px;
+    margin:10px 0;
+    font-weight:bold;
+}
+
+.tabla{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:10px;
+}
+
+.tabla th{
+    background:#f2f2f2;
+}
+
+.tabla th, .tabla td{
+    border:1px solid #ddd;
+    padding:6px;
+    text-align:center;
+}
+
+.tabla td{
+    font-size:11px;
+}
+
+.totales{
+    margin-top:15px;
+    width:100%;
+}
+
+.totales td{
+    padding:6px;
+}
+
+.total-final{
+    font-size:16px;
+    font-weight:bold;
+}
+
+.footer{
+    text-align:center;
+    font-size:10px;
+    margin-top:20px;
+    color:#777;
+}
+</style>
+</head>
+
+<body>
+
+<!-- 🏢 EMPRESA -->
+<div class="header">
+
+<div class="logo">
+    <img src="{{ logo_path }}">
+    <div style="color: {{ color_primario }}; font-weight:bold;">
+        {{ empresa_nombre }}
+    </div>
+</div>
+
+<div class="info">
+    NIT: {{ empresa_nit }}<br>
+    Tel: {{ empresa_telefono }}<br>
+    {{ empresa_direccion }}
+</div>
+
+{% if pedido.estado == 'pagado' %}
+    <div class="estado pagado">
+        🟢 Pagado
+    </div>
+
+{% elif pedido.estado == 'vencido' %}
+    <div class="estado pendiente" style="background:#f8d7da; color:#721c24;">
+        🔴 Vencido
+    </div>
+
+{% elif pedido.estado == 'enviado' %}
+    <div class="estado" style="background:#d1ecf1; color:#0c5460;">
+        🚚 Enviado
+    </div>
+
+{% else %}
+    <div class="estado pendiente">
+        🟡 Pendiente de pago
+    </div>
+{% endif %}
+
+</div>
+
+<div style="height:3px;background: {{ color_primario }}; margin:10px 0;"></div>
+
+<!-- 🧾 TITULO -->
+<div class="titulo" style="color: {{ color_secundario }};">
+    FACTURA DE VENTA
+</div>
+
+<p><strong>Pedido:</strong> {{ pedido.numero_orden }}</p>
+<p><strong>Fecha:</strong> {{ pedido.fecha|date:"d/m/Y" }}</p>
+
+<hr>
+
+<!-- 👤 CLIENTE -->
+<p>
+<strong>Cliente:</strong> {{ pedido.cliente.nombre|default:"Consumidor final" }}<br>
+<strong>Teléfono:</strong> {{ pedido.cliente.telefono|default:"-" }}<br>
+<strong>Tipo de pago:</strong> {{ pedido.tipo_pago }}<br>
+<strong>Estado:</strong> {{ pedido.estado }}
+</p>
+
+<hr>
+
+<!-- 🛍️ PRODUCTOS -->
+<table class="tabla">
+<tr style="background: {{ color_primario }}; color:white;">
+    <th>Producto</th>
+    <th>Cantidad</th>
+    <th>Precio</th>
+    <th>Total</th>
+</tr>
+
+{% for item in items %}
+<tr>
+<td>{{ item.producto.nombre }}</td>
+<td>{{ item.cantidad }}</td>
+<td>${{ item.precio|default:0|floatformat:0 }}</td>
+<td>${{ item.subtotal|default:0|floatformat:0 }}</td>
+</tr>
+{% endfor %}
+</table>
+
+<!-- 💰 TOTALES -->
+<table class="totales">
+<tr>
+<td>Subtotal</td>
+<td style="text-align:right;">${{ subtotal|default:0|floatformat:0 }}</td>
+</tr>
+
+<tr>
+<td>IVA</td>
+<td style="text-align:right;">${{ iva_total|default:0|floatformat:0 }}</td>
+</tr>
+
+<tr>
+<td>Descuento</td>
+<td style="text-align:right;">${{ descuento_total|default:0|floatformat:0 }}</td>
+</tr>
+
+<tr>
+<td>Retefuente</td>
+<td style="text-align:right;">${{ retefuente_total|default:0|floatformat:0 }}</td>
+</tr>
+
+<tr>
+<td>Envío</td>
+<td style="text-align:right;">${{ envio|default:0|floatformat:0 }}</td>
+</tr>
+
+<tr>
+<td class="total-final" style="color: {{ color_primario }};">TOTAL</td>
+<td class="total-final" style="text-align:right; color: {{ color_primario }};">
+${{ total_final|default:0|floatformat:0 }}
+</td>
+</tr>
+</table>
+
+<!-- 🧾 FOOTER -->
+<div class="footer">
+Gracias por su compra<br>
+Factura #{{ pedido.numero_orden }}<br>
+<span style="color: {{ color_primario }};">
+{{ empresa_nombre }}
+</span>
+</div>
+
+</body>
+</html>

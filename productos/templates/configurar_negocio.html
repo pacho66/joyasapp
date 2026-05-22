@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+.wrap{
+    max-width:700px;
+    margin:auto;
+    padding:30px 20px;
+    font-family:Arial,sans-serif;
+}
+
+.card{
+    background:#fff;
+    border-radius:16px;
+    padding:28px;
+    box-shadow:0 6px 18px rgba(0,0,0,.08);
+}
+
+.titulo{
+    margin:0 0 8px;
+    font-size:30px;
+    color:#111;
+}
+
+.sub{
+    color:#666;
+    margin-bottom:25px;
+    font-size:14px;
+}
+
+.grupo{
+    margin-bottom:18px;
+}
+
+label{
+    display:block;
+    margin-bottom:7px;
+    font-weight:bold;
+    font-size:14px;
+    color:#222;
+}
+
+input{
+    width:100%;
+    padding:12px;
+    border:1px solid #ddd;
+    border-radius:10px;
+    font-size:15px;
+    box-sizing:border-box;
+}
+
+input:focus{
+    outline:none;
+    border-color:#007bff;
+}
+
+.botones{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:20px;
+}
+
+.btn{
+    border:none;
+    padding:12px 18px;
+    border-radius:10px;
+    font-weight:bold;
+    text-decoration:none;
+    cursor:pointer;
+    font-size:14px;
+}
+
+.guardar{
+    background:#28a745;
+    color:#fff;
+}
+
+.volver{
+    background:#111;
+    color:#fff;
+}
+
+.info{
+    margin-top:18px;
+    background:#f8f8f8;
+    padding:14px;
+    border-radius:10px;
+    font-size:14px;
+    color:#555;
+}
+
+@media(max-width:768px){
+    .titulo{
+        font-size:24px;
+    }
+
+    .card{
+        padding:20px;
+    }
+}
+</style>
+
+<div class="wrap">
+
+<div class="card">
+
+<h1 class="titulo">⚙️ Configurar Negocio</h1>
+<p class="sub">Actualiza los datos que aparecerán en tu tienda y facturas.</p>
+
+<h3>Logo del negocio</h3>
+
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {{ form.as_p }}
+
+    <label>Logo:</label>
+    <input type="file" name="logo">
+
+    <button type="submit">Guardar</button>
+</form>
+
+<label>Color primario:</label>
+<input type="color" name="color_primario" value="{{ perfil.color_primario }}">
+
+<label>Color secundario:</label>
+<input type="color" name="color_secundario" value="{{ perfil.color_secundario }}">
+
+{% if perfil.logo %}
+    <p>Logo actual:</p>
+    <img src="{{ perfil.logo.url }}" style="max-height:80px;">
+{% endif %}
+
+<div class="grupo">
+<label>🏪 Nombre Tienda</label>
+{{ form.nombre_tienda }}
+</div>
+
+<div class="grupo">
+<label>📲 WhatsApp</label>
+{{ form.whatsapp }}
+</div>
+
+<div class="grupo">
+<label>📧 Correo Empresa</label>
+{{ form.correo_negocio }}
+</div>
+
+<div class="grupo">
+<label>📍 Dirección</label>
+{{ form.direccion }}
+</div>
+
+<div class="grupo">
+<label>🌎 Ciudad</label>
+{{ form.ciudad }}
+</div>
+
+<div class="botones">
+<button type="submit" class="btn guardar">💾 Guardar Cambios</button>
+<a href="{% url 'dashboard' %}" class="btn volver">⬅️ Volver</a>
+</div>
+
+</form>
+
+<div class="info">
+💎 Estos datos se usarán en facturas, contacto y configuración general del negocio.
+</div>
+
+</div>
+</div>
+
+{% endblock %}

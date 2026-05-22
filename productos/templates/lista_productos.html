@@ -1,0 +1,48 @@
+{% load moneda %}
+
+<!-- 🔥 CATEGORÍAS -->
+ {% for categoria in categorias %}
+        <a href="/categoria/{{ categoria.id }}/">
+            <button style="
+                padding:8px 14px;
+                border-radius:20px;
+                border:none;
+                background:#f0f0f0;
+                cursor:pointer;
+            ">
+                {{ categoria.nombre }}
+            </button>
+        </a>
+    {% endfor %}
+
+</div>
+
+<h2>Resultados para: "{{ query }}"</h2>
+
+{% if productos %}
+
+    {% for producto in productos %}
+    <div style="margin-bottom:40px">
+
+        <h2>{{ producto.nombre }}</h2>
+
+        <img src="{{ producto.imagen_principal.url }}" width="200">
+
+        <p>{{ producto.descripcion }}</p>
+
+        {% if producto.tipo_venta == "gramo" %}
+            <p><strong>Precio:</strong> {{ producto.precio_calculado|default:0|moneda }}</p>
+        {% else %}
+            <p><strong>Precio:</strong> {{ producto.precio_detal|default:0|moneda }}</p>
+        {% endif %}
+
+        <a href="/producto/{{ producto.id }}/{{ producto.slug }}/">
+            <button>Ver producto</button>
+        </a>
+
+    </div>
+    {% endfor %}
+
+{% else %}
+    <p>No se encontraron productos 😕</p>
+{% endif %}

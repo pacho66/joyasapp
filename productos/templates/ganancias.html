@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+.wrap{
+    max-width:1200px;
+    margin:auto;
+    padding:25px;
+    font-family:Arial,sans-serif;
+}
+
+.titulo{
+    font-size:30px;
+    margin-bottom:20px;
+    color:#111;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:15px;
+    margin-bottom:25px;
+}
+
+.card{
+    background:#fff;
+    border-radius:14px;
+    padding:18px;
+    box-shadow:0 4px 14px rgba(0,0,0,.08);
+}
+
+.card h4{
+    margin:0;
+    color:#666;
+    font-size:14px;
+}
+
+.card h2{
+    margin:10px 0 0;
+    font-size:28px;
+    color:#111;
+}
+
+.verde{border-left:5px solid #28a745;}
+.azul{border-left:5px solid #007bff;}
+.naranja{border-left:5px solid #ff9800;}
+.morado{border-left:5px solid #6f42c1;}
+
+.tabla{
+    background:#fff;
+    border-radius:14px;
+    padding:18px;
+    box-shadow:0 4px 14px rgba(0,0,0,.08);
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,td{
+    padding:12px;
+    border-bottom:1px solid #eee;
+    text-align:left;
+    font-size:14px;
+}
+
+th{
+    background:#f8f8f8;
+}
+
+.estado-ok{
+    color:#28a745;
+    font-weight:bold;
+}
+
+.estado-pendiente{
+    color:#ff9800;
+    font-weight:bold;
+}
+
+.btn{
+    display:inline-block;
+    margin-top:20px;
+    background:#111;
+    color:#fff;
+    padding:10px 15px;
+    border-radius:8px;
+    text-decoration:none;
+}
+
+@media(max-width:768px){
+    .titulo{font-size:24px;}
+    .card h2{font-size:22px;}
+}
+</style>
+
+<div class="wrap">
+
+<h1 class="titulo">💰 Ganancias PRO</h1>
+
+<!-- MÉTRICAS -->
+<div class="grid">
+
+<div class="card verde">
+<h4>Ventas Hoy</h4>
+<h2>${{ ventas_hoy|floatformat:0 }}</h2>
+</div>
+
+<div class="card azul">
+<h4>Ventas Mes</h4>
+<h2>${{ ventas_mes|floatformat:0 }}</h2>
+</div>
+
+<div class="card naranja">
+<h4>Total General</h4>
+<h2>${{ ventas_total|floatformat:0 }}</h2>
+</div>
+
+<div class="card morado">
+<h4>Ticket Promedio</h4>
+<h2>${{ ticket_promedio|floatformat:0 }}</h2>
+</div>
+
+</div>
+
+<!-- TABLA -->
+<div class="tabla">
+
+<h3>📦 Últimos Pedidos</h3>
+
+<table>
+<tr>
+<th>Orden</th>
+<th>Total</th>
+<th>Estado</th>
+<th>Fecha</th>
+</tr>
+
+{% for pedido in pedidos %}
+<tr>
+<td>{{ pedido.numero_orden }}</td>
+<td>${{ pedido.total|floatformat:0 }}</td>
+
+<td>
+{% if pedido.estado == 'Pagado' %}
+<span class="estado-ok">Pagado</span>
+{% else %}
+<span class="estado-pendiente">{{ pedido.estado }}</span>
+{% endif %}
+</td>
+
+<td>{{ pedido.fecha|date:"d/m/Y" }}</td>
+</tr>
+
+{% empty %}
+<tr>
+<td colspan="4">No hay pedidos</td>
+</tr>
+{% endfor %}
+
+</table>
+
+<a href="{% url 'dashboard' %}" class="btn">⬅️ Volver al Dashboard</a>
+
+</div>
+
+</div>
+
+{% endblock %}

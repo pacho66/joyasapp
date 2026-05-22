@@ -1,0 +1,2295 @@
+import json
+from decimal import Decimal, InvalidOperation
+from django.core.serializers.json import DjangoJSONEncoder
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.db import transaction
+from urllib.parse import quote
+import uuid
+from productos.models import Producto, Categoria, ProductoImagen, CarritoItem
+from .models import ProductoVariante, Pedido, PedidoItem
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from django.http import HttpResponse
+from django.db.models import Sum
+from django.utils import timezone
+from datetime import timedelta
+from django.core.mail import EmailMessage
+from productos.services.precios import calcular_precio_producto
+from productos.services.envios import calcular_envio
+from productos.models import Cliente
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.contrib.auth import login
+from .models import Perfil
+from .forms import RegistroForm
+from django.contrib.auth import authenticate, login, logout
+from .forms import ConfiguracionNegocioForm
+from .models import Abono
+from .models import PedidoItem
+from django.db.models.functions import TruncDate
+from .models import Gasto
+from .forms import GastoForm
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+import os
+from django.conf import settings
+import urllib.parse
+from django.urls import reverse
+from django.db.models import Q
+from django.http import Http404
+import stripe
+import mercadopago
+import requests
+from .utils import generar_link_whatsapp
+
+def safe_int(valor, default=1):
+    try:
+        return int(valor)
+    except (ValueError, TypeError):
+        return default
+
+def generar_numero_orden(usuario=None):
+    """
+    Genera consecutivo:
+    - Por usuario (SaaS)
+    - Global (WhatsApp / sin usuario)
+    """
+
+    if usuario:
+        queryset = Pedido.objects.filter(usuario=usuario)
+    else:
+        queryset = Pedido.objects.all()
+
+    ultimo = queryset.only('numero_orden', 'id').order_by('-id').first()
+
+    numero = 1
+
+    if ultimo and ultimo.numero_orden:
+
+        try:
+            partes = ultimo.numero_orden.strip().split('-')
+            consecutivo = partes[-1]
+
+            if consecutivo.isdigit():
+                numero = int(consecutivo) + 1
+            else:
+                raise ValueError
+
+        except Exception:
+            numero = queryset.count() + 1
+
+    if numero < 1:
+        numero = 1
+
+    return f"FAC-{numero:06d}"
+
+def calcular_envio(ciudad, subtotal):
+    """
+    Calcula envío automático.
+    """
+
+    if subtotal >= 300000:
+        return Decimal('0')
+
+    ciudad = (ciudad or '').lower()
+
+    if ciudad in ['medellin', 'medellín']:
+        return Decimal('10000')
+
+    elif ciudad in ['bogota', 'bogotá', 'cali']:
+        return Decimal('15000')
+
+    return Decimal('20000')
+
+def calcular_precio_producto(producto, cantidad):
+    """
+    Motor de precios.
+    """
+
+    cantidad = int(cantidad)
+
+    if cantidad >= 12:
+        return Decimal(producto.precio_mayor), None
+
+    return Decimal(producto.precio_detal), None
+
+
+def obtener_variante(producto, color, talla):
+    return ProductoVariante.objects.filter(
+        producto=producto,
+        color=color,
+        talla=talla
+    ).first()
+
+def cantidad_carrito(request):
+    session_key = request.session.session_key
+
+    if not session_key:
+        return {'cantidad_carrito': 0}
+
+    items = CarritoItem.objects.filter(session_key=session_key)
+
+    cantidad = sum(item.cantidad for item in items)
+
+    return {'cantidad_carrito': cantidad}
+
+
+def registro(request):
+    if request.method == 'POST':
+        form = RegistroForm(request.POST)
+
+        if form.is_valid():
+
+            email = form.cleaned_data['email']
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+            confirmar = form.cleaned_data['confirmar_password']
+
+            if password != confirmar:
+                return render(request, 'registro.html', {
+                    'form': form,
+                    'error': 'Las contraseñas no coinciden'
+                })
+
+            if User.objects.filter(email=email).exists():
+                return render(request, 'registro.html', {
+                    'form': form,
+                    'error': 'Este correo ya está registrado'
+                })
+
+            if User.objects.filter(username=username).exists():
+                return render(request, 'registro.html', {
+                    'form': form,
+                    'error': 'Este usuario ya existe'
+                })
+
+            with transaction.atomic():
+
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password
+                )
+
+                Perfil.objects.create(
+                    user=user,
+                    nombre_tienda=form.cleaned_data['nombre_tienda'],
+                    whatsapp=form.cleaned_data['whatsapp'],
+                    plan='basico',
+                    activa=True,
+                    plan_vence=timezone.localdate() + timedelta(days=15)
+                )
+
+            login(request, user)
+            return redirect('dashboard')
+
+    else:
+        form = RegistroForm()
+
+    return render(request, 'registro.html', {'form': form})
+        
+def iniciar_sesion(request):
+    print(settings.STRIPE_SECRET_KEY) 
+
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(
+            request,
+            username=username,
+            password=password
+        )
+
+        if user:
+            login(request, user)
+            return redirect('dashboard')
+
+        messages.error(request, 'Usuario o contraseña incorrectos')
+
+    return render(request, 'login.html')
+
+@login_required
+def cerrar_sesion(request):
+    logout(request)
+    return redirect('inicio')
+        
+@login_required
+def inicio(request):
+    productos = Producto.objects.filter(
+        usuario=request.user
+    ).order_by('-id')
+
+    destacados = Producto.objects.filter(
+        usuario=request.user,
+        destacado=True
+    ).order_by('-id')[:8]
+
+    categorias = Categoria.objects.filter(
+        usuario=request.user
+    ).order_by('nombre')
+
+    return render(request, 'inicio.html', {
+        'productos': productos,
+        'destacados': destacados,
+        'categorias': categorias
+    })  
+
+def buscar_productos(request):
+    query = request.GET.get('q', '')
+
+    productos = Producto.objects.filter(usuario=request.user)
+
+    if query:
+        productos = productos.filter(
+            Q(nombre__icontains=query) |
+            Q(descripcion__icontains=query) |
+            Q(categoria__nombre__icontains=query)
+        )
+
+    categorias = Categoria.objects.filter(usuario=request.user)
+
+    return render(request, 'lista_productos.html', {
+        'productos': productos,
+        'categorias': categorias,
+        'query': query
+    })
+
+@login_required
+def lista_productos(request):
+    productos = Producto.objects.filter(usuario=request.user)
+    categorias = Categoria.objects.filter(usuario=request.user)
+    return render(request, 'lista_productos.html', {
+        'productos': productos,
+        'categorias': categorias
+    })
+
+@login_required
+def productos_por_categoria(request, categoria_id):
+    categoria = get_object_or_404(
+    Categoria,
+    id=categoria_id,
+    usuario=request.user
+)
+    productos = Producto.objects.filter(
+        categoria=categoria,
+        usuario=request.user
+    ).order_by('-id')
+    return render(request, 'productos_por_categoria.html', {
+        'categoria': categoria,
+        'productos': productos
+    }) 
+
+
+@login_required
+def detalle_producto(request, id, slug):
+    producto = get_object_or_404(
+        Producto,
+        id=id,
+        slug=slug,
+        usuario=request.user
+    )
+
+    session_key = request.session.session_key
+    cantidad_en_carrito = 0
+
+    if session_key:
+        item = CarritoItem.objects.filter(
+            producto=producto,
+            session_key=session_key
+        ).first()
+
+        if item:
+                cantidad_en_carrito = item.cantidad
+
+    # 🔥 STOCK REAL (VARIANTES)
+    tiene_stock = producto.variantes.filter(stock__gt=0).exists()
+
+    # 🔥 SI TIENE VARIANTES, EL STOCK LO MANEJAN ELLAS
+    if producto.variantes.exists():
+        stock_disponible = None
+    else:
+        stock_disponible = producto.stock - cantidad_en_carrito
+
+    return render(request, 'detalle_producto.html', {
+        'producto': producto,
+        'stock_disponible': stock_disponible,
+        'tiene_stock': tiene_stock
+})
+
+def productos_top(request):
+    top = PedidoItem.objects.values('producto__nombre')\
+        .annotate(total_vendido=Sum('cantidad'))\
+        .order_by('-total_vendido')[:5]
+
+    return render(request, 'top_productos.html', {
+        'top': top
+    })
+
+@login_required
+def dashboard(request):
+    usuario = request.user
+
+    # 🔒 Perfil SaaS
+    if not hasattr(usuario, 'perfil'):
+        return redirect('inicio')
+
+    perfil = usuario.perfil
+
+    # 🔒 Validar plan
+    if perfil.plan_vence < timezone.localdate():
+        return render(request, 'plan_vencido.html')
+
+    hoy = timezone.localdate()
+    ayer = hoy - timedelta(days=1)
+    hace_30 = timezone.now() - timedelta(days=30)
+
+    tipo = request.GET.get('tipo')
+
+    # ==========================
+    # BASE MULTIUSUARIO SaaS
+    # ==========================
+    pedidos = Pedido.objects.filter(usuario=usuario)
+
+    cliente_id = request.GET.get('cliente')
+
+    if cliente_id:
+        pedidos = pedidos.filter(cliente_id=cliente_id)
+
+    clientes = Cliente.objects.filter(usuario=usuario)
+    productos = Producto.objects.filter(usuario=usuario)
+
+    hoy = timezone.now().date()
+
+    clientes_morosos = Cliente.objects.filter(
+    usuario=request.user,
+    pedido__tipo_pago='credito',
+    pedido__saldo_pendiente__gt=0,
+    pedido__fecha_limite__lt=hoy
+    ).distinct()
+
+    morosos_count = clientes_morosos.count()
+
+    morosos_total = clientes_morosos.aggregate(
+    total=Sum('pedido__saldo_pendiente')
+    )['total'] or 0
+
+    # ==========================
+    # FILTROS CLIENTES
+    # ==========================
+    clientes_filtrados = clientes
+
+    if tipo == 'vip':
+        clientes_filtrados = clientes.filter(total_compras__gte=500000)
+
+    elif tipo == 'nuevos':
+        clientes_filtrados = clientes.filter(fecha_creacion__date=hoy)
+
+    elif tipo == 'dormidos':
+        clientes_filtrados = clientes.filter(
+            ultima_compra__lt=hace_30
+        ).distinct()
+
+    elif tipo == 'morosos':
+        clientes_filtrados = clientes.filter(
+        pedido__tipo_pago='credito',
+        pedido__saldo_pendiente__gt=0,
+        pedido__fecha_limite__lt=hoy
+    ).distinct()
+
+    # ==========================
+    # MENSAJES
+    # ==========================
+    mensajes = {
+    'vip': "💎 Clientes VIP",
+    'nuevos': "✨ Clientes nuevos",
+    'dormidos': "😴 Clientes inactivos",
+    'morosos': "🔴 Clientes en mora"
+}
+
+    mensaje = mensajes.get(tipo, "📊 Panel General")
+
+    # ==========================
+    # VENTAS
+    # ==========================
+    total_hoy = pedidos.filter(
+        fecha__date=hoy
+    ).aggregate(total=Sum('total'))['total'] or 0
+
+    total_ayer = pedidos.filter(
+        fecha__date=ayer
+    ).aggregate(total=Sum('total'))['total'] or 0
+
+    total_general = pedidos.aggregate(
+        total=Sum('total')
+    )['total'] or 0
+
+    ganancias_mes = pedidos.filter(
+        fecha__month=hoy.month,
+        fecha__year=hoy.year
+    ).aggregate(total=Sum('total'))['total'] or 0
+
+    # ==========================
+    # PEDIDOS
+    # ==========================
+    pedidos_hoy = pedidos.filter(fecha__date=hoy).count()
+    total_pedidos = pedidos.count()
+    pedidos_recientes = pedidos.order_by('-fecha')[:5]
+
+    pedidos_pendientes = pedidos.filter(
+        estado='pendiente'
+    ).count()
+
+    pedidos_pagados = pedidos.filter(
+        estado='pagado'
+    ).count()
+
+    # ==========================
+    # CLIENTES
+    # ==========================
+    total_clientes = clientes.count()
+
+    clientes_vip = clientes.filter(
+        total_compras__gte=500000
+    ).count()
+
+    clientes_nuevos = clientes.filter(
+        fecha_creacion__date=hoy
+    ).count()
+
+    clientes_dormidos = clientes.filter(
+        ultima_compra__lt=hace_30
+    ).distinct().count()
+
+    # ==========================
+    # INVENTARIO
+    # ==========================
+    total_productos = productos.count()
+
+    productos_sin_stock = productos.filter(
+        stock=0
+    ).count()
+
+    productos_bajo_stock = productos.filter(
+        stock__gt=0,
+        stock__lte=5
+    ).count()
+
+    # ==========================
+    # MÉTRICAS
+    # ==========================
+    ticket_promedio = (
+        total_general / total_pedidos
+        if total_pedidos > 0 else 0
+    )
+
+    crecimiento = total_hoy - total_ayer
+
+    # ==========================
+    # 💰 FINANZAS
+    # ==========================
+
+    # INGRESOS 
+    total_ingresos = total_general
+
+    # GASTOS (multiusuario 🔥)
+    total_gastos = Gasto.objects.filter(
+        usuario=usuario
+    ).aggregate(total=Sum('monto'))['total'] or 0
+
+    # UTILIDAD
+    utilidad = total_ingresos - total_gastos
+
+    # ==========================
+    # CONTEXT
+    # ==========================
+    context = {
+
+    # ==========================
+    # 📊 GENERAL
+    # ==========================
+    'mensaje': mensaje,
+    'tipo': tipo,
+    'today': hoy,
+
+    # ==========================
+    # 💰 VENTAS
+    # ==========================
+    'total_hoy': total_hoy,
+    'total_ayer': total_ayer,
+    'total_general': total_general,
+    'ganancias_mes': ganancias_mes,
+    'crecimiento': crecimiento,
+
+    # ==========================
+    # 💸 FINANZAS
+    # ==========================
+    'total_ingresos': total_ingresos,
+    'total_gastos': total_gastos,
+    'utilidad': utilidad,
+
+    # ==========================
+    # 📦 PEDIDOS
+    # ==========================
+    'pedidos_hoy': pedidos_hoy,
+    'total_pedidos': total_pedidos,
+    'pedidos_recientes': pedidos_recientes,
+    'pedidos_pendientes': pedidos_pendientes,
+    'pedidos_pagados': pedidos_pagados,
+
+    # ==========================
+    # 👥 CLIENTES
+    # ==========================
+    'total_clientes': total_clientes,
+    'clientes_vip': clientes_vip,
+    'clientes_nuevos': clientes_nuevos,
+    'clientes_dormidos': clientes_dormidos,
+    'clientes_filtrados': clientes_filtrados,
+
+    # 💳 CRÉDITO
+    'morosos_count': morosos_count,
+    'morosos_total': morosos_total,
+
+    # ==========================
+    # 📦 INVENTARIO
+    # ==========================
+    'total_productos': total_productos,
+    'productos_sin_stock': productos_sin_stock,
+    'productos_bajo_stock': productos_bajo_stock,
+
+    # ==========================
+    # 📈 MÉTRICAS
+    # ==========================
+    'ticket_promedio': ticket_promedio,
+}
+
+    return render(request, 'dashboard.html', context)
+
+@login_required
+def modificar_banner(request):
+    perfil = request.user.perfil
+
+    if request.method == 'POST':
+        banner = request.FILES.get('banner')
+
+        if banner:
+            perfil.banner = banner
+            perfil.save()
+
+        return redirect('dashboard')
+
+    return render(request, 'modificar_banner.html')    
+
+@login_required
+def estadisticas(request):
+
+    pedidos = Pedido.objects.filter(usuario=request.user)
+
+    # 🔹 HOY
+    hoy = timezone.now().date()
+    ventas_hoy = pedidos.filter(fecha__date=hoy).aggregate(
+        total=Sum('total')
+    )['total'] or 0
+
+    # 🔹 ÚLTIMOS 30 DÍAS
+    hace_30 = hoy - timedelta(days=30)
+    ventas_mes = pedidos.filter(fecha__date__gte=hace_30).aggregate(
+        total=Sum('total')
+    )['total'] or 0
+
+    # 🔹 TOTAL PEDIDOS
+    total_pedidos = pedidos.count()
+
+    # 🔹 VENTAS POR DÍA
+    ventas_por_dia = pedidos.annotate(
+        dia=TruncDate('fecha')
+    ).values('dia').annotate(
+        total=Sum('total')
+    ).order_by('dia')
+
+    gastos = Gasto.objects.filter(usuario=request.user).annotate(
+    dia=TruncDate('fecha')
+    ).values('dia').annotate(
+    total=Sum('monto')
+    ).order_by('dia')
+
+    # 🔹 TOP PRODUCTOS (si ya lo tienes)
+    top_productos = PedidoItem.objects.values(
+        'producto__nombre'
+    ).annotate(
+        total_vendido=Sum('cantidad')
+    ).order_by('-total_vendido')[:5]
+
+    # 🔹 MÉTODOS DE PAGO (si ya lo tienes)
+    metodos_pago = pedidos.values('tipo_pago').annotate(
+        total=Sum('total')
+    )
+
+    top_clientes = pedidos.values(
+    'cliente__nombre'
+    ).annotate(
+    total_compras=Sum('total')
+    ).order_by('-total_compras')[:5]
+
+
+    context = {
+        'ventas_hoy': ventas_hoy,
+        'ventas_mes': ventas_mes,
+        'total_pedidos': total_pedidos,
+        'ventas_por_dia': ventas_por_dia,
+        'top_productos': top_productos,
+        'metodos_pago': metodos_pago,
+        'top_clientes': top_clientes,
+    }
+
+    return render(
+        request,
+        'estadisticas.html',
+        context
+    )
+
+# ==========================================
+# 💰 GANANCIAS
+# ==========================================
+@login_required
+def ganancias(request):
+    hoy = timezone.now().date()
+
+    ventas_hoy = Pedido.objects.filter(
+        usuario=request.user,
+        fecha__date=hoy
+    ).aggregate(total=Sum('total'))['total'] or 0
+
+    ventas_total = Pedido.objects.filter(
+        usuario=request.user
+    ).aggregate(total=Sum('total'))['total'] or 0
+
+    pedidos = Pedido.objects.filter(
+        usuario=request.user
+    ).order_by('-fecha')[:20]
+
+    context = {
+        'ventas_hoy': ventas_hoy,
+        'ventas_total': ventas_total,
+        'pedidos': pedidos,
+    }
+
+    return render(request, 'ganancias.html', context)
+
+
+# ==========================================
+# 📦 INVENTARIO
+# ==========================================
+@login_required
+def inventario(request):
+    productos = Producto.objects.filter(
+        usuario=request.user
+    ).order_by('nombre')
+
+    total_productos = productos.count()
+
+    context = {
+        'productos': productos,
+        'total_productos': total_productos,
+    }
+
+    return render(request, 'inventario.html', context)
+
+@login_required
+def configurar_negocio(request):
+    perfil = request.user.perfil
+
+    if request.method == 'POST':
+        form = ConfiguracionNegocioForm(request.POST, request.FILES)  # 👈 CLAVE
+
+        if form.is_valid():
+
+            perfil.nombre_tienda = form.cleaned_data['nombre_tienda']
+            perfil.whatsapp = form.cleaned_data['whatsapp']
+            perfil.email_empresa = form.cleaned_data['correo_negocio']
+            perfil.direccion = form.cleaned_data['direccion']
+            perfil.ciudad = form.cleaned_data['ciudad']
+
+            # 🔥 NUEVO (LOGO)
+            if request.FILES.get('logo'):
+                perfil.logo = request.FILES['logo']
+
+             # 🔥 COLORES
+            perfil.color_primario = request.POST.get('color_primario', '#28a745')
+            perfil.color_secundario = request.POST.get('color_secundario', '#000000')
+
+            perfil.save()
+
+            messages.success(request, "Configuración actualizada correctamente")
+            return redirect('dashboard')
+
+    else:
+        form = ConfiguracionNegocioForm(initial={
+            'nombre_tienda': perfil.nombre_tienda,
+            'whatsapp': perfil.whatsapp,
+            'correo_negocio': perfil.email_empresa,
+            'direccion': perfil.direccion,
+            'ciudad': perfil.ciudad,
+        })
+
+    return render(request, 'configurar_negocio.html', {
+        'form': form,
+        'perfil': perfil  # 👈 para mostrar logo
+    })
+
+@login_required
+def renovar_manual(request):
+    perfil = request.user.perfil
+    renovar_plan(perfil)
+    return redirect('dashboard')
+
+def renovar_plan(perfil):
+    hoy = timezone.localdate()
+
+    if perfil.plan_vence and perfil.plan_vence > hoy:
+        perfil.plan_vence = perfil.plan_vence + timedelta(days=30)
+    else:
+        perfil.plan_vence = hoy + timedelta(days=30)
+
+    perfil.activa = True
+    perfil.save()    
+
+@login_required
+def agregar_al_carrito(request, producto_id):
+    cantidad = safe_int(request.GET.get('cantidad', 1), 1)
+    producto = get_object_or_404(
+        Producto,
+        id=producto_id,
+        usuario=request.user
+    )
+    color = request.GET.get('color') or None
+    talla = request.GET.get('talla') or None
+
+    session_key = request.session.session_key
+    if not session_key:
+        request.session.create()
+        session_key = request.session.session_key
+
+    # 🔥 OBTENER VARIANTE
+    variante = obtener_variante(producto, color, talla)
+
+    # ❌ SI NO EXISTE → NO SE VENDE
+    if not variante:
+        messages.error(request, "Esta combinación no está disponible")
+        return redirect(
+            'detalle_producto',
+            id=producto.id,
+            slug=producto.slug
+    )
+
+    # 🔥 STOCK REAL
+    stock_disponible = variante.stock
+
+    carrito_item, created = CarritoItem.objects.get_or_create(
+        producto=producto,
+        session_key=session_key,
+        variante=variante,
+        defaults={
+            'cantidad': cantidad,
+            'color': color,
+            'talla': talla
+        }
+    )
+
+    if not created:
+        if carrito_item.cantidad + cantidad > stock_disponible:
+            messages.warning(request, "No hay más unidades disponibles en inventario.")
+        else:
+            carrito_item.cantidad += cantidad
+            carrito_item.save()
+
+    else:
+        if cantidad > stock_disponible:
+            messages.warning(request, "No hay suficiente stock disponible.")
+            carrito_item.delete()
+
+    return redirect('ver_carrito')
+    # si sí hay stock, no necesitas save (ya quedó creado correctamente)
+
+@login_required
+def ver_carrito(request):
+    session_key = request.session.session_key
+    if not session_key:
+        items = []
+    else:
+        items = CarritoItem.objects.filter(session_key=session_key)
+
+    total_articulos = 0
+    total = Decimal('0.00')
+
+    # 🔥 CONTAR TOTAL GLOBAL
+    for item in items:
+        total_articulos += item.cantidad or 0
+
+    # 🔥 DEFINIR NIVEL GLOBAL
+    if total_articulos >= 12:
+        tipo_global = "Mayorista"
+    elif total_articulos >= 6:
+        tipo_global = "Semi-Mayorista"
+    else:
+        tipo_global = "Detal"
+
+    # 🔥 CALCULAR CADA ITEM
+    for item in items:
+        cantidad = item.cantidad or 0
+        producto = item.producto
+
+        tipo = tipo_global  # 👈 ESTE MANDA TODO
+
+        # =========================
+        # PRODUCTOS POR GRAMOS
+        # =========================
+        if producto.tipo_venta == "gramo":
+
+            peso = producto.peso_producto or 0
+            total_gramos = Decimal(cantidad) * Decimal(peso)
+            item.total_gramos = total_gramos
+
+            if tipo == "Mayorista":
+                precio = producto.precio_por_gramo_mayor or 0
+            elif tipo == "Semi-Mayorista":
+                precio = producto.precio_por_gramo_semimayor or 0
+            else:
+                precio = producto.precio_por_gramo_detal or 0
+
+            item.precio_aplicado = Decimal(precio)
+            item.subtotal_calculado = total_gramos * Decimal(precio)
+
+            # ahorro gramos
+            precio_base = producto.precio_por_gramo_detal or 0
+            item.ahorro = (Decimal(precio_base) - Decimal(precio)) * total_gramos
+
+        # =========================
+        # PRODUCTOS POR UNIDADES
+        # =========================
+        else:
+
+            item.total_gramos = None
+
+            if tipo == "Mayorista":
+                precio = producto.precio_mayor or 0
+            elif tipo == "Semi-Mayorista":
+                precio = producto.precio_semimayor or 0
+            else:
+                precio = producto.precio_detal or 0
+
+            item.precio_aplicado = Decimal(precio)
+            item.subtotal_calculado = Decimal(cantidad) * Decimal(precio)
+
+            # ahorro unidades
+            precio_base = producto.precio_detal or 0
+            item.ahorro = (Decimal(precio_base) - Decimal(precio)) * Decimal(cantidad)
+
+        # 🔥 ESTO VA FUERA DEL IF
+        item.tipo_precio = tipo
+
+        total += item.subtotal_calculado
+
+    # =========================
+    # PROGRESO
+    # =========================
+    faltan_semi = max(0, 6 - total_articulos)
+    faltan_mayor = max(0, 12 - total_articulos)
+
+    # =========================
+    # JSON WHATSAPP
+    # =========================
+    carrito_json = json.dumps([
+        {
+            "producto": {"nombre": item.producto.nombre},
+            "color": item.color,
+            "talla": item.talla,
+            "cantidad": item.cantidad,
+            "subtotal": float(item.subtotal_calculado),
+            "total_gramos": float(item.total_gramos) if item.total_gramos else None
+        } for item in items
+    ], cls=DjangoJSONEncoder)
+
+    return render(request, 'carrito.html', {
+        'items': items,
+        'total': total,
+        'total_articulos': total_articulos,
+        'faltan_semi': faltan_semi,
+        'faltan_mayor': faltan_mayor,
+        'carrito_json': carrito_json
+    })
+
+@login_required
+def aumentar_cantidad(request, item_id):
+    item = get_object_or_404(
+        CarritoItem,
+        id=item_id,
+        session_key=request.session.session_key
+    )
+
+    # verificar stock disponible
+    if item.cantidad >= item.producto.stock:
+        messages.warning(request, "No hay más unidades disponibles en inventario.")
+    else:
+        item.cantidad += 1
+        item.save()
+
+    return redirect('ver_carrito')
+
+@login_required
+def disminuir_cantidad(request, item_id):
+    item = get_object_or_404(
+        CarritoItem,
+        id=item_id,
+        session_key=request.session.session_key
+    )
+
+    if item.cantidad > 1:
+        item.cantidad -= 1
+        item.save()
+    else:
+        item.delete()
+
+    return redirect('ver_carrito')
+
+@login_required
+def eliminar_del_carrito(request, item_id):
+    item = get_object_or_404(
+        CarritoItem,
+        id=item_id,
+        session_key=request.session.session_key
+    )
+    item.delete()
+    return redirect('ver_carrito')
+
+
+@login_required
+@transaction.atomic
+def comprar_whatsapp(request):
+    usuario = request.user
+    session_key = request.session.session_key
+
+    if not session_key:
+        messages.warning(request, "El carrito está vacío")
+        return redirect('ver_carrito')
+
+    # =====================================
+    # 🔒 SOLO PRODUCTOS DEL USUARIO SaaS
+    # =====================================
+    items = CarritoItem.objects.select_related(
+        'producto',
+        'variante'
+    ).filter(
+        session_key=session_key,
+        producto__usuario=usuario
+    )
+
+    if not items.exists():
+        messages.warning(request, "El carrito está vacío")
+        return redirect('ver_carrito')
+
+    # =====================================
+    # 🔢 ORDEN
+    # =====================================
+    numero = generar_numero_orden(usuario)
+
+    # =====================================
+    # ⚙️ CONFIGURACIÓN
+    # =====================================
+    aplica_iva = request.GET.get('aplica_iva') == 'on'
+    es_retenedor = request.GET.get('es_retenedor') == 'on'
+
+    valor_descuento = request.GET.get('descuento', '0')
+
+    try:
+        porcentaje_descuento = Decimal(valor_descuento)
+    except:
+        porcentaje_descuento = Decimal('0')
+
+    if porcentaje_descuento < 0:
+        porcentaje_descuento = Decimal('0')
+
+    if porcentaje_descuento > 100:
+        porcentaje_descuento = Decimal('100')
+
+    # =====================================
+    # 👤 CLIENTE
+    # =====================================
+    cliente_nombre = request.GET.get('nombre', '').strip()
+    cliente_telefono = request.GET.get('telefono', '').strip()
+    cliente_email = request.GET.get('email', '').strip()
+    cliente_ciudad = request.GET.get('ciudad', '').strip()
+    cliente_direccion = request.GET.get('direccion', '').strip()
+    cliente_nit = request.GET.get('nit', '').strip()
+
+    # =====================================
+    # 💬 MENSAJE BASE
+    # =====================================
+    mensaje = f"🛍️ Hola, quiero comprar:\n"
+    mensaje += f"🧾 Orden: {numero}\n\n"
+
+    subtotal_general = Decimal('0')
+
+    # =====================================
+    # 🔥 VALIDAR STOCK + CALCULAR
+    # =====================================
+    resumen_items = []
+
+    for item in items:
+
+        producto = item.producto
+        variante = item.variante
+        cantidad = item.cantidad or 0
+
+        # 🔒 Seguridad extra SaaS
+        if producto.usuario != usuario:
+            messages.warning(request, "Producto inválido.")
+            return redirect('ver_carrito')
+
+        # =================================
+        # STOCK VARIANTE
+        # =================================
+        if variante:
+
+            if variante.stock < cantidad:
+                messages.warning(
+                    request,
+                    f"Sin stock suficiente para {producto.nombre}"
+                )
+                return redirect('ver_carrito')
+
+        # =================================
+        # MOTOR PRECIOS
+        # =================================
+        precio, gramos = calcular_precio_producto(
+            producto,
+            cantidad
+        )
+
+        precio = Decimal(precio)
+
+        if gramos:
+            subtotal = Decimal(gramos) * precio
+            linea = f"{producto.nombre} ({gramos}g)"
+        else:
+            subtotal = Decimal(cantidad) * precio
+            linea = f"{producto.nombre} x{cantidad}"
+
+        subtotal_general += subtotal
+
+        resumen_items.append({
+            'item': item,
+            'producto': producto,
+            'variante': variante,
+            'cantidad': cantidad,
+            'precio': precio,
+            'gramos': gramos,
+            'subtotal': subtotal,
+            'linea': linea,
+        })
+
+    # =====================================
+    # 💸 DESCUENTO
+    # =====================================
+    descuento = subtotal_general * (
+        porcentaje_descuento / Decimal('100')
+    )
+
+    subtotal_con_descuento = subtotal_general - descuento
+
+    # =====================================
+    # 🧾 IMPUESTOS
+    # =====================================
+    iva = Decimal('0')
+    if aplica_iva:
+        iva = subtotal_con_descuento * Decimal('0.19')
+
+    retefuente = Decimal('0')
+    if es_retenedor:
+        retefuente = subtotal_con_descuento * Decimal('0.025')
+
+    # =====================================
+    # 🚚 ENVÍO
+    # =====================================
+    costo_envio = calcular_envio(
+        cliente_ciudad,
+        subtotal_con_descuento
+    )
+
+    total_final = (
+        subtotal_con_descuento
+        + iva
+        - retefuente
+        + costo_envio
+    )
+
+    # =====================================
+    # 📦 CREAR PEDIDO
+    # =====================================
+    pedido = Pedido.objects.create(
+        usuario=usuario,
+        numero_orden=numero,
+        total=total_final,
+
+        aplica_iva=aplica_iva,
+        porcentaje_descuento=porcentaje_descuento,
+        es_retenedor=es_retenedor,
+
+        cliente_nombre=cliente_nombre,
+        cliente_telefono=cliente_telefono,
+        cliente_email=cliente_email,
+        cliente_ciudad=cliente_ciudad,
+        cliente_direccion=cliente_direccion,
+        cliente_nit=cliente_nit,
+
+        costo_envio=costo_envio,
+    )
+
+    # =====================================
+    # 📦 GUARDAR ITEMS + DESCONTAR STOCK
+    # =====================================
+    for data in resumen_items:
+
+        item = data['item']
+        variante = data['variante']
+        subtotal = data['subtotal']
+
+        iva_item = Decimal('0')
+        if aplica_iva:
+            iva_item = subtotal * Decimal('0.19')
+
+        retefuente_item = Decimal('0')
+        if es_retenedor:
+            retefuente_item = subtotal * Decimal('0.025')
+
+        total_item = subtotal + iva_item - retefuente_item
+
+        PedidoItem.objects.create(
+            pedido=pedido,
+            producto=data['producto'],
+            variante=variante,
+            cantidad=data['cantidad'],
+            precio=data['precio'],
+            subtotal=subtotal,
+            iva=iva_item,
+            retefuente=retefuente_item,
+            total_final=total_item
+        )
+
+        # 🔥 descontar stock después de crear pedido
+        if variante:
+            variante.stock -= data['cantidad']
+            variante.save()
+
+        # 💬 línea WhatsApp
+        mensaje += (
+            f"{data['linea']} - "
+            f"${subtotal:,.0f}\n"
+        ).replace(",", ".")
+
+    # =====================================
+    # 🧾 RESUMEN FINAL
+    # =====================================
+    mensaje += f"\nSubtotal: ${subtotal_general:,.0f}".replace(",", ".")
+
+    if descuento > 0:
+        mensaje += f"\nDescuento: -${descuento:,.0f}".replace(",", ".")
+
+    if iva > 0:
+        mensaje += f"\nIVA: ${iva:,.0f}".replace(",", ".")
+
+    if retefuente > 0:
+        mensaje += f"\nReteFuente: -${retefuente:,.0f}".replace(",", ".")
+
+    if costo_envio > 0:
+        mensaje += f"\n🚚 Envío: ${costo_envio:,.0f}".replace(",", ".")
+    else:
+        mensaje += "\n🎁 Envío gratis"
+
+    mensaje += f"\n\n💰 Total: ${total_final:,.0f}".replace(",", ".")
+    mensaje += "\n🙏 Gracias por tu compra."
+
+    # =====================================
+    # 📲 WHATSAPP
+    # =====================================
+    perfil, created = Perfil.objects.get_or_create(user=usuario)
+
+    if not perfil.whatsapp:
+        messages.warning(request, "Configura tu número de WhatsApp primero")
+        return redirect('dashboard')
+
+    numero_ws = perfil.whatsapp
+
+    url = f"https://wa.me/{numero_ws}?text={quote(mensaje)}"
+
+    # =====================================
+    # 🧹 LIMPIAR CARRITO
+    # =====================================
+    items.delete()
+
+    return redirect(url)
+
+@login_required
+def comprar_directo_whatsapp(request, producto_id):
+    usuario = request.user
+
+    producto = get_object_or_404(
+        Producto,
+        id=producto_id,
+        usuario=usuario
+    )
+
+    # ===============================
+    # 🔢 DATOS SEGUROS
+    # ===============================
+    try:
+        cantidad = int(request.GET.get('cantidad', 1))
+    except:
+        cantidad = 1
+
+    if cantidad < 1:
+        cantidad = 1
+
+    color = request.GET.get('color', '').strip()
+    talla = request.GET.get('talla', '').strip()
+
+    # ===============================
+    # 💰 PRECIO INTELIGENTE
+    # ===============================
+    precio, gramos = calcular_precio_producto(
+        producto,
+        cantidad
+    )
+
+    precio = Decimal(precio)
+
+    if gramos:
+        subtotal = Decimal(gramos) * precio
+    else:
+        subtotal = Decimal(cantidad) * precio
+
+    # ===============================
+    # 📦 VALIDAR STOCK
+    # ===============================
+    if producto.tipo_venta != "gramo":
+        if producto.stock < cantidad:
+            messages.warning(
+                request,
+                "No hay suficiente stock disponible."
+            )
+            return redirect(
+                'detalle_producto',
+                id=producto.id,
+                slug=producto.slug
+            )
+
+    # ===============================
+    # 💬 MENSAJE PROFESIONAL
+    # ===============================
+    mensaje = "🛍️ Hola, quiero comprar este producto:\n\n"
+
+    mensaje += f"📌 Producto: {producto.nombre}\n"
+    mensaje += f"🔖 Ref: {producto.referencia}\n"
+
+    if gramos:
+        mensaje += f"⚖️ Peso total: {gramos} g\n"
+        mensaje += f"💰 Precio x gramo: ${precio:,.0f}\n".replace(",", ".")
+    else:
+        mensaje += f"🔢 Cantidad: {cantidad}\n"
+        mensaje += f"💰 Precio unidad: ${precio:,.0f}\n".replace(",", ".")
+
+    if color:
+        mensaje += f"🎨 Color: {color}\n"
+
+    if talla:
+        mensaje += f"📏 Talla: {talla}\n"
+
+    mensaje += f"\n💵 Total: ${subtotal:,.0f}".replace(",", ".")
+    mensaje += "\n🙏 Quedo atento."
+
+    # ===============================
+    # 📲 WHATSAPP DEL CLIENTE SaaS
+    # ===============================
+    perfil, created = Perfil.objects.get_or_create(user=usuario)
+
+    if not perfil.whatsapp:
+        messages.warning(request, "Configura tu número de WhatsApp primero")
+        return redirect('dashboard')
+
+    numero_ws = perfil.whatsapp
+
+    url = f"https://wa.me/{numero_ws}?text={quote(mensaje)}"
+
+    return redirect(url)
+
+def pagar_pedido(request):
+    session_key = request.session.session_key
+    items = CarritoItem.objects.filter(session_key=session_key)
+
+    if not items:
+        return redirect('ver_carrito')
+
+    numero = generar_numero_orden()
+
+    total = 0
+
+    for item in items:
+        precio = item.producto.precio_por_cantidad(item.cantidad)
+        subtotal = item.cantidad * precio
+        total += subtotal
+
+    pedido = Pedido.objects.create(
+        numero_orden=numero,
+        total=total,
+        estado="pendiente_pago",
+        aplica_iva=True,        
+        es_retenedor=False     
+) 
+    # 🔥 Guardar productos del pedido
+    total_pedido = Decimal('0')
+
+    for item in items:
+
+        cantidad = Decimal(str(item.cantidad))
+        precio = Decimal(str(item.producto.precio_por_cantidad(item.cantidad)))
+
+        # 🔥 BASE
+        subtotal = cantidad * precio
+
+        # 🔥 DESCUENTO POR ITEM (editable después)
+        descuento = Decimal('0')  # luego lo cambias desde admin
+
+        # 🔥 IVA
+        iva = Decimal('0')
+        if pedido.aplica_iva:
+            iva = subtotal * Decimal('0.19')
+
+        # 🔥 RETEFUENTE
+        retefuente = Decimal('0')
+        if pedido.es_retenedor:
+            retefuente = subtotal * Decimal('0.025')
+
+        # 🔥 TOTAL FINAL ITEM
+        total_item = subtotal + iva - retefuente - descuento
+
+        # 🔥 ACUMULAR TOTAL REAL
+        total_pedido += total_item
+
+    PedidoItem.objects.create(
+            pedido=pedido,
+    producto=item.producto,
+    variante=item.variante,
+    cantidad=int(cantidad),
+                precio=precio,
+                subtotal=subtotal,
+                iva=iva,
+    retefuente=retefuente,
+    total_final=total_item
+    )
+
+    pedido.total = total_pedido
+    pedido.save()
+
+
+    return render(request, 'pago.html', {
+        'pedido': pedido
+    }) 
+
+def confirmar_pago(request, pedido_id):
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        usuario=request.user
+    )
+
+    pedido.estado = "pagado"
+    pedido.save()
+
+    return render(request, 'pago_confirmado.html', {
+        'pedido': pedido
+    })
+
+def confirmar_pago_publico(request, token):
+    pedido = get_object_or_404(Pedido, token_publico=token)
+
+    pedido.estado = "confirmacion_pago"
+    pedido.save()
+
+    return redirect('factura_publica', token=token)
+
+def pagar_wompi(request, pedido_id):
+    pedido = Pedido.objects.get(id=pedido_id)
+    return crear_checkout_wompi(request, pedido)
+
+
+def crear_checkout_wompi(request, pedido):
+
+    redirect_url = request.build_absolute_uri(f'/pago-exitoso/{pedido.id}/')
+    redirect_url_encoded = quote(redirect_url, safe='')
+
+    checkout_url = (
+        "https://checkout.wompi.co/p/"
+        f"?public-key={settings.WOMPI_PUBLIC_KEY}"
+        f"&currency=COP"
+        f"&amount-in-cents={int(pedido.total * 100)}"
+        f"&reference={pedido.numero_orden}"
+        f"&redirect-url={redirect_url_encoded}"
+    )
+
+    print("URL FINAL:", checkout_url)
+
+    return redirect(checkout_url)
+
+def pagar_con_mercadopago(request, token):
+    pedido = get_object_or_404(Pedido, token_publico=token)
+
+    sdk = mercadopago.SDK("APP_USR_xxx")
+
+    preference_data = {
+        "items": [
+            {
+                "title": f"Pedido #{pedido.numero_orden}",
+                "quantity": 1,
+                "currency_id": "COP",
+                "unit_price": float(pedido.total),
+            }
+        ],
+        "back_urls": {
+            "success": request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/"),
+        },
+        "auto_return": "approved",
+    }
+
+    preference = sdk.preference().create(preference_data)
+
+    return redirect(preference["response"]["init_point"])
+
+def pago_exitoso(request, token):
+    pedido = get_object_or_404(Pedido, token_publico=token)
+
+    pedido.estado = "pagado"
+    pedido.saldo_pendiente = 0
+    pedido.save()
+
+    return redirect('factura_publica', token=token)
+
+@login_required
+def lista_pedidos(request):
+    pedidos = Pedido.objects.filter(
+        usuario=request.user
+    ).order_by('-fecha')
+
+    hoy = timezone.now().date()
+
+    for p in pedidos:
+        # 🔥 estado visual pro
+        if p.tipo_pago == 'credito' and p.fecha_limite:
+            if p.saldo_pendiente > 0 and p.fecha_limite < hoy:
+                p.estado_visual = 'vencido'
+            elif p.saldo_pendiente > 0:
+                p.estado_visual = 'pendiente'
+            else:
+                p.estado_visual = 'pagado'
+        else:
+            p.estado_visual = 'pagado'
+
+    return render(request, 'lista_pedidos.html', {
+        'pedidos': pedidos
+    })
+
+@login_required
+def detalle_pedido(request, pedido_id):
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        usuario=request.user
+    )
+
+    items = pedido.items.select_related(
+        'producto',
+        'variante'
+    ).all()
+
+    # ===============================
+    # 🔢 TOTALES
+    # ===============================
+    subtotal = sum(Decimal(item.subtotal or 0) for item in items)
+    iva_total = sum(Decimal(item.iva or 0) for item in items)
+    descuento_total = sum(Decimal(item.descuento or 0) for item in items)
+    retefuente_total = sum(Decimal(item.retefuente or 0) for item in items)
+
+    # 🔥 CORREGIDO
+    envio = Decimal(pedido.costo_envio or 0)
+
+    total_final = Decimal(pedido.total or 0)
+
+    # 🔗 PDF
+    link_pdf = request.build_absolute_uri(
+        reverse('pedido_pdf', args=[pedido.id])
+    )
+
+    # 🔥 FUTURO SAAS
+    link_publico = request.build_absolute_uri(
+        reverse('factura_publica', args=[pedido.token_publico])
+)
+
+    # 📲 WHATSAPP
+    whatsapp_url = generar_link_whatsapp(request, pedido)
+
+    # ===============================
+    # 💳 CRÉDITO
+    # ===============================
+    hoy = timezone.now().date()
+
+    estado_credito = None
+
+    if pedido.tipo_pago == 'credito':
+        if pedido.saldo_pendiente <= 0:
+            estado_credito = 'pagado'
+        elif pedido.fecha_limite and pedido.fecha_limite < hoy:
+            estado_credito = 'vencido'
+        else:
+            estado_credito = 'pendiente'
+
+    # ===============================
+    # 📜 ABONOS
+    # ===============================
+    abonos = pedido.abonos.all().order_by('-fecha') if hasattr(pedido, 'abonos') else []
+    total_abonado = sum(a.monto for a in abonos) if abonos else 0
+
+    # ===============================
+    # 📦 CONTEXT
+    # ===============================
+    perfil = request.user.perfil
+    context = {
+        'pedido': pedido,
+        'items': items,
+
+        'subtotal': subtotal,
+        'iva_total': iva_total,
+        'descuento_total': descuento_total,
+        'retefuente_total': retefuente_total,
+        'envio': envio,
+        'total_final': total_final,
+
+        'link_pdf': link_pdf,
+        'link_publico': link_publico,
+
+        'whatsapp_url': whatsapp_url,
+
+        'estado_credito': estado_credito,
+        'abonos': abonos,
+        'total_abonado': total_abonado,
+
+        # 🔥 EMPRESA (IMPORTANTE)
+        'empresa_nombre': perfil.nombre_tienda,
+        'empresa_nit': perfil.nit,
+        'empresa_telefono': perfil.whatsapp,
+        'empresa_direccion': perfil.direccion,
+
+        # 🔥 QR (temporal funcional)
+        'qr_pago_url': link_pdf,
+}
+
+    return render(
+        request,
+        'detalle_pedido.html',
+        context
+    )
+
+def pedido_pdf(request, pedido_id):
+
+    pedido = get_object_or_404(Pedido, token_publico=pedido_id)
+    items = pedido.items.all()
+
+    perfil = pedido.usuario.perfil
+
+    if not perfil.activa:
+        return HttpResponse("Cuenta inactiva")
+
+    if perfil.logo:
+        logo_path = perfil.logo.path
+    else:
+        logo_path = os.path.join(settings.BASE_DIR, 'static/img/logo.png')
+
+    subtotal = sum(item.subtotal or 0 for item in items)
+    iva_total = sum(item.iva or 0 for item in items)
+    descuento_total = sum(item.descuento or 0 for item in items)
+    retefuente_total = sum(item.retefuente or 0 for item in items)
+
+    envio = pedido.costo_envio or 0
+    total_final = pedido.total
+
+    context = {
+        'pedido': pedido,
+        'items': items,
+        'cliente': pedido.cliente,
+
+        'empresa_nombre': perfil.nombre_tienda,
+        'empresa_nit': perfil.nit,
+        'empresa_telefono': perfil.whatsapp,
+        'empresa_direccion': perfil.direccion,
+
+        'logo_path': logo_path,
+
+        'color_primario': perfil.color_primario,
+        'color_secundario': perfil.color_secundario,
+
+        'subtotal': subtotal,
+        'iva_total': iva_total,
+        'descuento_total': descuento_total,
+        'retefuente_total': retefuente_total,
+        'envio': envio,
+        'total_final': total_final,
+    }
+
+    template = get_template('pedido_pdf.html')
+    html = template.render(context)
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="pedido_{pedido.numero_orden}.pdf"'
+
+    pisa.CreatePDF(html, dest=response)
+
+    return response
+
+@login_required
+def gastos(request):
+
+    gastos = Gasto.objects.filter(usuario=request.user).order_by('-fecha')
+
+    form = GastoForm(request.POST or None)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            gasto = form.save(commit=False)
+            gasto.usuario = request.user
+            gasto.save()
+            return redirect('gastos')
+
+    # 🔥 TOTAL GASTOS
+    total_gastos = gastos.aggregate(total=Sum('monto'))['total'] or 0
+
+    context = {
+        'form': form,
+        'gastos': gastos,
+        'total_gastos': total_gastos  # 👈 AQUÍ
+    }
+
+    return render(request, 'gastos.html', context)
+
+@login_required
+def lista_gastos(request):
+    if not request.user.is_staff:
+        raise Http404()  # 🔥 oculta completamente la página
+
+    gastos = Gasto.objects.filter(usuario=request.user)
+
+    return render(request, 'lista_gastos.html', {
+        'gastos': gastos
+    })
+
+@login_required
+def registrar_abono(request, pedido_id):
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        usuario=request.user
+    )
+
+    if request.method == 'POST':
+        monto = request.POST.get('monto')
+
+        if monto:
+            monto = float(monto)
+
+            Abono.objects.create(
+                pedido=pedido,
+                monto=monto
+            )
+
+            # 🔥 RESTAR AL SALDO
+            pedido.saldo_pendiente -= monto
+
+            # 🔥 SI YA PAGÓ TODO
+            if pedido.saldo_pendiente <= 0:
+                pedido.saldo_pendiente = 0
+                pedido.estado = "pagado"
+
+            pedido.save()
+
+            messages.success(request, "Abono registrado correctamente")
+
+    return redirect('detalle_pedido', pedido_id=pedido.id)
+
+@login_required
+def cobrar_cliente(request, cliente_id):
+    cliente = get_object_or_404(
+        Cliente,
+        id=cliente_id,
+        usuario=request.user
+    )
+
+    pedidos = Pedido.objects.filter(
+        cliente_nombre=cliente.nombre,
+        usuario=request.user,
+        tipo_pago='credito',
+        saldo_pendiente__gt=0
+    )
+
+    total_deuda = sum(p.saldo_pendiente for p in pedidos)
+
+    mensaje = f"Hola {cliente.nombre},\n\n"
+    mensaje += "Te recordamos que tienes una factura pendiente:\n\n"
+
+    for p in pedidos:
+        mensaje += f"🧾 {p.numero_orden} - ${p.saldo_pendiente:,.0f}\n".replace(",", ".")
+
+    mensaje += f"\n💰 Total pendiente: ${total_deuda:,.0f}".replace(",", ".")
+    mensaje += "\n\nPor favor realizar el pago lo antes posible 🙏"
+
+    telefono = ''.join(filter(str.isdigit, cliente.telefono))
+
+    if not telefono.startswith('57'):
+        telefono = f"57{telefono}"
+
+    url = f"https://wa.me/{telefono}?text={quote(mensaje)}"
+
+    return redirect(url)
+
+@login_required
+def cobrar_whatsapp(request, pedido_id):
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        usuario=request.user
+    )
+
+    hoy = timezone.now().date()
+
+    # 🔥 VALIDAR QUE DEBE
+    if pedido.saldo_pendiente <= 0:
+        messages.info(request, "Este pedido ya está pago")
+        return redirect('detalle_pedido', pedido_id=pedido.id)
+
+    # 🔥 MENSAJE AUTOMÁTICO PRO
+    mensaje = (
+        f"Hola {pedido.cliente_nombre},\n\n"
+        f"Te escribimos de {request.user.perfil.nombre_tienda} 💎\n\n"
+        f"🧾 Factura: {pedido.numero_orden}\n"
+        f"📅 Vencimiento: {pedido.fecha_limite}\n"
+        f"💰 Saldo pendiente: ${pedido.saldo_pendiente:,.0f}\n\n"
+        f"⚠️ Esta factura se encuentra vencida.\n"
+        f"Agradecemos tu pago lo antes posible.\n\n"
+        f"Si ya realizaste el pago, por favor ignora este mensaje 🙏"
+    ).replace(",", ".")
+
+    # 🔥 LIMPIAR TELÉFONO
+    telefono = ''.join(filter(str.isdigit, pedido.cliente_telefono or ""))
+
+    if not telefono:
+        messages.warning(request, "Cliente sin teléfono válido")
+        return redirect('detalle_pedido', pedido_id=pedido.id)
+
+    if not telefono.startswith('57'):
+        telefono = f"57{telefono}"
+
+    url = f"https://wa.me/{telefono}?text={quote(mensaje)}"
+
+    return redirect(url)
+
+@login_required
+def cobrar_moroso(request, cliente_id):
+    cliente = get_object_or_404(Cliente, id=cliente_id, usuario=request.user)
+
+    pedidos = Pedido.objects.filter(
+        cliente=cliente,
+        saldo_pendiente__gt=0
+    ).order_by('fecha_limite')
+
+    if not pedidos:
+        return redirect('cartera_clientes')
+
+    total = 0
+    mensaje = f"Hola {cliente.nombre},\n\nTienes las siguientes facturas pendientes:\n\n"
+
+    for p in pedidos:
+        mensaje += f"🧾 Pedido #{p.id} → ${p.saldo_pendiente}\n"
+        total += p.saldo_pendiente
+
+    mensaje += f"\n💰 Total: ${total}\n"
+    mensaje += "Por favor realizar el pago 🙏"
+
+    telefono = ''.join(filter(str.isdigit, cliente.telefono or ""))
+
+    if not telefono.startswith('57'):
+        telefono = f"57{telefono}"
+
+    url = f"https://wa.me/{telefono}?text={quote(mensaje)}"
+
+    return redirect(url)
+
+
+@login_required
+def cartera_clientes(request):
+    hoy = timezone.now().date()
+
+    pedidos = Pedido.objects.filter(
+        usuario=request.user,
+        tipo_pago='credito',
+        saldo_pendiente__gt=0,
+        estado__in=['pendiente', 'vencido']
+    ).order_by('fecha_limite')
+
+    cartera = []
+
+    for p in pedidos:
+        dias_mora = 0
+
+        if p.fecha_limite and p.fecha_limite < hoy:
+            dias_mora = (hoy - p.fecha_limite).days
+
+        # estado visual inteligente
+        estado_visual = 'pendiente'
+
+        if dias_mora > 0:
+            estado_visual = 'vencido'
+
+        # 🔥 link directo factura pública
+        link_pago = request.build_absolute_uri(f"/factura/{p.token_publico}/")
+
+        # 📲 mensaje automático whatsapp
+        mensaje = f"Hola {p.cliente_nombre}, tienes un saldo pendiente de ${p.saldo_pendiente}. Puedes pagar aquí: {link_pago}"
+        
+        mensaje_codificado = urllib.parse.quote(mensaje)
+
+        whatsapp_link: f"https://wa.me/{p.cliente_telefono}?text={mensaje}"
+
+        cartera.append({
+            'pedido': p,
+            'cliente': p.cliente_nombre,
+            'telefono': p.cliente_telefono,
+            'saldo': p.saldo_pendiente,
+            'fecha_limite': p.fecha_limite,
+            'dias_mora': dias_mora,
+            'estado': estado_visual,
+            'link_pago': link_pago,
+            'whatsapp': whatsapp_link, 
+            
+        })
+
+    morosos_total = sum(c['saldo'] for c in cartera if c['estado'] == 'vencido')
+    morosos_count = sum(1 for c in cartera if c['estado'] == 'vencido')
+
+    return render(request, 'cartera.html', {
+        'cartera': cartera,
+        'morosos_total': morosos_total,
+        'morosos_count': morosos_count
+})
+
+
+def factura_publica(request, token):
+    pedido = get_object_or_404(Pedido, token_publico=token)
+
+    items = pedido.items.all()
+    perfil = pedido.usuario.perfil
+
+    subtotal = sum(item.subtotal for item in items)
+    iva_total = sum(item.iva or 0 for item in items)
+    descuento_total = sum(item.descuento or 0 for item in items)
+    retefuente_total = sum(item.retefuente or 0 for item in items)
+
+    envio = pedido.costo_envio or 0
+    total_final = pedido.total
+
+    # 🔥 ESTADO
+    hoy = timezone.now().date()
+
+    if pedido.saldo_pendiente <= 0:
+        estado = "pagado"
+    elif pedido.fecha_limite and pedido.fecha_limite < hoy:
+        estado = "vencido"
+    else:
+        estado = "pendiente"
+
+    # 🔥 WHATSAPP
+    mensaje = f"Hola, quiero pagar el pedido #{pedido.numero_orden} por valor de ${total_final}"
+    whatsapp_url = f"https://wa.me/{perfil.whatsapp}?text={mensaje}"
+
+    # 🔥 QR (puedes cambiar link por Stripe / MercadoPago)
+    qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={whatsapp_url}"
+
+    context = {
+        'pedido': pedido,
+        'items': items,
+
+        'empresa_nombre': perfil.nombre_tienda,
+        'empresa_nit': perfil.nit,
+        'empresa_telefono': perfil.whatsapp,
+
+        'color_primario': perfil.color_primario,
+        'color_secundario': perfil.color_secundario,
+
+        'subtotal': subtotal,
+        'iva_total': iva_total,
+        'descuento_total': descuento_total,
+        'retefuente_total': retefuente_total,
+        'envio': envio,
+        'total_final': total_final,
+
+        'whatsapp_url': whatsapp_url,
+        'qr_url': qr_url,
+
+        'estado': estado,
+    }
+
+    return render(request, 'factura_publica.html', context)
+
+@login_required
+def generar_factura(request, pedido_id):
+    pedido = get_object_or_404(
+        Pedido,
+        id=pedido_id,
+        usuario=request.user
+    )
+
+    items = pedido.items.select_related('producto', 'variante').all()
+
+    from io import BytesIO
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+
+    # ==================================
+    # CONFIG GENERAL
+    # ==================================
+    PAGE_WIDTH, PAGE_HEIGHT = letter
+    MARGIN_LEFT = 50
+    MARGIN_RIGHT = 550
+    LINE_HEIGHT = 18
+
+    # ==================================
+    # HEADER
+    # ==================================
+    correo_empresa = (
+    getattr(request.user.perfil, 'email_empresa', None)
+    or request.user.email
+    or 'correo@empresa.com'
+)
+
+    def draw_header():
+        y = 760
+
+        # ==================================
+        # 🔥 CORREO DINÁMICO SaaS
+        # ==================================
+        email_empresa = (
+        getattr(request.user.perfil, 'email_empresa', None)
+            or request.user.email
+            or 'correo@empresa.com'
+        )
+        # ==================================
+        # EMPRESA
+        # ==================================
+
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(50, y, request.user.perfil.nombre_tienda or "Mi Empresa")
+
+        p.setFont("Helvetica", 9)
+        p.drawString(50, y - 15, f"NIT: {request.user.perfil.nit or ''}")
+        p.drawString(50, y - 28, f"Tel: {request.user.perfil.whatsapp or ''}")
+        p.drawString(50, y - 41, f"Email: {email_empresa}")
+        p.drawString(50, y - 54, f"{request.user.perfil.ciudad or ''}")
+
+        # FACTURA DERECHA
+        p.setFont("Helvetica-Bold", 11)
+        p.drawString(390, y, "FACTURA")
+
+        p.setFont("Helvetica", 9)
+        p.drawString(390, y - 18, f"N° {pedido.numero_orden}")
+
+        fecha = pedido.fecha.strftime('%Y-%m-%d') if pedido.fecha else ''
+        p.drawString(390, y - 33, f"Fecha: {fecha}")
+
+        if getattr(pedido, "es_credito", False):
+            p.drawString(390, y - 48, "Pago: Crédito")
+        else:
+            p.drawString(390, y - 48, "Pago: Contado")
+
+        p.line(50, y - 65, 550, y - 65)
+
+        # CLIENTE
+        yc = y - 85
+
+        p.drawString(50, yc, f"Cliente: {pedido.cliente_nombre or ''}")
+        p.drawString(50, yc - 14, f"NIT: {pedido.cliente_nit or ''}")
+        p.drawString(50, yc - 28, f"Dirección: {pedido.cliente_direccion or ''}")
+        p.drawString(50, yc - 42, f"Ciudad: {pedido.cliente_ciudad or ''}")
+        p.drawString(50, yc - 56, f"Teléfono: {pedido.cliente_telefono or ''}")
+
+    # ==================================
+    # FOOTER
+    # ==================================
+    def draw_footer():
+        p.line(50, 60, 550, 60)
+        p.setFont("Helvetica", 8)
+        p.drawString(50, 45, "Gracias por su compra 💎")
+        p.drawRightString(550, 45, f"Factura {pedido.numero_orden}")
+
+    # ==================================
+    # TABLA
+    # ==================================
+    def draw_table_header(y):
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(50, y, "Producto")
+        p.drawString(250, y, "Cant.")
+        p.drawString(310, y, "Precio")
+        p.drawString(410, y, "Total")
+        p.line(50, y - 5, 550, y - 5)
+        return y - 20
+
+    # ==================================
+    # NUEVA PAGINA
+    # ==================================
+    def nueva_pagina():
+        p.showPage()
+        draw_header()
+        return draw_table_header(560)
+
+    # ==================================
+    # INICIO
+    # ==================================
+    draw_header()
+    y = draw_table_header(560)
+
+    subtotal_general = Decimal('0')
+    iva_total = Decimal('0')
+    descuento_total = Decimal('0')
+    retefuente_total = Decimal('0')
+
+    # ==================================
+    # ITEMS
+    # ==================================
+    for item in items:
+
+        if y < 100:
+            draw_footer()
+            y = nueva_pagina()
+
+        nombre = item.producto.nombre[:28]
+
+        if getattr(item, 'gramos', None):
+            cantidad = f"{item.gramos}g"
+        else:
+            cantidad = str(item.cantidad)
+
+        precio = Decimal(item.precio or 0)
+        total_item = Decimal(item.total_final or item.subtotal or 0)
+
+        p.setFont("Helvetica", 9)
+
+        p.drawString(50, y, nombre)
+        p.drawString(250, y, cantidad)
+        p.drawRightString(390, y, f"${precio:,.0f}".replace(",", "."))
+        p.drawRightString(540, y, f"${total_item:,.0f}".replace(",", "."))
+
+        subtotal_general += Decimal(item.subtotal or 0)
+        iva_total += Decimal(item.iva or 0)
+        descuento_total += Decimal(item.descuento or 0)
+        retefuente_total += Decimal(item.retefuente or 0)
+
+        y -= LINE_HEIGHT
+
+    # ==================================
+    # TOTALES
+    # ==================================
+    y -= 20
+
+    if y < 160:
+        draw_footer()
+        y = nueva_pagina()
+
+    p.setFont("Helvetica", 10)
+
+    p.drawString(340, y, "Subtotal:")
+    p.drawRightString(540, y, f"${subtotal_general:,.0f}".replace(",", "."))
+
+    if iva_total > 0:
+        y -= 15
+        p.drawString(340, y, "IVA:")
+        p.drawRightString(540, y, f"${iva_total:,.0f}".replace(",", "."))
+
+    if retefuente_total > 0:
+        y -= 15
+        p.drawString(340, y, "ReteFuente:")
+        p.drawRightString(540, y, f"-${retefuente_total:,.0f}".replace(",", "."))
+
+    if descuento_total > 0:
+        y -= 15
+        p.drawString(340, y, "Descuento:")
+        p.drawRightString(540, y, f"-${descuento_total:,.0f}".replace(",", "."))
+
+    y -= 15
+    p.drawString(340, y, "Envío:")
+
+    if Decimal(getattr(pedido, 'costo_envio', 0)) == 0:
+        p.drawRightString(540, y, "GRATIS")
+    else:
+        p.drawRightString(
+            540,
+            y,
+            f"${pedido.costo_envio:,.0f}".replace(",", ".")
+        )
+
+    y -= 22
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(340, y, "TOTAL:")
+    p.drawRightString(
+        540,
+        y,
+        f"${Decimal(pedido.total):,.0f}".replace(",", ".")
+    )
+
+    draw_footer()
+
+    # ==================================
+    # FINALIZAR PDF
+    # ==================================
+    p.save()
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    # ==================================
+    # ENVIAR EMAIL
+    # ==================================
+    if pedido.cliente_email:
+        try:
+            email = EmailMessage(
+                subject=f"Factura {pedido.numero_orden}",
+                body="Gracias por tu compra 💎 Adjuntamos tu factura.",
+                from_email=correo_empresa,
+                to=[pedido.cliente_email]
+        )
+
+            email.attach(
+                f"factura_{pedido.numero_orden}.pdf",
+                pdf,
+                'application/pdf'
+        )
+
+            email.send()
+
+        except Exception as e:
+            print("Error enviando correo:", e)
+
+    # ==================================
+    # RESPUESTA
+    # ==================================
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = (
+        f'inline; filename="factura_{pedido.numero_orden}.pdf"'
+    )
+
+    return response
+
+@login_required
+def whatsapp_segmento(request):
+    usuario = request.user
+    tipo = request.GET.get('tipo', '').strip()
+
+    hoy = timezone.localdate()
+    hace_30 = timezone.now() - timedelta(days=30)
+
+    # =====================================
+    # 🔒 BASE SaaS MULTIUSUARIO
+    # =====================================
+    clientes = Cliente.objects.filter(
+        usuario=usuario
+    )
+
+    # =====================================
+    # 🎯 FILTROS
+    # =====================================
+    if tipo == 'vip':
+        clientes = clientes.filter(
+            total_compras__gte=500000
+        )
+
+    elif tipo == 'nuevos':
+        clientes = clientes.filter(
+            fecha_creacion__date=hoy
+        )
+
+    elif tipo == 'dormidos':
+        clientes = clientes.filter(
+            pedido_fecha_lt=hace_30
+        ).distinct()
+
+    # =====================================
+    # 💬 MENSAJES PROFESIONALES
+    # =====================================
+    mensajes = {
+        'vip': "💎 Cliente VIP, tienes acceso a piezas exclusivas. Escríbenos 👇",
+        'nuevos': "🆕 Bienvenido a PG Joyas, tenemos algo especial para ti 💎",
+        'dormidos': "😴 Te extrañamos. Tenemos una oferta especial para ti 💎",
+    }
+
+    mensaje = mensajes.get(
+        tipo,
+        "✨ Hola, tenemos novedades en PG Joyas 💎"
+    )
+
+    # =====================================
+    # 📲 CLIENTE DESTINO
+    # =====================================
+    cliente = clientes.exclude(
+        telefono__isnull=True
+    ).exclude(
+        telefono=''
+    ).first()
+
+    if not cliente:
+        messages.warning(
+            request,
+            "No hay clientes disponibles para ese segmento."
+        )
+        return redirect('dashboard')
+
+    # =====================================
+    # ☎️ LIMPIAR TELÉFONO
+    # =====================================
+    telefono = ''.join(
+        filter(str.isdigit, cliente.telefono)
+    )
+
+    if not telefono:
+        messages.warning(
+            request,
+            "El cliente no tiene teléfono válido."
+        )
+        return redirect('dashboard')
+
+    # Colombia por defecto si no trae prefijo
+    if not telefono.startswith('57'):
+        telefono = f"57{telefono}"
+
+    # =====================================
+    # 🧠 PERSONALIZAR MENSAJE
+    # =====================================
+    texto_final = (
+        f"Hola {cliente.nombre},\n\n"
+        f"{mensaje}\n\n"
+        f"📲 PG Joyas"
+    )
+
+    # =====================================
+    # 🚀 REDIRECT WHATSAPP
+    # =====================================
+    url = f"https://wa.me/{telefono}?text={quote(texto_final)}"
+
+    return redirect(url)
+# Create your views here.

@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div style="max-width:900px; margin:auto; font-family:Arial;">
+
+<!-- 🧾 HEADER -->
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+
+    <div>
+        <img src="{% static 'img/logo.png' %}" style="max-height:70px;">
+    </div>
+
+    <div style="text-align:right;">
+        <h3 style="margin:0;">{{ empresa_nombre }}</h3>
+        <small>NIT: {{ empresa_nit }}</small><br>
+        <small>{{ empresa_telefono }}</small><br>
+        <small>{{ empresa_direccion }}</small>
+    </div>
+
+</div>
+
+<hr>
+
+<!-- 🧾 INFO PEDIDO -->
+<h2 style="text-align:center;">📦 Pedido #{{ pedido.numero_orden }}</h2>
+
+<div style="display:flex; justify-content:space-between; flex-wrap:wrap; margin-bottom:15px;">
+
+    <div>
+        <strong>Cliente:</strong><br>
+        {{ pedido.cliente_nombre|default:"No definido" }}<br>
+        {{ pedido.cliente_telefono|default:"Sin teléfono" }}
+    </div>
+
+    <div style="text-align:right;">
+        <strong>Estado:</strong> {{ pedido.estado }}<br>
+        <strong>Fecha:</strong> {{ pedido.fecha|date:"d/m/Y" }}
+    </div>
+
+</div>
+
+<!-- 🔥 BOTONES -->
+<div style="display:flex; gap:10px; flex-wrap:wrap; margin:20px 0;">
+
+<a href="{% url 'pedido_pdf' pedido.id %}" target="_blank"
+style="flex:1; padding:12px; background:#28a745; color:white; border-radius:8px; text-align:center; text-decoration:none;">
+📄 Descargar PDF
+</a>
+
+<a href="{{ link_publico }}" target="_blank"
+style="flex:1; padding:12px; background:#007bff; color:white; border-radius:8px; text-align:center; text-decoration:none;">
+🌐 Factura pública
+</a>
+
+<a href="{{ whatsapp_url }}" target="_blank"
+style="flex:1; padding:12px; background:#25D366; color:white; border-radius:8px; text-align:center; text-decoration:none;">
+ 📲 Enviar factura por WhatsApp
+</a>
+
+<a href="{% url 'pagar_wompi' pedido.id %}"
+style="background:#6f42c1;color:white;padding:10px 15px;border-radius:8px;">
+💳 Pagar con Wompi
+</a>
+
+<button onclick="window.print()"
+style="flex:1; padding:12px; background:#343a40; color:white; border:none; border-radius:8px;">
+🖨️ Imprimir
+</button>
+
+</div>
+
+<hr>
+
+<!-- 🛍️ PRODUCTOS -->
+<h3>🛍️ Productos</h3>
+
+<table style="width:100%; border-collapse:collapse;">
+<tr style="background:#f5f5f5;">
+    <th>Producto</th>
+    <th>Cantidad</th>
+    <th>Precio</th>
+    <th>Subtotal</th>
+</tr>
+
+{% for item in items %}
+<tr>
+    <td>{{ item.producto.nombre }}</td>
+    <td>{{ item.cantidad }}</td>
+    <td>${{ item.precio }}</td>
+    <td>${{ item.subtotal }}</td>
+</tr>
+{% endfor %}
+</table>
+
+<hr>
+
+{% if envio > 0 %}
+<p><strong>🚚 Envío:</strong> ${{ envio }}</p>
+{% else %}
+<p><strong>🚚 Envío:</strong> GRATIS</p>
+{% endif %}
+
+<!-- 💰 TOTALES -->
+<p><strong>Subtotal:</strong> ${{ subtotal }}</p>
+<p><strong>IVA:</strong> ${{ iva_total }}</p>
+<p><strong>Descuento:</strong> ${{ descuento_total }}</p>
+<p><strong>Retefuente:</strong> ${{ retefuente_total }}</p>
+
+<h2 style="color:#28a745;">
+${{ total_final|floatformat:0 }}
+</h2>
+
+<!-- 🔳 QR PAGO -->
+<div style="text-align:center; margin-top:20px;">
+    <p>Escanea para pagar</p>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ qr_pago_url }}">
+</div>
+
+<div style="text-align:center; margin-top:15px;">
+
+    <a href="{{ link_pdf }}" target="_blank"
+    style="
+        display:inline-block;
+        background:#28a745;
+        color:white;
+        padding:12px 18px;
+        border-radius:8px;
+        text-decoration:none;
+        font-weight:bold;
+    ">
+        📄 Descargar PDF
+    </a>
+
+</div>
+
+<!-- 💳 CRÉDITO -->
+{% if pedido.tipo_pago == 'credito' %}
+<div style="margin-top:20px; padding:15px; background:#fff3cd; border-radius:10px;">
+
+<h3>💳 Venta a crédito</h3>
+
+<p><strong>Saldo:</strong> ${{ pedido.saldo_pendiente|default:0 }}</p>
+<p><strong>Fecha límite:</strong> {{ pedido.fecha_limite|default:"No definida" }}</p>
+
+{% if pedido.saldo_pendiente > 0 %}
+<p style="color:red;">🔴 Pendiente</p>
+{% else %}
+<p style="color:green;">✅ Pagado</p>
+{% endif %}
+
+</div>
+{% endif %}
+
+<!-- 💰 ABONOS -->
+{% if abonos %}
+<div style="margin-top:20px; padding:15px; background:#f8f9fa; border-radius:10px;">
+
+<h4>Historial de abonos</h4>
+
+<table style="width:100%;">
+<tr>
+    <th>Fecha</th>
+    <th>Monto</th>
+</tr>
+
+{% for abono in abonos %}
+<tr>
+    <td>{{ abono.fecha|date:"d/m/Y" }}</td>
+    <td>${{ abono.monto }}</td>
+</tr>
+{% endfor %}
+
+</table>
+
+</div>
+{% endif %}
+
+<hr>
+
+<!-- 🧾 FOOTER -->
+<div style="text-align:center; font-size:12px; color:#777; margin-top:20px;">
+    Pedido #{{ pedido.numero_orden }}<br>
+    Gracias por tu compra 💎
+</div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% load moneda %}
+{% block content %}
+
+<h2>🛒 Mi carrito</h2>
+
+{% if total_articulos < 6 %}
+
+<div style="background:#fff3cd;padding:10px;margin-bottom:10px;border-radius:5px;">
+🛒 Te faltan <b>{{ faltan_semi }}</b> piezas para <b>precio Semi-Mayorista</b>.<br>
+🛒 Y <b>{{ faltan_mayor }}</b> piezas para <b>precio Mayorista</b>.
+</div>
+
+{% elif total_articulos < 12 %}
+
+<div style="background:#d1ecf1;padding:10px;margin-bottom:10px;border-radius:5px;">
+✨ Ya tienes <b>precio Semi-Mayorista</b>.<br>
+Te faltan <b>{{ faltan_mayor }}</b> piezas para <b>precio Mayorista</b>.
+</div>
+
+{% else %}
+
+<div style="background:#d4edda;padding:10px;margin-bottom:10px;border-radius:5px;">
+🎉 ¡Precio Mayorista activado!
+</div>
+
+{% endif %}
+
+{% if items %}
+
+<form method="GET" action="{% url 'comprar_whatsapp' %}">  
+<table style="width:100%; border-collapse:collapse; margin-top:20px;">
+<thead>
+<tr style="border-bottom:2px solid #ddd;">
+<th>Producto</th>
+<th>Precio</th>
+<th>Cantidad</th>
+<th>Subtotal</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+    </form>
+{% for item in items %}
+<tr style="border-bottom:1px solid #eee;">
+<td style="padding:10px;">
+    <img src="{{ item.producto.imagen_principal.url }}" width="60" style="border-radius:6px;">
+    <br>
+    {{ item.producto.nombre }}
+    <br>
+
+    {% if item.variante %}
+    {% if item.variante.color %}
+        <br><small>Color: {{ item.variante.color }}</small>
+    {% endif %}
+
+    {% if item.variante.talla %}
+        <br><small>Talla: {{ item.variante.talla }}</small>
+    {% endif %}
+{% else %}
+    {% if item.color %}
+        <br><small>Color: {{ item.color }}</small>
+    {% endif %}
+
+    {% if item.talla %}
+        <br><small>Talla: {{ item.talla }}</small>
+
+    {% endif %}
+{% endif %}
+    <!-- 🔥 STOCK INTELIGENTE -->
+    {% if item.producto.stock > 10 %}
+        <small style="color:green; font-weight:bold;">
+        ✅ Disponible
+        </small>
+
+    {% elif item.producto.stock > 3 %}
+        <small style="color:orange; font-weight:bold;">
+        ⚠ Quedan {{ item.producto.stock }} unidades
+        </small>
+
+    {% elif item.producto.stock > 0 %}
+        <small style="color:red; font-weight:bold;">
+        🔥 ¡Solo quedan {{ item.producto.stock }}!
+        </small>
+
+    {% else %}
+        <small style="color:red; font-weight:bold;">
+        ❌ Agotado
+        </small>
+    {% endif %}
+
+    <br>
+
+    <small style="color:#777;">
+        Ref: {{ item.producto.referencia }}
+    </small>
+</td>
+
+<td>
+    <!-- PRECIO BASE (tachado correctamente) -->
+    <span style="text-decoration:line-through; color:#999;">
+        {% if item.producto.tipo_venta == "gramo" %}
+            $ {{ item.producto.precio_por_gramo_detal|default:0|moneda }}
+        {% else %}
+            $ {{ item.producto.precio_detal|default:0|moneda }}
+        {% endif %}
+    </span>
+    <br>
+
+    <!-- PRECIO APLICADO (backend manda el correcto) -->
+    <span style="color:#0a7; font-weight:bold;">
+        $ {{ item.precio_aplicado|default:0|moneda }}
+    </span>
+
+    <br>
+    <small>
+
+        <!-- NIVEL DE PRECIO -->
+        {{ item.tipo_precio }}
+
+        <br>
+
+        <!-- GRAMOS O UNIDADES -->
+        {% if item.producto.tipo_venta == "gramo" %}
+            {{ item.total_gramos|default:0 }} g
+        {% else %}
+            {{ item.cantidad }} unidades
+        {% endif %}
+
+        <br>
+
+        <!-- SUBTOTAL -->
+        Subtotal: $ {{ item.subtotal_calculado|default:0|moneda }}
+
+        <!-- AHORRO -->
+        {% if item.ahorro|default:0 > 0 %}
+<br>
+<span style="
+    background:#d4edda;
+    color:#155724;
+    padding:4px 8px;
+    border-radius:5px;
+    font-weight:bold;
+    display:inline-block;
+    margin-top:3px;
+">
+💰 Ahorras $ {{ item.ahorro|moneda }}
+</span>
+{% endif %}
+
+    </small>
+
+</td>
+
+<td style="text-align:center;">
+    <a href="{% url 'disminuir_cantidad' item.id %}" style="padding:4px 8px;background:#ddd;border-radius:4px;text-decoration:none;">-</a>
+    <span style="margin:0 10px; font-weight:bold;">{{ item.cantidad }}</span>
+    <a href="{% url 'aumentar_cantidad' item.id %}" style="padding:4px 8px;background:#ddd;border-radius:4px;text-decoration:none;">+</a>
+</td>
+
+<td>
+    <div>
+    <strong>
+        {% if item.total_gramos %}
+            {{ item.total_gramos|floatformat:2 }} g
+        {% else %}
+            {{ item.cantidad }} und
+        {% endif %}
+    </strong>
+
+    <br>
+
+    <small>
+        ${{ item.precio_aplicado|moneda }}
+        {% if item.total_gramos %}/g{% endif %}
+    </small>
+
+    <br>
+
+    <strong>
+        ${{ item.subtotal_calculado|moneda }}
+    </strong>
+</div>
+</td>
+
+<td>
+    <a href="{% url 'eliminar_del_carrito' item.id %}" style="color:red; text-decoration:none;">Eliminar</a>
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+<form method="GET" action="{% url 'comprar_whatsapp' %}">
+
+    <h3 style="margin-top:20px;">
+        Total: ${{ total|moneda }}
+    </h3>
+
+    <div style="
+        margin-top:15px;
+        padding:15px;
+        border:1px solid #ddd;
+        border-radius:8px;
+        background:#f9f9f9;
+    ">
+
+        <h4 style="margin-bottom:10px;">⚙ Opciones de factura</h4>
+
+        <!-- IVA -->
+        <label style="display:block; margin-bottom:8px;">
+            <input type="checkbox" name="aplica_iva">
+            Aplicar IVA (19%)
+        </label>
+
+        <label>
+        <input type="checkbox" name="es_retenedor">
+            Cliente retenedor (aplica retefuente)
+        </label>
+
+        <!-- EMAIL -->
+        <label style="display:block; margin-bottom:8px;">
+            Correo electrónico:
+            <input type="email" name="email" placeholder="cliente@email.com" style="width:200px;">
+        </label>
+        <label style="display:block; margin-bottom:8px;">
+            Nombre:
+            <input type="text" name="nombre">
+        </label>
+
+        <label style="display:block; margin-bottom:8px;">
+            Teléfono:
+            <input type="text" name="telefono">
+        </label>
+
+        <label style="display:block; margin-bottom:8px;">
+            Dirección:
+            <input type="text" name="direccion">
+        </label>
+        <label>Ciudad:
+        <input type="text" name="ciudad">
+        </label>
+
+        <label style="display:block; margin-bottom:8px;">
+            NIT:
+            <input type="text" name="nit">
+        </label>
+
+        <!-- IMAGEN -->
+        <label style="display:block;">
+            <input type="checkbox" name="mostrar_imagen">
+            Incluir imagen en factura
+        </label>
+
+    </div>
+
+    <!-- BOTÓN -->
+    <button type="submit" style="
+        background:#25D366;
+        color:white;
+        padding:12px 20px;
+        border-radius:6px;
+        border:none;
+        font-weight:bold;
+        cursor:pointer;
+        margin-top:15px;
+    ">
+        📱 Comprar por WhatsApp
+    </button>
+</form>
+
+<br><br>
+<form method="GET" action="{% url 'pagar_pedido' %}">
+    <button type="submit" style="
+    background:#007bff;
+    color:white;
+    padding:12px 20px;
+    border-radius:6px;
+    border:none;
+    font-weight:bold;
+    cursor:pointer;
+    margin-top:10px;
+    ">
+    💳 Pagar ahora
+    </button>
+</form>
+
+<a href="/" style="
+background:#444;
+color:white;
+padding:10px 15px;
+border-radius:6px;
+text-decoration:none;
+">
+Seguir comprando
+</a>
+
+<!-- Botón flotante WhatsApp -->
+<a href="#" id="whatsapp-flotante" target="_blank">
+    📱 WhatsApp - <span id="whatsapp-info">0 productos - $0</span>
+</a>
+
+<!-- JS para actualizar botón flotante WhatsApp -->
+<script type="application/json" id="carrito-data">{{ carrito_json|safe }}</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+    const carrito = JSON.parse(document.getElementById("carrito-data").textContent);
+
+    const boton = document.getElementById("whatsapp-flotante");
+
+    let totalProductos = 0;
+    let subtotal = 0;
+
+    carrito.forEach(item => {
+        totalProductos += item.cantidad;
+        subtotal += item.subtotal;
+    });
+
+    const info = document.getElementById("whatsapp-info");
+
+    info.textContent = totalProductos + " productos - $" + subtotal.toLocaleString('de-DE');
+
+    // 🔥 AHORA VA A DJANGO (NO DIRECTO A WHATSAPP)
+    boton.href = "/comprar_whatsapp/";
+
+    // 🔥 ESTADO VISUAL
+    if (totalProductos === 0) {
+        boton.style.opacity = "0.5";
+        boton.style.pointerEvents = "none";
+        boton.style.background = "#ccc";
+        info.textContent = "🛒 Agrega productos";
+    } else {
+        boton.style.opacity = "1";
+        boton.style.pointerEvents = "auto";
+        boton.style.background = "#25D366";
+    }
+
+});
+</script>
+
+{% else %}
+<p>Tu carrito está vacío.</p>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,683 @@
+{% extends "base.html" %}
+{% load moneda %}
+
+{% block content %}
+
+<h1>{{ producto.nombre }}</h1>
+
+<p id="stock-general" style="font-weight:bold;"></p>
+
+<!-- Categoría -->
+<p><strong>Categoría:</strong> {{ producto.categoria.nombre }}</p>
+
+<!-- ========================= -->
+<!-- 🖼️ IMAGEN PRINCIPAL -->
+<!-- ========================= -->
+
+<div class="contenedor-imagen">
+
+{% if producto.imagen_principal %}
+    <img 
+        id="imagen-principal" 
+        src="{{ producto.imagen_principal.url }}" 
+        class="imagen-principal"
+    >
+{% else %}
+    <img 
+        id="imagen-principal" 
+        src="/static/img/sin-imagen.jpg" 
+        class="imagen-principal"
+    >
+{% endif %}
+
+</div>
+
+<!-- ========================= -->
+<!-- 🖼️ GALERÍA -->
+<!-- ========================= -->
+
+<h3>Galería</h3>
+
+<div class="galeria">
+
+{% for imagen in producto.imagenes.all %}
+    <img 
+        src="{{ imagen.imagen.url }}" 
+        class="miniatura"
+        onclick="cambiarImagen('{{ imagen.imagen.url }}', this)"
+    >
+{% endfor %}
+
+</div>
+
+<!-- 🎥 VIDEO PRODUCTO -->
+{% if producto.video %}
+<div style="margin:20px 0; text-align:center;">
+
+  <video 
+    width="100%" 
+    style="max-width:500px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,.15);" 
+    controls 
+    preload="metadata"
+  >
+    <source src="{{ producto.video.url }}" type="video/mp4">
+    Tu navegador no soporta video.
+  </video>
+
+</div>
+{% endif %}
+
+<!-- Descripción -->
+<p>{{ producto.descripcion }}</p>
+
+<!-- Certificado -->
+{% if producto.certificado %}
+<h3>Certificado de garantía</h3>
+<p style="color:#444;">
+Uso exclusivo para joyas en <strong>oro 18K, diamantes y esmeraldas</strong>.
+</p>
+<a href="{{ producto.certificado.url }}" target="_blank">Ver certificado</a>
+{% endif %}
+
+<!-- Productos relacionados -->
+<h3>Productos relacionados</h3>
+<div style="display:flex; gap:20px; flex-wrap:wrap;">
+{% for p in productos_relacionados %}
+<div style="width:150px; text-align:center;">
+<a href="{% url 'detalle_producto' p.id p.slug %}">
+{% if p.imagen %}
+<img src="{{ p.imagen.url }}" width="120">
+{% endif %}
+<p>{{ p.nombre }}</p>
+<p>$ {{ p.precio_detal|moneda }}</p>
+{% if p.stock > 10 %}
+<p style="color:green;font-weight:bold;">✅ Disponible</p>
+{% elif p.stock > 3 %}
+<p style="color:orange;font-weight:bold;">⚠ Quedan {{ p.stock }} unidades</p>
+{% elif p.stock > 0 %}
+<p style="color:red;font-weight:bold;">🔥 Solo quedan {{ p.stock }} unidades!</p>
+{% else %}
+<p style="color:red;font-weight:bold;">❌ Producto agotado</p>
+{% endif %}
+</a>
+</div>
+{% endfor %}
+</div>
+
+<!-- Precios -->
+<h3>Precios</h3>
+
+{% if producto.tipo_venta == "gramo" %}
+
+<p>
+<strong>Precio Detal (por gramo):</strong>
+$ {{ producto.precio_por_gramo_detal|default_if_none:0|moneda }}
+</p>
+
+<p style="color:#0a7;">
+Semi-mayorista (6g+):
+$ {{ producto.precio_por_gramo_semimayor|default_if_none:0|moneda }}
+</p>
+
+<p style="color:#0a7;">
+Mayorista (12g+):
+$ {{ producto.precio_por_gramo_mayor|default_if_none:0|moneda }}
+</p>
+
+{% else %}
+
+<p>
+Detal:
+<strong>$ {{ producto.precio_detal|default:0|moneda }}</strong>
+</p>
+
+<p style="color:#0a7;">
+Semi-mayorista (6+):
+$ {{ producto.precio_semimayor|default:0|moneda }}
+</p>
+
+<p style="color:#0a7;">
+Mayorista (12+):
+$ {{ producto.precio_mayor|default:0|moneda }}
+</p>
+
+{% endif %}
+
+<!-- ========================= -->
+<!-- 🎨 VARIANTES -->
+<!-- ========================= -->
+
+<label><strong>Color:</strong></label>
+<select id="color" onchange="actualizarStockDisponible(); actualizarTallas();">
+  <option value="">Seleccione color</option>
+  {% for variante in producto.variantes.all|dictsort:"color" %}
+    {% ifchanged variante.color %}
+      <option value="{{ variante.color }}">{{ variante.color }}</option>
+    {% endifchanged %}
+  {% endfor %}
+</select>
+
+<br><br>
+
+<label id="label-talla"><strong>Talla:</strong></label>
+<select id="talla" onchange="actualizarStockDisponible();">
+  <option value="">Seleccione talla</option>
+  {% for variante in producto.variantes.all %}
+    {% if variante.talla %}
+      <option value="{{ variante.talla }}">{{ variante.talla }}</option>
+    {% endif %}
+  {% endfor %}
+</select>
+
+<br><br>
+
+<!-- ========================= -->
+<!-- 🔢 CANTIDAD -->
+<!-- ========================= -->
+
+<label><strong>Cantidad:</strong></label>
+
+<div style="display:flex; align-items:center; gap:8px;">
+
+    <button type="button" onclick="cambiarCantidad(-1)">➖</button>
+
+    <input 
+        type="number"
+        id="cantidad"
+        value="1"
+        min="1"
+        step="1"
+        oninput="validarCantidad(); actualizarPrecio();"
+        style="width:70px; text-align:center; padding:6px;"
+    >
+
+    <button type="button" onclick="cambiarCantidad(1)">➕</button>
+
+</div>
+
+<p id="stock-info" style="font-weight:bold; margin-top:5px;"></p>
+
+<!-- ========================= -->
+<!-- ⚖️ GRAMOS -->
+<!-- ========================= -->
+
+{% if producto.tipo_venta == "gramo" %}
+<p>
+<strong>Peso por unidad:</strong> {{ producto.peso_producto|default:0 }} g
+</p>
+
+<p>
+<strong>Total gramos:</strong>
+<span id="total-gramos">{{ producto.peso_producto|default:0 }}</span> g
+</p>
+{% endif %}
+
+<!-- Subtotal -->
+<p>
+<strong>Subtotal:</strong> $
+<span id="subtotal">0</span>
+</p>
+
+<p id="detalle-calculo" style="font-size:14px;color:#555;"></p>
+<p id="mensaje-mayorista" style="color:green;font-weight:bold;"></p>
+
+<!-- Botones -->
+<input type="hidden" id="url-carrito" value="{% url 'agregar_al_carrito' producto.id %}">
+
+{% if stock_disponible is not None %}
+    
+    {% if stock_disponible > 0 %}
+        <button id="btn-carrito" onclick="agregarCarrito()"
+        style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;">
+            🛒 Agregar al carrito
+        </button>
+    {% else %}
+        <p style="color:red;font-weight:bold;">Producto agotado</p>
+    {% endif %}
+
+{% elif tiene_stock %}
+
+    <input type="hidden" id="whatsapp-numero" value="{{ request.user.perfil.whatsapp }}">
+
+    <button id="btn-carrito" onclick="agregarCarrito()"
+    style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;">
+        🛒 Agregar al carrito
+    </button>
+
+{% else %}
+
+    <p style="color:red;font-weight:bold;">Producto agotado</p>
+
+{% endif %}
+
+<br><br>
+
+<button onclick="comprarWhatsApp()"
+style="
+background:#25D366;
+color:white;
+padding:14px 26px;
+border:none;
+border-radius:8px;
+font-size:16px;
+font-weight:bold;
+box-shadow:0 4px 12px rgba(0,0,0,.2);
+cursor:pointer;
+transition:.2s;
+">
+📲 Comprar por WhatsApp
+</button>
+
+<!-- 🔥 VARIANTES SEGURAS -->
+<script id="variantes-data" type="application/json">
+[
+{% for v in producto.variantes.all %}
+{
+    "color": "{{ v.color|default_if_none:''|escapejs }}",
+    "talla": "{{ v.talla|default_if_none:''|escapejs }}",
+    "stock": {{ v.stock|default:0 }}
+}{% if not forloop.last %},{% endif %}
+{% endfor %}
+]
+</script>
+
+<!-- Scripts -->
+<script>
+const variantes = JSON.parse(
+    document.getElementById("variantes-data").textContent
+);
+function actualizarStockDisponible() {
+
+    let color = document.getElementById("color")?.value || "";
+    let talla = document.getElementById("talla")?.value || "";
+
+    let variante = variantes.find(v =>
+        v.color === color && v.talla === talla
+    );
+
+    let inputCantidad = document.getElementById("cantidad");
+    let boton = document.getElementById("btn-carrito");
+
+    if (variante) {
+
+        inputCantidad.max = variante.stock;
+
+        if (parseInt(inputCantidad.value) > variante.stock) {
+            inputCantidad.value = variante.stock;
+        }
+
+    if (variante.stock > 0) {
+    document.getElementById("stock-info").innerHTML =
+        "✅ Disponibles: " + variante.stock;
+} else {
+    document.getElementById("stock-info").innerHTML =
+        "❌ Agotado";
+}
+
+        // 🔥 BOTÓN
+        if (variante.stock > 0) {
+            boton.disabled = false;
+            boton.style.opacity = "1";
+        } else {
+            boton.disabled = true;
+            boton.style.opacity = "0.5";
+        }
+
+    } else {
+
+        document.getElementById("stock-info").innerHTML =
+            "Seleccione una combinación válida";
+
+        // 🔥 BLOQUEAR BOTÓN
+        boton.disabled = true;
+        boton.style.opacity = "0.5";
+    }
+}
+function actualizarStockGeneral() {
+
+    let totalStock = variantes.reduce((total, v) => total + v.stock, 0);
+
+    let mensaje = "";
+
+    if (totalStock > 15) {
+        mensaje = "✅ Alta disponibilidad";
+    } else if (totalStock > 5) {
+        mensaje = "⚠️ Se está vendiendo rápido (" + totalStock + ")";
+    } else if (totalStock > 0) {
+        mensaje = "🔥 ¡Últimas unidades!";
+    } else {
+        mensaje = "❌ Producto agotado";
+    }
+
+    document.getElementById("stock-general").innerHTML = mensaje;
+}
+
+// ===============================
+// FUNCIONES BÁSICAS
+// ===============================
+function cambiarImagen(url, elemento){
+
+    // Cambiar imagen principal
+    document.getElementById("imagen-principal").src = url;
+
+    // Quitar activa de todas
+    document.querySelectorAll(".miniatura").forEach(img => {
+        img.classList.remove("activa");
+    });
+
+    // Activar la seleccionada
+    elemento.classList.add("activa");
+}
+
+function comprarWhatsApp(){
+
+    let cantidad = document.getElementById("cantidad").value;
+    let color = document.getElementById("color")?.value || "";
+    let talla = document.getElementById("talla")?.value || "";
+
+    let numero = document.getElementById("whatsapp-numero").value;
+
+    // 🔥 VALIDACIONES
+    let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
+
+    if (!color) {
+        alert("Selecciona un color");
+        return;
+    }
+
+    if (hayTallas && !talla) {
+        alert("Selecciona una talla");
+        return;
+    }
+
+    if (!numero) {
+        alert("Error: número de WhatsApp no configurado");
+        return;
+    }
+
+    // 🔥 MENSAJE PRO
+    let mensaje = "🛍️ Pedido desde tienda\n\n";
+    mensaje += "Producto: {{ producto.nombre }}\n";
+    mensaje += "Cantidad: " + cantidad + "\n";
+
+    if(color) mensaje += "Color: " + color + "\n";
+    if(talla) mensaje += "Talla: " + talla + "\n";
+
+    mensaje += "\n\n✨ Hola, quiero comprar este producto";
+    mensaje += "\n📦 ¿Está disponible en este momento?";
+    mensaje += "\n💰 ¿Cuál sería el total con envío?";
+    mensaje += "\n🚚 ¿En cuánto tiempo llega?";
+    mensaje += "\n🙏 Gracias, quedo atento";
+
+    let url = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensaje);
+
+    window.open(url, "_blank");
+}
+
+function agregarCarrito(){
+
+    let inputCantidad = document.getElementById("cantidad");
+    let cantidad = parseInt(inputCantidad.value || 1);
+
+    let color = document.getElementById("color")?.value || "";
+    let talla = document.getElementById("talla")?.value || "";
+
+    let baseUrl = document.getElementById("url-carrito").value;
+
+    let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
+
+    // ===============================
+    // 🔥 VALIDACIONES
+    // ===============================
+    if (!color) {
+        alert("Selecciona un color");
+        return;
+    }
+
+    if (hayTallas && !talla) {
+        alert("Selecciona una talla");
+        return;
+    }
+
+    if (cantidad < 1) {
+        alert("Cantidad inválida");
+        inputCantidad.value = 1;
+        return;
+    }
+
+    // 🔥 VALIDAR STOCK
+    let variante = variantes.find(v =>
+        v.color === color && v.talla === talla
+    );
+
+    if (variante && cantidad > variante.stock) {
+        alert("No hay suficiente stock disponible");
+        inputCantidad.value = variante.stock;
+        return;
+    }
+
+    // ===============================
+    // 🔗 ARMAR URL SEGURO
+    // ===============================
+    let params = new URLSearchParams({
+        cantidad: cantidad,
+        color: color,
+        talla: talla
+    });
+
+    let url = baseUrl + "?" + params.toString();
+
+    console.log("Agregando al carrito:", {cantidad, color, talla});
+
+    // ===============================
+    // 🚀 REDIRECCIÓN
+    // ===============================
+    window.location.href = url;
+}
+
+// ===============================
+// PRECIOS DINÁMICOS
+// ===============================
+let tipoVenta = "{{ producto.tipo_venta }}";
+let pesoProducto = parseFloat("{{ producto.peso_producto|default_if_none:0 }}") || 0;
+
+let precioDetal = Number("{{ producto.precio_detal|default:0 }}");
+let precioGramoDetal = parseFloat("{{ producto.precio_por_gramo_detal|default_if_none:0 }}") || 0;
+
+function actualizarPrecio(){
+
+    let cantidad = parseInt(document.getElementById("cantidad").value) || 1;
+
+    let subtotal = 0;
+
+    if(tipoVenta === "gramo"){
+
+        let totalGramos = cantidad * (pesoProducto || 0);
+
+        document.getElementById("total-gramos").innerHTML = totalGramos;
+
+        subtotal = totalGramos * (precioGramoDetal || 0);
+
+        document.getElementById("detalle-calculo").innerHTML =
+            totalGramos + "g x $" + (precioGramoDetal || 0).toLocaleString();
+
+    } else {
+
+        subtotal = cantidad * (precioDetal || 0);
+
+        document.getElementById("detalle-calculo").innerHTML =
+            cantidad + " unidades x $" + (precioDetal || 0).toLocaleString();
+    }
+
+    document.getElementById("mensaje-mayorista").innerHTML =
+        "💡 Descuentos por cantidad se aplican en el carrito";
+
+    document.getElementById("subtotal").innerHTML =
+        subtotal ? subtotal.toLocaleString() : "0";
+}
+
+// ===============================
+// 🔢 CONTROL CANTIDAD
+// ===============================
+function cambiarCantidad(valor){
+    let input = document.getElementById("cantidad");
+
+    let nueva = parseInt(input.value || 1) + valor;
+
+    if(nueva < 1) nueva = 1;
+
+    if(input.max){
+        nueva = Math.min(nueva, parseInt(input.max));
+    }
+
+    input.value = nueva;
+
+    actualizarPrecio();
+}
+
+function validarCantidad(){
+    let input = document.getElementById("cantidad");
+
+    if(input.value < 1){
+        input.value = 1;
+    }
+
+    if(input.max && parseInt(input.value) > parseInt(input.max)){
+        input.value = input.max;
+    }
+}
+
+// ===============================
+// VARIANTES DINÁMICAS 🔥
+// ===============================
+function actualizarTallas(){
+    if (!variantes.some(v => v.talla && v.talla.trim() !== "")) {
+    return;
+}
+    const colorSelect = document.getElementById("color");
+    const tallaSelect = document.getElementById("talla");
+
+    if(!colorSelect || !tallaSelect) return;
+
+    let colorSeleccionado = colorSelect.value;
+
+    let tallasDisponibles = variantes
+        .filter(v => v.color === colorSeleccionado && v.stock > 0)
+        .map(v => v.talla);
+
+    tallasDisponibles = [...new Set(tallasDisponibles)];
+
+    tallaSelect.innerHTML = '<option value="">Seleccione</option>';
+
+    if (tallasDisponibles.length === 0) {
+        let option = document.createElement("option");
+        option.text = "No disponible";
+        option.value = "";
+        tallaSelect.appendChild(option);
+        return;
+    }
+
+    tallasDisponibles.forEach(talla => {
+        let option = document.createElement("option");
+        option.value = talla;
+        option.text = talla;
+        tallaSelect.appendChild(option);
+    });
+}
+
+// ===============================
+// INICIO
+// ===============================
+document.addEventListener("DOMContentLoaded", function() {
+
+    actualizarPrecio();
+    actualizarTallas();  
+    actualizarStockDisponible();
+    actualizarStockGeneral();
+
+    let btn = document.getElementById("btn-carrito");
+
+    if (btn) {
+        btn.disabled = false;
+        btn.style.opacity = "1";
+    }
+
+    // 🔥 EVENTOS
+    document.getElementById("color")?.addEventListener("change", function() {
+        actualizarTallas();
+        actualizarStockDisponible();
+    });
+
+    document.getElementById("talla")?.addEventListener("change", function() {
+        actualizarStockDisponible();
+    });
+
+});
+
+    // 🔥 OCULTAR TALLA SI NO EXISTE
+    let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
+
+    if (!hayTallas) {
+        let tallaSelect = document.getElementById("talla");
+        let labelTalla = document.getElementById("label-talla");
+
+        if (tallaSelect) tallaSelect.style.display = "none";
+        if (labelTalla) labelTalla.style.display = "none";
+    }
+
+</script>
+
+<!-- Zoom de imagen -->
+<style>
+.contenedor-imagen{
+    display:flex;
+    justify-content:center;
+    margin-bottom:15px;
+}
+
+.imagen-principal{
+    width:100%;
+    max-width:420px;
+    border-radius:14px;
+    box-shadow:0 8px 25px rgba(0,0,0,.18);
+    cursor:zoom-in;
+    transition: transform .3s ease;
+}
+
+.imagen-principal:hover{
+    transform: scale(1.35);
+}
+
+/* GALERÍA */
+.galeria{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+    margin-top:10px;
+}
+
+.miniatura{
+    width:70px;
+    height:70px;
+    object-fit:cover;
+    border-radius:8px;
+    cursor:pointer;
+    border:2px solid transparent;
+    transition: all .2s ease;
+}
+
+.miniatura:hover{
+    transform: scale(1.1);
+    border:2px solid #000;
+}
+
+/* MINIATURA ACTIVA */
+.miniatura.activa{
+    border:2px solid #000;
+}
+</style>
+
+{% endblock %}
+
+

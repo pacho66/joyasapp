@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+.wrap{
+    max-width:1200px;
+    margin:auto;
+    padding:25px;
+    font-family:Arial,sans-serif;
+}
+
+.titulo{
+    font-size:30px;
+    margin-bottom:20px;
+    color:#111;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:15px;
+    margin-bottom:25px;
+}
+
+.card{
+    background:#fff;
+    border-radius:14px;
+    padding:18px;
+    box-shadow:0 4px 14px rgba(0,0,0,.08);
+}
+
+.card h4{
+    margin:0;
+    font-size:14px;
+    color:#666;
+}
+
+.card h2{
+    margin:10px 0 0;
+    font-size:28px;
+    color:#111;
+}
+
+.verde{border-left:5px solid #28a745;}
+.rojo{border-left:5px solid #dc3545;}
+.azul{border-left:5px solid #007bff;}
+.naranja{border-left:5px solid #ff9800;}
+
+.tabla{
+    background:#fff;
+    border-radius:14px;
+    padding:18px;
+    box-shadow:0 4px 14px rgba(0,0,0,.08);
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,td{
+    padding:12px;
+    border-bottom:1px solid #eee;
+    text-align:left;
+    font-size:14px;
+}
+
+th{
+    background:#f8f8f8;
+}
+
+.stock-ok{
+    color:#28a745;
+    font-weight:bold;
+}
+
+.stock-bajo{
+    color:#ff9800;
+    font-weight:bold;
+}
+
+.stock-agotado{
+    color:#dc3545;
+    font-weight:bold;
+}
+
+.btn{
+    display:inline-block;
+    margin-top:20px;
+    background:#111;
+    color:#fff;
+    padding:10px 15px;
+    border-radius:8px;
+    text-decoration:none;
+}
+
+@media(max-width:768px){
+    .titulo{font-size:24px;}
+    .card h2{font-size:22px;}
+    table{font-size:13px;}
+}
+</style>
+
+<div class="wrap">
+
+<h1 class="titulo">📦 Inventario PRO</h1>
+
+<!-- MÉTRICAS -->
+<div class="grid">
+
+<div class="card azul">
+<h4>Total Productos</h4>
+<h2>{{ total_productos }}</h2>
+</div>
+
+<div class="card verde">
+<h4>Con Stock</h4>
+<h2>{{ productos_stock }}</h2>
+</div>
+
+<div class="card naranja">
+<h4>Stock Bajo</h4>
+<h2>{{ stock_bajo }}</h2>
+</div>
+
+<div class="card rojo">
+<h4>Agotados</h4>
+<h2>{{ agotados }}</h2>
+</div>
+
+</div>
+
+<!-- TABLA -->
+<div class="tabla">
+
+<h3>🛍️ Productos</h3>
+
+<table>
+
+<tr>
+<th>Producto</th>
+<th>Precio</th>
+<th>Stock</th>
+<th>Estado</th>
+</tr>
+
+{% for producto in productos %}
+<tr>
+
+<td>{{ producto.nombre }}</td>
+
+<td>${{ producto.precio_detal|floatformat:0 }}</td>
+
+<td>{{ producto.stock }}</td>
+
+<td>
+{% if producto.stock == 0 %}
+<span class="stock-agotado">Agotado</span>
+
+{% elif producto.stock <= 5 %}
+<span class="stock-bajo">Bajo</span>
+
+{% else %}
+<span class="stock-ok">Disponible</span>
+{% endif %}
+</td>
+
+</tr>
+
+{% empty %}
+<tr>
+<td colspan="4">No hay productos registrados</td>
+</tr>
+{% endfor %}
+
+</table>
+
+<a href="{% url 'dashboard' %}" class="btn">⬅️ Volver al Dashboard</a>
+
+</div>
+
+</div>
+
+{% endblock %}
