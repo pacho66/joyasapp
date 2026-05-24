@@ -191,7 +191,7 @@ nav{
     <ul id="menu-lista">
         <li><a href="{% url 'inicio' %}">Inicio</a></li>
 
-        {% for categoria in categorias_menu %}
+        {% for categoria in categorias %}
             <li>
                 <a href="{% url 'productos_por_categoria' categoria.id %}">
                     {{ categoria.nombre }}
@@ -201,7 +201,7 @@ nav{
 
             <li>
                 <a href="{% url 'ver_carrito' %}">
-                🛒 Carrito ({{ cantidad_carrito }})
+                🛒 Carrito ({{ cantidad_carrito|default:0 }})
                 </a>
             </li>
 
@@ -216,14 +216,6 @@ nav{
             <li>
                 <a href="{% url 'logout' %}">
                 🚪 Salir
-                </a>
-            </li>
-
-            {% else %}
-
-            <li>
-                <a href="{% url 'login' %}">
-                🔐 Ingresar
                 </a>
             </li>
 
