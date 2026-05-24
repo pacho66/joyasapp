@@ -190,7 +190,6 @@ def registro(request):
     return render(request, 'registro.html', {'form': form})
         
 def iniciar_sesion(request):
-    print(settings.STRIPE_SECRET_KEY) 
 
     if request.user.is_authenticated:
         return redirect('dashboard')
