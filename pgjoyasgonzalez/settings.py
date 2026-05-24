@@ -36,6 +36,8 @@ ALLOWED_HOSTS = [
     'localhost'
 ]
 
+LOGIN_URL = '/login/'
+
 
 # Application definition
 
