@@ -199,11 +199,35 @@ nav{
             </li>
         {% endfor %}
 
-        <li>
-            <a href="{% url 'ver_carrito' %}">
+            <li>
+                <a href="{% url 'ver_carrito' %}">
                 🛒 Carrito ({{ cantidad_carrito }})
-            </a>
-        </li>
+                </a>
+            </li>
+
+        {% if user.is_authenticated %}
+
+            <li>
+                <a href="{% url 'dashboard' %}">
+                📊 Panel
+                </a>
+            </li>
+
+            <li>
+                <a href="{% url 'logout' %}">
+                🚪 Salir
+                </a>
+            </li>
+
+            {% else %}
+
+            <li>
+                <a href="{% url 'login' %}">
+                🔐 Ingresar
+                </a>
+            </li>
+
+            {% endif %}
 
     </ul>
 
