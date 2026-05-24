@@ -191,33 +191,35 @@ nav{
     <ul id="menu-lista">
         <li><a href="{% url 'inicio' %}">Inicio</a></li>
 
-        {% for categoria in categorias %}
-            <li>
-                <a href="{% url 'productos_por_categoria' categoria.id %}">
-                    {{ categoria.nombre }}
-                </a>
-            </li>
-        {% endfor %}
+        {% if categorias %}
+            {% for categoria in categorias %}
+                <li>
+                    <a href="{% url 'productos_por_categoria' categoria.id %}">
+            {{ categoria.nombre }}
+                    </a>
+                </li>
+                {% endfor %}
+        {% endif %}
 
-            <li>
-                <a href="{% url 'ver_carrito' %}">
+                <li>
+                    <a href="{% url '#' %}">
                 🛒 Carrito ({{ cantidad_carrito|default:0 }})
-                </a>
-            </li>
+                    </a>
+                </li>
 
         {% if user.is_authenticated %}
 
-            <li>
-                <a href="{% url 'dashboard' %}">
+                <li>
+                    <a href="{% url '#' %}">
                 📊 Panel
-                </a>
-            </li>
+                    </a>
+                </li>
 
-            <li>
-                <a href="{% url 'logout' %}">
-                🚪 Salir
-                </a>
-            </li>
+                 <li>
+                    <a href="{% url '#' %}">
+                    🚪 Salir
+                    </a>
+                </li>
 
             {% endif %}
 
