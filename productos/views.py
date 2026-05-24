@@ -189,6 +189,7 @@ def registro(request):
 
     return render(request, 'registro.html', {'form': form})
         
+
 def iniciar_sesion(request):
 
     if request.user.is_authenticated:
@@ -205,11 +206,15 @@ def iniciar_sesion(request):
             password=password
         )
 
-        if user:
+        if user is not None:
             login(request, user)
             return redirect('dashboard')
 
-        messages.error(request, 'Usuario o contraseña incorrectos')
+        else:
+            messages.error(
+                request,
+                'Usuario o contraseña incorrectos'
+            )
 
     return render(request, 'login.html')
 
