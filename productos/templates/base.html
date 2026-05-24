@@ -189,41 +189,40 @@ nav{
     </div>
 
     <ul id="menu-lista">
-        <li><a href="{% url 'inicio' %}">Inicio</a></li>
+    <li><a href="{% url 'inicio' %}">Inicio</a></li>
 
-        {% if categorias %}
-            {% for categoria in categorias %}
-                <li>
-                    <a href="{% url 'productos_por_categoria' categoria.id %}">
-            {{ categoria.nombre }}
-                    </a>
-                </li>
-                {% endfor %}
-        {% endif %}
+    {% if categorias %}
+        {% for categoria in categorias %}
+            <li>
+                <a href="{% url 'productos_por_categoria' categoria.id %}">
+                    {{ categoria.nombre }}
+                </a>
+            </li>
+        {% endfor %}
+    {% endif %}
 
-                <li>
-                    <a href="{% url '#' %}">
-                🛒 Carrito ({{ cantidad_carrito|default:0 }})
-                    </a>
-                </li>
+    <li>
+        <a href="#">
+            🛒 Carrito ({{ cantidad_carrito|default:0 }})
+        </a>
+    </li>
 
-        {% if user.is_authenticated %}
+    {% if user.is_authenticated %}
 
-                <li>
-                    <a href="{% url '#' %}">
+        <li>
+            <a href="#">
                 📊 Panel
-                    </a>
-                </li>
+            </a>
+        </li>
 
-                 <li>
-                    <a href="{% url '#' %}">
-                    🚪 Salir
-                    </a>
-                </li>
+        <li>
+            <a href="#">
+                🚪 Salir
+            </a>
+        </li>
 
-            {% endif %}
-
-    </ul>
+    {% endif %}
+</ul>
 
     <form action="{% url 'buscar_productos' %}" method="GET" class="buscador">
         <input type="text" name="q" placeholder="🔎 Buscar productos..." required>
