@@ -38,6 +38,13 @@ ALLOWED_HOSTS = [
 
 LOGIN_URL = '/login/'
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://joyasapp.onrender.com'
+]
+
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
 
 # Application definition
 
