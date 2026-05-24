@@ -367,15 +367,15 @@ def dashboard(request):
 
     clientes_morosos = Cliente.objects.filter(
     usuario=request.user,
-    pedido__tipo_pago='credito',
-    pedido__saldo_pendiente__gt=0,
-    pedido__fecha_limite__lt=hoy
+    pedidos__tipo_pago='credito',
+    pedidos__saldo_pendiente__gt=0,
+    pedidos__fecha_limite__lt=hoy
     ).distinct()
 
     morosos_count = clientes_morosos.count()
 
     morosos_total = clientes_morosos.aggregate(
-    total=Sum('pedido__saldo_pendiente')
+    total=Sum('pedidos__saldo_pendiente')
     )['total'] or 0
 
     # ==========================
@@ -396,9 +396,9 @@ def dashboard(request):
 
     elif tipo == 'morosos':
         clientes_filtrados = clientes.filter(
-        pedido__tipo_pago='credito',
-        pedido__saldo_pendiente__gt=0,
-        pedido__fecha_limite__lt=hoy
+        pedidos__tipo_pago='credito',
+        pedidos__saldo_pendiente__gt=0,
+        pedidos__fecha_limite__lt=hoy
     ).distinct()
 
     # ==========================
