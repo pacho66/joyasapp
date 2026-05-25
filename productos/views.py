@@ -238,11 +238,7 @@ def inicio(request):
         usuario=request.user
     ).order_by('nombre')
 
-    return render(request, 'inicio.html', {
-        'productos': productos,
-        'destacados': destacados,
-        'categorias': categorias,
-    })  
+    return render(request, 'inicio.html') 
 
 
 def buscar_productos(request):
