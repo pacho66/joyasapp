@@ -42,6 +42,7 @@ import stripe
 import mercadopago
 import requests
 from .utils import generar_link_whatsapp
+from django.http import HttpResponse
 
 def safe_int(valor, default=1):
     try:
@@ -238,7 +239,7 @@ def inicio(request):
         usuario=request.user
     ).order_by('nombre')
 
-    return render(request, 'inicio.html') 
+    return HttpResponse("LOGIN FUNCIONANDO")
 
 
 def buscar_productos(request):
