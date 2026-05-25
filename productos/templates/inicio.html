@@ -2,56 +2,6 @@
 
 {% block content %}
 
-<div class="redes">
-    {% if perfil.instagram %}
-        <a href="https://instagram.com/{{ perfil.instagram }}" target="_blank">Instagram</a>
-    {% endif %}
-
-    {% if perfil.facebook %}
-        <a href="{{ perfil.facebook }}" target="_blank">Facebook</a>
-    {% endif %}
-
-    {% if perfil.tiktok %}
-        <a href="https://tiktok.com/@{{ perfil.tiktok }}" target="_blank">TikTok</a>
-    {% endif %}
-</div>
-
-<h2>⭐ Productos destacados</h2>
-
-<div style="display:flex; flex-wrap:wrap; gap:20px;">
-
-{% for producto in destacados %}
-
-<div style="border:1px solid #ddd; padding:10px; width:200px; text-align:center;">
-
-<img src="{{ producto.imagen_principal.url }}" width="180">
-
-<h4>{{ producto.nombre }}</h4>
-
-<p><strong>${{ producto.precio_detal }}</strong></p>
-
-<a href="{% url 'agregar_al_carrito' producto.id %}" style="
-background:#28a745;
-color:white;
-padding:8px 12px;
-text-decoration:none;
-border-radius:5px;
-display:inline-block;
-margin:5px;
-">
-🛒 Agregar al carrito
-</a>
-
-<br>
-
-<a href="{% url 'detalle_producto' producto.id producto.slug %}">
-👁 Ver producto
-</a>
-
-</div>
-
-{% endfor %}
-
-</div>
+<h2>Funciona</h2>
 
 {% endblock %}
