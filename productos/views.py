@@ -241,7 +241,7 @@ def inicio(request):
     return render(request, 'inicio.html', {
         'productos': productos,
         'destacados': destacados,
-        'categorias': categorias
+        'categorias': categorias,
     })  
 
 def buscar_productos(request):
