@@ -28,7 +28,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 SECRET_KEY = 'django-insecure-y!1z==8481!^59e%m^x1&hica@__820%1!w#b4fn@58v$w49(z'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
     'joyasapp.onrender.com',
@@ -137,7 +137,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 STATICFILES_DIRS = [
