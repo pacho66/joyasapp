@@ -244,19 +244,23 @@ def inicio(request):
         'categorias': categorias,
     })  
 
+
 def buscar_productos(request):
     query = request.GET.get('q', '')
 
-    productos = Producto.objects.filter(usuario=request.user)
+    if request.user.is_authenticated:
+        productos = Producto.objects.filter(usuario=request.user)
+        categorias = Categoria.objects.filter(usuario=request.user)
+    else:
+        productos = Producto.objects.none()
+        categorias = []
 
     if query:
         productos = productos.filter(
             Q(nombre__icontains=query) |
             Q(descripcion__icontains=query) |
-            Q(categoria__nombre__icontains=query)
+            Q(categoria_nombre_icontains=query)
         )
-
-    categorias = Categoria.objects.filter(usuario=request.user)
 
     return render(request, 'lista_productos.html', {
         'productos': productos,
