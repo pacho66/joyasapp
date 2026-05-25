@@ -191,8 +191,8 @@ nav{
     <ul id="menu-lista">
     <li><a href="{% url 'inicio' %}">Inicio</a></li>
 
-    {% if categorias %}
-        {% for categoria in categorias %}
+    {% if categorias_menu %}
+        {% for categoria in categorias_menu %}
             <li>
                 <a href="#">
                     {{ categoria.nombre }}
@@ -210,13 +210,13 @@ nav{
     {% if user.is_authenticated %}
 
         <li>
-            <a href="#">
+            <a href="/dashboard/">
                 📊 Panel
             </a>
         </li>
 
         <li>
-            <a href="#">
+            <a href="/logout/">
                 🚪 Salir
             </a>
         </li>
@@ -224,7 +224,7 @@ nav{
     {% endif %}
 </ul>
 
-    <form action="#" method="GET" class="buscador">
+    <form action="{% url 'buscar_productos' %}" method="GET" class="buscador">
         <input type="text" name="q" placeholder="🔎 Buscar productos..." required>
         <button type="submit">Buscar</button>
     </form>
