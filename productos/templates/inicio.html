@@ -7,11 +7,11 @@
         <a href="https://instagram.com/{{ perfil.instagram }}" target="_blank">Instagram</a>
     {% endif %}
 
-    {% if perfil.facebook %}
+    {% if perfil and perfil.facebook %}
         <a href="{{ perfil.facebook }}" target="_blank">Facebook</a>
     {% endif %}
 
-    {% if perfil.tiktok %}
+    {% if perfil and perfil.tiktok %}
         <a href="https://tiktok.com/@{{ perfil.tiktok }}" target="_blank">TikTok</a>
     {% endif %}
 </div>
