@@ -225,7 +225,9 @@ def cerrar_sesion(request):
     return redirect('login')
         
 
+@login_required
 def inicio(request):
+
     productos = Producto.objects.filter(
         usuario=request.user
     ).order_by('-id')
@@ -239,7 +241,12 @@ def inicio(request):
         usuario=request.user
     ).order_by('nombre')
 
-    return HttpResponse("OK")
+    return render(request, 'inicio.html', {
+        'productos': productos,
+        'destacados': destacados,
+        'categorias': categorias,
+    })
+
 
 
 def buscar_productos(request):
