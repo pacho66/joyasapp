@@ -224,9 +224,11 @@ def cerrar_sesion(request):
     logout(request)
     return redirect('login')
         
-
-@login_required
+@login_required(login_url='login')
 def inicio(request):
+
+    if not request.user.is_authenticated:
+        return redirect('login')
 
     productos = Producto.objects.filter(
         usuario=request.user
@@ -246,7 +248,6 @@ def inicio(request):
         'destacados': destacados,
         'categorias': categorias,
     })
-
 
 
 def buscar_productos(request):
