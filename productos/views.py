@@ -224,7 +224,7 @@ def cerrar_sesion(request):
     logout(request)
     return redirect('login')
         
-@login_required
+
 def inicio(request):
     productos = Producto.objects.filter(
         usuario=request.user
@@ -239,7 +239,7 @@ def inicio(request):
         usuario=request.user
     ).order_by('nombre')
 
-    return HttpResponse("LOGIN FUNCIONANDO")
+    return HttpResponse("SERVIDOR OK")
 
 
 def buscar_productos(request):
