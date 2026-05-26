@@ -28,13 +28,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 SECRET_KEY = 'django-insecure-y!1z==8481!^59e%m^x1&hica@__820%1!w#b4fn@58v$w49(z'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = [
-    'joyasapp.onrender.com',
-    '127.0.0.1',
-    'localhost'
-]
+ALLOWED_HOSTS = ['*']
 
 LOGIN_URL = '/login/'
 
@@ -82,8 +78,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'pgjoyasgonzalez.context_processors.categorias_menu',
-                'productos.views.cantidad_carrito',
+                #'pgjoyasgonzalez.context_processors.categorias_menu',
+                #'productos.views.cantidad_carrito',
             ],
         },
     },

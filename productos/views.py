@@ -239,7 +239,7 @@ def inicio(request):
         usuario=request.user
     ).order_by('nombre')
 
-    return HttpResponse("SERVIDOR OK")
+    return HttpResponse("OK")
 
 
 def buscar_productos(request):
