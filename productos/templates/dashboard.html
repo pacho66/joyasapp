@@ -176,7 +176,53 @@ th{
     font-weight:700;
 }
 
+/* MENU DASHBOARD */
+.menu-dashboard{
+    margin-bottom:15px;
+}
+
+.menu-dashboard-toggle{
+    display:none;
+    background:#111;
+    color:white;
+    padding:12px;
+    text-align:center;
+    border-radius:8px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.menu-dashboard-links{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.menu-dashboard-links a{
+    text-decoration:none;
+    background:#111;
+    color:white;
+    padding:8px 12px;
+    border-radius:8px;
+    font-size:14px;
+}
+
 @media(max-width:768px){
+
+    .menu-dashboard-toggle{
+        display:block;
+    }
+
+    .menu-dashboard-links{
+        display:none;
+        flex-direction:column;
+        gap:8px;
+        margin-top:10px;
+    }
+
+    .menu-dashboard-links.show{
+        display:flex;
+    }
 
     .container-dashboard{
         padding:14px;
@@ -198,6 +244,26 @@ th{
 </style>
 
 <div class="container-dashboard">
+
+<!-- MENU DASHBOARD -->
+<div class="menu-dashboard">
+
+    <div class="menu-dashboard-toggle" onclick="toggleMenuDash()">
+        ☰ Opciones Dashboard
+    </div>
+
+    <div id="menu-dash-lista" class="menu-dashboard-links">
+
+        <a href="{% url 'dashboard' %}">📊 Inicio</a>
+        <a href="{% url 'estadisticas' %}">📈 Estadísticas</a>
+        <a href="{% url 'ganancias' %}">💰 Ganancias</a>
+        <a href="{% url 'inventario' %}">📦 Inventario</a>
+        <a href="{% url 'lista_gastos' %}">📊 Gastos</a>
+        <a href="{% url 'configurar_negocio' %}">⚙️ Configurar</a>
+
+    </div>
+
+</div>
 
 <!-- ENCABEZADO -->
 <div class="topbar">
@@ -262,7 +328,9 @@ th{
 
 </div>
 
-<!-- MÉTRICAS -->
+<!-- ========================= -->
+<!-- 📊 MÉTRICAS (KPIs) -->
+<!-- ========================= -->
 <div class="grid-metricas">
 
 <div class="card">
@@ -305,6 +373,56 @@ th{
 <h2>${{ ticket_promedio|floatformat:0 }}</h2>
 </div>
 
+</div>
+
+<!-- ========================= -->
+<!-- 📊 GRÁFICA VENTAS -->
+<!-- ========================= -->
+<div class="seccion">
+    <h3>📊 Ventas últimos días</h3>
+    <canvas id="graficaVentas"></canvas>
+</div>
+
+<!-- ========================= -->
+<!-- 💰 FINANZAS PRO -->
+<!-- ========================= -->
+<div class="seccion">
+
+<h3>💰 Finanzas del negocio</h3>
+
+<div class="grid-finanzas">
+
+    <div class="fin-card ingreso">
+        <h4>Ingresos</h4>
+        <h2>${{ total_ingresos|floatformat:0 }}</h2>
+    </div>
+
+    <div class="fin-card costo">
+        <h4>Costos</h4>
+        <h2>${{ total_costos|floatformat:0 }}</h2>
+    </div>
+
+    <div class="fin-card gasto">
+        <h4>Gastos</h4>
+        <h2>${{ total_gastos|floatformat:0 }}</h2>
+    </div>
+
+    <div class="fin-card utilidad">
+        <h4>Utilidad</h4>
+        <h2>${{ utilidad|floatformat:0 }}</h2>
+        <small>{{ margen|floatformat:1 }}% margen</small>
+    </div>
+
+</div>
+
+</div>
+
+<!-- ========================= -->
+<!-- 📊 GRÁFICA FINANZAS -->
+<!-- ========================= -->
+<div class="seccion">
+    <h3>📊 Flujo financiero</h3>
+    <canvas id="graficaFinanzas"></canvas>
 </div>
 
 <!-- ACCIONES -->
@@ -437,3 +555,58 @@ Ver
 </div>
 
 {% endblock %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// 📊 GRÁFICA VENTAS
+const ctx = document.getElementById('graficaVentas');
+
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: {{ fechas|safe }},
+        datasets: [{
+            label: 'Ventas',
+            data: {{ totales|safe }},
+            borderColor: '#25D366',
+            backgroundColor: 'rgba(37, 211, 102, 0.2)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true
+    }
+});
+
+// 💰 GRÁFICA FINANZAS
+const ctx2 = document.getElementById('graficaFinanzas');
+
+new Chart(ctx2, {
+    type: 'bar',
+    data: {
+        labels: ['Ingresos', 'Costos', 'Gastos', 'Utilidad'],
+        datasets: [{
+            data: [
+                {{ total_ingresos }},
+                {{ total_costos }},
+                {{ total_gastos }},
+                {{ utilidad }}
+            ],
+            backgroundColor: [
+                '#198754',
+                '#fd7e14',
+                '#dc3545',
+                '#0d6efd'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false }
+        }
+    }
+});
+</script>

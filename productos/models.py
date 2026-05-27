@@ -105,6 +105,7 @@ class Producto(models.Model):
     precio_por_gramo_semimayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     precio_por_gramo_mayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     # 🔥 LÓGICA CENTRAL (LA IMPORTANTE)
+
     def precio_por_cantidad(self, cantidad):
 
     # 🔵 VENTA POR GRAMOS
@@ -274,23 +275,25 @@ class Pedido(models.Model):
     es_retenedor = models.BooleanField(default=False)
     descuento_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     porcentaje_descuento = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    tipo_envio = models.CharField(
-        max_length=20,
-        choices=[
-        ('recogida', 'Recogida en tienda'),
-        ('domicilio', 'Domicilio'),
-        ('transportadora', 'Transportadora'),
-    ],
-        default='recogida'
-)
-
+    tipo_envio = models.CharField(max_length=20,choices=[('recogida', 'Recogida en tienda'),('domicilio', 'Domicilio'),('transportadora', 'Transportadora'),],default='recogida')
     costo_envio = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-
     direccion_envio = models.CharField(max_length=255, blank=True, null=True)
     ciudad_envio = models.CharField(max_length=100, blank=True, null=True)
 
     # 🔹 TOTAL
     total = models.DecimalField(max_digits=10, decimal_places=2)
+
+    # 🔹 COSTOS (🔥 PRO)
+    costo_material = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    costo_mano_obra = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    @property
+    def utilidad(self):
+        return self.total - (self.costo_material + self.costo_mano_obra)
+    
+    @property
+    def costo_total(self):
+        return self.costo_material + self.costo_mano_obra
 
     def __str__(self):
         return self.numero_orden

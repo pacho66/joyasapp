@@ -43,6 +43,7 @@ import mercadopago
 import requests
 from .utils import generar_link_whatsapp
 from django.http import HttpResponse
+from django.db.models.functions import TruncDate
 
 def safe_int(valor, default=1):
     try:
@@ -369,6 +370,22 @@ def dashboard(request):
     # ==========================
     pedidos = Pedido.objects.filter(usuario=usuario)
 
+    # ==========================
+    # 📊 GRÁFICAS (ÚLTIMOS 7 DÍAS)
+    # ==========================
+
+    ventas_por_dia = (
+        pedidos
+        .annotate(fecha_dia=TruncDate('fecha'))
+        .values('fecha_dia')
+        .annotate(total=Sum('total'))
+        .order_by('fecha_dia')
+)
+
+    # preparar datos para JS
+    fechas = [v['fecha_dia'].strftime('%d/%m') for v in ventas_por_dia]
+    totales = [float(v['total']) for v in ventas_por_dia]
+
     cliente_id = request.GET.get('cliente')
 
     if cliente_id:
@@ -538,6 +555,12 @@ def dashboard(request):
     'total_general': total_general,
     'ganancias_mes': ganancias_mes,
     'crecimiento': crecimiento,
+
+    # ==========================
+    # 📊 GRÁFICAS
+    # ==========================
+    'fechas': fechas,
+    'totales': totales,
 
     # ==========================
     # 💸 FINANZAS
