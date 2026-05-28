@@ -225,8 +225,6 @@ def cerrar_sesion(request):
     logout(request)
     return redirect('login')
         
-
-@login_required(login_url='login')
 def inicio(request):
 
     productos = Producto.objects.filter(
