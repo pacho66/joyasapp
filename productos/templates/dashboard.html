@@ -124,7 +124,7 @@ body{
 }
 
 .seccion{
-    height:300px;
+    min-height:300px;
 }
 
 .seccion canvas{
@@ -280,65 +280,88 @@ th{
 </div>
 
 <!-- ENCABEZADO -->
+
 <div class="topbar">
 
-<div>
-<h1 class="titulo">📊 Dashboard</h1>
+    <div>
 
-<div style="text-align:center; margin:20px;">
-    <a href="{% url 'lista_gastos' %}" style="
-        background:#dc3545;
-        color:white;
-        padding:10px 15px;
-        border-radius:8px;
-        text-decoration:none;
-    ">
-        📊 Ver gastos
-    </a>
-</div>
+        <h1 class="titulo">📊 Dashboard</h1>
 
-<div class="sub">Control total de tu negocio</div>
-</div>
+        <div style="text-align:center; margin:20px;">
+            <a href="{% url 'lista_gastos' %}" style="
+                background:#dc3545;
+                color:white;
+                padding:10px 15px;
+                border-radius:8px;
+                text-decoration:none;
+            ">
+                📊 Ver gastos
+            </a>
+        </div>
 
-<a href="{% url 'dashboard' %}?tipo=morosos" style="text-decoration:none;">
-    
-    {% if morosos_count > 0 %}
-<a href="{% url 'dashboard' %}?tipo=morosos" style="text-decoration:none;">
-    
-    <div style="
-        background:#ff4d4d;
-        color:white;
-        padding:12px;
-        margin-top:10px;
-        border-radius:10px;
-        font-weight:bold;
-        transition:0.3s;
-        cursor:pointer;
-    " 
-    onmouseover="this.style.transform='scale(1.02)'" 
-    onmouseout="this.style.transform='scale(1)'">
-        
-        ⚠️ {{ morosos_count }} clientes en mora — Ver cartera
+        <div class="sub">
+            Control total de tu negocio
+        </div>
+
+        {% if morosos_count > 0 %}
+
+        <a href="{% url 'dashboard' %}?tipo=morosos"
+           style="text-decoration:none;">
+
+            <div style="
+                background:#ff4d4d;
+                color:white;
+                padding:12px;
+                margin-top:10px;
+                border-radius:10px;
+                font-weight:bold;
+                transition:0.3s;
+                cursor:pointer;
+            "
+            onmouseover="this.style.transform='scale(1.02)'"
+            onmouseout="this.style.transform='scale(1)'">
+
+                ⚠️ {{ morosos_count }} clientes en mora — Ver cartera
+
+            </div>
+
+        </a>
+
+        {% endif %}
 
     </div>
 
-</a>
-{% endif %}
+    <!-- BOTONES -->
+    <div class="botones">
 
-<a href="{% url 'estadisticas' %}" class="btn azul">📈 Estadísticas</a>
+        <a href="{% url 'estadisticas' %}" class="btn azul">
+            📈 Estadísticas
+        </a>
 
-<a href="{% url 'ganancias' %}" class="btn verde">💰 Ganancias</a>
+        <a href="{% url 'ganancias' %}" class="btn verde">
+            💰 Ganancias
+        </a>
 
-<a href="{% url 'inventario' %}" class="btn naranja">📦 Inventario</a>
+        <a href="{% url 'inventario' %}" class="btn naranja">
+            📦 Inventario
+        </a>
 
-<a href="{% url 'whatsapp_segmento' %}?tipo=vip" class="btn morado">📲 WhatsApp VIP</a>
+        <a href="{% url 'whatsapp_segmento' %}?tipo=vip"
+           class="btn morado">
+            📲 WhatsApp VIP
+        </a>
 
-<a href="{% url 'configurar_negocio' %}" class="btn gris">⚙️ Configurar</a>
+        <a href="{% url 'configurar_negocio' %}"
+           class="btn gris">
+            ⚙️ Configurar
+        </a>
 
-<a href="{% url 'modificar_banner' %}" class="btn gris">
-🖼️ Modificar Banner
-</a>
-</div>
+        <a href="{% url 'modificar_banner' %}"
+           class="btn gris">
+            🖼️ Modificar Banner
+        </a>
+
+    </div>
 
 </div>
 
@@ -568,8 +591,6 @@ Ver
 
 </div>
 
-{% endblock %}
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
@@ -636,3 +657,5 @@ document.addEventListener("DOMContentLoaded", function(){
 
 });
 </script>
+
+{% endblock %}

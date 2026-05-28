@@ -268,7 +268,7 @@ def buscar_productos(request):
         productos = productos.filter(
             Q(nombre__icontains=query) |
             Q(descripcion__icontains=query) |
-            Q(categoria_nombre_icontains=query)
+            Q(categoria__nombre__icontains=query)
         )
 
     return render(request, 'lista_productos.html', {
@@ -348,7 +348,7 @@ def productos_top(request):
         'top': top
     })
 
-@login_required
+@login_required(login_url='/login/')
 def dashboard(request):
     usuario = request.user
 
