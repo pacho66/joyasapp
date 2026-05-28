@@ -227,25 +227,32 @@ def cerrar_sesion(request):
         
 def inicio(request):
 
-    productos = Producto.objects.filter(
-        usuario=request.user
-    ).order_by('-id')
+    if request.user.is_authenticated:
+        productos = Producto.objects.filter(usuario=request.user)
 
-    destacados = Producto.objects.filter(
-        usuario=request.user,
-        destacado=True
-    ).order_by('-id')[:8]
+        destacados = Producto.objects.filter(
+            usuario=request.user,
+            destacado=True
+        ).order_by('-id')[:8]
 
-    categorias = Categoria.objects.filter(
-        usuario=request.user
-    ).order_by('nombre')
+        categorias = Categoria.objects.filter(
+            usuario=request.user
+        ).order_by('nombre')
+
+    else:
+        productos = Producto.objects.all()
+
+        destacados = Producto.objects.filter(
+            destacado=True
+        ).order_by('-id')[:8]
+
+        categorias = Categoria.objects.all().order_by('nombre')
 
     return render(request, 'inicio.html', {
         'productos': productos,
         'destacados': destacados,
         'categorias': categorias,
     })
-
 
 def buscar_productos(request):
     query = request.GET.get('q', '')
