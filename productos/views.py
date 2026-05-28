@@ -210,7 +210,7 @@ def iniciar_sesion(request):
 
         if user is not None:
             login(request, user)
-            return redirect('inicio')
+            return redirect('dashboard')
 
         else:
             messages.error(
@@ -225,11 +225,9 @@ def cerrar_sesion(request):
     logout(request)
     return redirect('login')
         
+
 @login_required(login_url='login')
 def inicio(request):
-
-    if not request.user.is_authenticated:
-        return redirect('login')
 
     productos = Producto.objects.filter(
         usuario=request.user
