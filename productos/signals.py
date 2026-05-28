@@ -8,6 +8,6 @@ def crear_perfil(sender, instance, created, **kwargs):
     if created:
         Perfil.objects.create(
             user=instance,
-            nombre_tienda='Mi tienda',
+            nombre_tienda='PG joyas gonzález',
             plan='gratis'
         )
