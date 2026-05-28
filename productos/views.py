@@ -190,8 +190,7 @@ def registro(request):
         form = RegistroForm()
 
     return render(request, 'registro.html', {'form': form})
-        
-
+    
 def iniciar_sesion(request):
 
     if request.user.is_authenticated:
