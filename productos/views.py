@@ -350,13 +350,15 @@ def dashboard(request):
     usuario = request.user
 
     # 🔒 Perfil SaaS
-    if not hasattr(usuario, 'perfil'):
-        return redirect('inicio')
+    perfil = getattr(usuario, 'perfil', None)
+
+    if not perfil:
+        return HttpResponse("⚠️ Usuario sin perfil creado")
 
     perfil = usuario.perfil
 
     # 🔒 Validar plan
-    if perfil.plan_vence < timezone.localdate():
+    if perfil.plan_vence and perfil.plan_vence < timezone.localdate():
         return render(request, 'plan_vencido.html')
 
     hoy = timezone.localdate()

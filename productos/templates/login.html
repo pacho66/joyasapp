@@ -1,28 +1,36 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Iniciar sesión</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% load static %}
 
-<h2>Iniciar sesión</h2>
+{% block content %}
 
-<form method="POST">
-    {% csrf_token %}
+<div class="login-container">
 
-    <input type="text" name="username" placeholder="Usuario" required>
-    <br><br>
+    <div class="login-box">
 
-    <input type="password" name="password" placeholder="Contraseña" required>
-    <br><br>
+        <!-- LOGO (opcional pero recomendado) -->
+        <img src="{% static 'img/logo.jpg' %}" class="login-logo">
 
-    <button type="submit">Ingresar</button>
-</form>
+        <h2>🔐 Iniciar sesión</h2>
 
-{% for message in messages %}
-    <p>{{ message }}</p>
-{% endfor %}
+        <form method="POST">
+            {% csrf_token %}
 
-</body>
-</html>
+            <input type="text" name="username" placeholder="👤 Usuario" required>
+
+            <input type="password" name="password" placeholder="🔒 Contraseña" required>
+
+            <button type="submit">Ingresar</button>
+        </form>
+
+        <!-- MENSAJES -->
+        {% if messages %}
+            {% for message in messages %}
+                <p class="error">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}

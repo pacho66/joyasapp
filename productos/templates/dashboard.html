@@ -108,14 +108,28 @@ body{
     padding:18px;
     border-radius:14px;
     border:1px solid var(--borde);
-    box-shadow:0 6px 18px rgba(0,0,0,.04);
+    box-shadow:0 6px 18px rgba(0,0,0,.06);
     margin-bottom:20px;
+    transition:0.3s;
+}
+
+.seccion:hover{
+    transform:translateY(-2px);
 }
 
 .seccion h3{
     margin:0 0 14px 0;
     font-size:18px;
     color:var(--texto);
+}
+
+.seccion{
+    height:300px;
+}
+
+.seccion canvas{
+    width:100% !important;
+    height:100% !important;
 }
 
 .filtros{
@@ -559,54 +573,66 @@ Ver
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-// 📊 GRÁFICA VENTAS
-const ctx = document.getElementById('graficaVentas');
+document.addEventListener("DOMContentLoaded", function(){
 
-new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: {{ fechas|safe }},
-        datasets: [{
-            label: 'Ventas',
-            data: {{ totales|safe }},
-            borderColor: '#25D366',
-            backgroundColor: 'rgba(37, 211, 102, 0.2)',
-            tension: 0.4,
-            fill: true
-        }]
-    },
-    options: {
-        responsive: true
+    // =========================
+    // 📊 GRÁFICA VENTAS
+    // =========================
+    const ctx = document.getElementById('graficaVentas');
+
+    if(ctx){
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ fechas|safe }},
+                datasets: [{
+                    label: 'Ventas',
+                    data: {{ totales|safe }},
+                    borderColor: '#25D366',
+                    backgroundColor: 'rgba(37, 211, 102, 0.2)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
     }
-});
 
-// 💰 GRÁFICA FINANZAS
-const ctx2 = document.getElementById('graficaFinanzas');
+    // =========================
+    // 💰 GRÁFICA FINANZAS
+    // =========================
+    const ctx2 = document.getElementById('graficaFinanzas');
 
-new Chart(ctx2, {
-    type: 'bar',
-    data: {
-        labels: ['Ingresos', 'Costos', 'Gastos', 'Utilidad'],
-        datasets: [{
-            data: [
-                {{ total_ingresos }},
-                {{ total_costos }},
-                {{ total_gastos }},
-                {{ utilidad }}
-            ],
-            backgroundColor: [
-                '#198754',
-                '#fd7e14',
-                '#dc3545',
-                '#0d6efd'
-            ]
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { display: false }
-        }
+    if(ctx2){
+        new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: ['Ingresos', 'Gastos', 'Utilidad'],
+                datasets: [{
+                    data: [
+                        {{ total_ingresos }},
+                        {{ total_gastos }},
+                        {{ utilidad }}
+                    ],
+                    backgroundColor: [
+                        '#198754',
+                        '#dc3545',
+                        '#0d6efd'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
     }
+
 });
 </script>
