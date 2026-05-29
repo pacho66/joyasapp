@@ -17,6 +17,7 @@ class Perfil(models.Model):
     )
     # EMPRESA
     nombre_tienda = models.CharField(max_length=120)
+    banner = models.ImageField(upload_to='banners/', blank=True, null=True)
     logo = models.ImageField(upload_to='logos/', blank=True, null=True)
     color_primario = models.CharField(max_length=7, default='#28a745')
     color_secundario = models.CharField(max_length=7, default='#000000')
@@ -286,7 +287,7 @@ class Pedido(models.Model):
     # 🔹 COSTOS (🔥 PRO)
     costo_material = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     costo_mano_obra = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
+
     @property
     def utilidad(self):
         return self.total - (self.costo_material + self.costo_mano_obra)

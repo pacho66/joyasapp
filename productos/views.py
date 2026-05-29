@@ -616,15 +616,12 @@ def modificar_banner(request):
     perfil = request.user.perfil
 
     if request.method == 'POST':
-        banner = request.FILES.get('banner')
-
-        if banner:
-            perfil.banner = banner
-            perfil.save()
-
+        texto = request.POST.get('banner_texto')
+        perfil.banner_texto = texto
+        perfil.save()
         return redirect('dashboard')
 
-    return render(request, 'modificar_banner.html')    
+    return render(request, 'modificar_banner.html', {'perfil': perfil})
 
 @login_required
 def estadisticas(request):

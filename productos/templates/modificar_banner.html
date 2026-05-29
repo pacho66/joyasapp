@@ -1,7 +1,26 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<h1>🖼️ Modificar Banner</h1>
-<p>Aquí podrás cambiar banner principal de tu tienda.</p>
+<div class="container mt-4" style="max-width:600px;">
+
+    <h2>🖼️ Modificar Banner</h2>
+    <p class="text-muted">Personaliza el mensaje que verán tus clientes</p>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label>Texto del banner</label>
+            <textarea name="banner_texto" class="form-control" rows="3">
+{{ perfil.banner_texto }}
+            </textarea>
+        </div>
+
+        <button type="submit" class="btn btn-dark w-100">
+            Guardar cambios
+        </button>
+    </form>
+
+</div>
 
 {% endblock %}

@@ -104,6 +104,20 @@ nav ul li a:hover {
     }
 }
 
+.banner-container {
+    width: 100%;
+    max-height: 300px;
+    overflow: hidden;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.banner-img {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+}
+
 /* WHATSAPP */
 #whatsapp-flotante {
     position: fixed;
@@ -325,9 +339,22 @@ nav ul li a:hover {
 </nav>
 
 <!-- BANNER -->
+
 <div class="banner-top">
-    🎉 Envío gratis desde $150.000 <br>
-    💬 Compra rápida por WhatsApp | 🔒 Pago seguro
+    {{ perfil.banner_texto|default:"🎉 Envío gratis desde $150.000 | 💬 Compra por WhatsApp | 🔒 Pago seguro" }}
+</div>
+
+<!-- 🖼️ BANNER IMAGEN -->
+<div class="banner-container position-relative">
+    {% if perfil.banner %}
+        <img src="{{ perfil.banner.url }}" class="banner-img">
+    {% else %}
+        <img src="/static/img/banner.jpg" class="banner-img">
+    {% endif %}
+
+    <div class="banner-text">
+        <h2>{{ perfil.nombre_tienda }}</h2>
+    </div>
 </div>
 
 <!-- CONTENIDO -->
