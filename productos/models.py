@@ -23,7 +23,7 @@ class Perfil(models.Model):
     color_secundario = models.CharField(max_length=7, default='#000000')
 
     # CONTACTO
-    whatsapp = models.CharField(max_length=20)
+    whatsapp = models.CharField(max_length=20, blank=True, null=True)
     email_empresa = models.EmailField(blank=True, null=True)
 
     # DIRECCIÓN

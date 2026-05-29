@@ -5,53 +5,36 @@
 .wrap{
     max-width:700px;
     margin:auto;
-    padding:30px 20px;
-    font-family:Arial,sans-serif;
+    padding:20px;
 }
 
 .card{
     background:#fff;
     border-radius:16px;
-    padding:28px;
+    padding:25px;
     box-shadow:0 6px 18px rgba(0,0,0,.08);
 }
 
 .titulo{
-    margin:0 0 8px;
-    font-size:30px;
-    color:#111;
+    font-size:26px;
+    margin-bottom:10px;
 }
 
 .sub{
     color:#666;
-    margin-bottom:25px;
+    margin-bottom:20px;
     font-size:14px;
 }
 
 .grupo{
-    margin-bottom:18px;
+    margin-bottom:15px;
 }
 
-label{
-    display:block;
-    margin-bottom:7px;
-    font-weight:bold;
-    font-size:14px;
-    color:#222;
-}
-
-input{
+input, select{
     width:100%;
-    padding:12px;
+    padding:10px;
     border:1px solid #ddd;
-    border-radius:10px;
-    font-size:15px;
-    box-sizing:border-box;
-}
-
-input:focus{
-    outline:none;
-    border-color:#007bff;
+    border-radius:8px;
 }
 
 .botones{
@@ -62,111 +45,89 @@ input:focus{
 }
 
 .btn{
+    padding:10px 15px;
+    border-radius:8px;
     border:none;
-    padding:12px 18px;
-    border-radius:10px;
     font-weight:bold;
-    text-decoration:none;
-    cursor:pointer;
-    font-size:14px;
 }
 
 .guardar{
     background:#28a745;
-    color:#fff;
+    color:white;
 }
 
 .volver{
     background:#111;
-    color:#fff;
-}
-
-.info{
-    margin-top:18px;
-    background:#f8f8f8;
-    padding:14px;
-    border-radius:10px;
-    font-size:14px;
-    color:#555;
+    color:white;
 }
 
 @media(max-width:768px){
     .titulo{
-        font-size:24px;
-    }
-
-    .card{
-        padding:20px;
+        font-size:22px;
     }
 }
 </style>
 
 <div class="wrap">
-
 <div class="card">
 
-<h1 class="titulo">⚙️ Configurar Negocio</h1>
-<p class="sub">Actualiza los datos que aparecerán en tu tienda y facturas.</p>
-
-<h3>Logo del negocio</h3>
+<h2 class="titulo">⚙️ Configurar Negocio</h2>
+<p class="sub">Personaliza tu tienda (SaaS)</p>
 
 <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
 
-    {{ form.as_p }}
+    <div class="grupo">
+        <label>🏪 Nombre tienda</label>
+        {{ form.nombre_tienda }}
+    </div>
 
-    <label>Logo:</label>
-    <input type="file" name="logo">
+    <div class="grupo">
+        <label>📲 WhatsApp</label>
+        {{ form.whatsapp }}
+    </div>
 
-    <button type="submit">Guardar</button>
+    <div class="grupo">
+        <label>📧 Correo</label>
+        {{ form.correo_negocio }}
+    </div>
+
+    <div class="grupo">
+        <label>📍 Dirección</label>
+        {{ form.direccion }}
+    </div>
+
+    <div class="grupo">
+        <label>🌎 Ciudad</label>
+        {{ form.ciudad }}
+    </div>
+
+    <div class="grupo">
+        <label>🎨 Color primario</label>
+        <input type="color" name="color_primario" value="{{ perfil.color_primario }}">
+    </div>
+
+    <div class="grupo">
+        <label>🎨 Color secundario</label>
+        <input type="color" name="color_secundario" value="{{ perfil.color_secundario }}">
+    </div>
+
+    <div class="grupo">
+        <label>🖼️ Logo</label>
+        <input type="file" name="logo">
+    </div>
+
+    {% if perfil.logo %}
+        <p>Logo actual:</p>
+        <img src="{{ perfil.logo.url }}" style="max-height:80px;">
+    {% endif %}
+
+    <div class="botones">
+        <button type="submit" class="btn guardar">💾 Guardar</button>
+        <a href="{% url 'dashboard' %}" class="btn volver">⬅️ Volver</a>
+    </div>
+
 </form>
-
-<label>Color primario:</label>
-<input type="color" name="color_primario" value="{{ perfil.color_primario }}">
-
-<label>Color secundario:</label>
-<input type="color" name="color_secundario" value="{{ perfil.color_secundario }}">
-
-{% if perfil.logo %}
-    <p>Logo actual:</p>
-    <img src="{{ perfil.logo.url }}" style="max-height:80px;">
-{% endif %}
-
-<div class="grupo">
-<label>🏪 Nombre Tienda</label>
-{{ form.nombre_tienda }}
-</div>
-
-<div class="grupo">
-<label>📲 WhatsApp</label>
-{{ form.whatsapp }}
-</div>
-
-<div class="grupo">
-<label>📧 Correo Empresa</label>
-{{ form.correo_negocio }}
-</div>
-
-<div class="grupo">
-<label>📍 Dirección</label>
-{{ form.direccion }}
-</div>
-
-<div class="grupo">
-<label>🌎 Ciudad</label>
-{{ form.ciudad }}
-</div>
-
-<div class="botones">
-<button type="submit" class="btn guardar">💾 Guardar Cambios</button>
-<a href="{% url 'dashboard' %}" class="btn volver">⬅️ Volver</a>
-</div>
-
-</form>
-
-<div class="info">
-💎 Estos datos se usarán en facturas, contacto y configuración general del negocio.
-</div>
 
 </div>
 </div>
