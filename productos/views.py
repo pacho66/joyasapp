@@ -351,18 +351,19 @@ def productos_top(request):
 def dashboard(request):
     usuario = request.user
 
-    # 🔒 Perfil SaaS
-    perfil = getattr(usuario, 'perfil', None)
-
-    if not perfil:
-        return HttpResponse("⚠️ Usuario sin perfil creado")
-
-    perfil = usuario.perfil
+    # ✅ Crear o obtener perfil automáticamente
+    perfil, creado = Perfil.objects.get_or_create(
+        user=usuario,
+        defaults={
+            'nombre_tienda': 'PG Joyas González',
+            'plan': 'gratis'
+        }
+    )
 
     # 🔒 Validar plan
     if perfil.plan_vence and perfil.plan_vence < timezone.localdate():
         return render(request, 'plan_vencido.html')
-
+    
     hoy = timezone.localdate()
     ayer = hoy - timedelta(days=1)
     hace_30 = timezone.now() - timedelta(days=30)
