@@ -361,7 +361,7 @@ nav ul li a:hover {
 <!-- BANNER -->
 
 <div class="banner-top">
-    {{ perfil.banner_texto|default:"🎉 Envío gratis desde $150.000 | 💬 Compra por WhatsApp | 🔒 Pago seguro" }}
+    {{ perfil.banner_texto|default:"🎉 Bienvenido a tu tienda" }}
 </div>
 
 <!-- 🖼️ BANNER IMAGEN -->
@@ -369,12 +369,15 @@ nav ul li a:hover {
     {% if perfil.banner %}
         <img src="{{ perfil.banner.url }}" class="banner-img">
     {% else %}
-        <img src="/static/img/banner.jpg" class="banner-img">
+        <img src="{% static 'img/banner.jpg' %}" class="banner-img">
     {% endif %}
 
     <div class="banner-text">
-        <h2>{{ perfil.nombre_tienda }}</h2>
-    </div>
+    <h2>{{ perfil.nombre_tienda }}</h2>
+
+    {% if perfil.banner_texto %}
+        <p>{{ perfil.banner_texto }}</p>
+    {% endif %}
 </div>
 
 <!-- CONTENIDO -->
