@@ -30,11 +30,14 @@
     margin-bottom:15px;
 }
 
-input, select{
+input,
+select,
+textarea{
     width:100%;
     padding:10px;
     border:1px solid #ddd;
     border-radius:8px;
+    box-sizing:border-box;
 }
 
 .botones{
@@ -62,8 +65,25 @@ input, select{
 }
 
 @media(max-width:768px){
+
     .titulo{
         font-size:22px;
+    }
+
+    .grupo input,
+    .grupo select,
+    .grupo textarea{
+        width:100%;
+        box-sizing:border-box;
+    }
+
+    .botones{
+        flex-direction:column;
+    }
+
+    .btn{
+        width:100%;
+        text-align:center;
     }
 }
 </style>
@@ -104,22 +124,34 @@ input, select{
 
     <div class="grupo">
         <label>🎨 Color primario</label>
-        <input type="color" name="color_primario" value="{{ perfil.color_primario }}">
+        <input type="color"
+            name="color_primario"
+            value="{{ perfil.color_primario|default:'#28a745' }}">
     </div>
 
     <div class="grupo">
         <label>🎨 Color secundario</label>
-        <input type="color" name="color_secundario" value="{{ perfil.color_secundario }}">
+        <input type="color"
+            name="color_secundario"
+            value="{{ perfil.color_secundario|default:'#000000' }}">
     </div>
 
     <div class="grupo">
         <label>🖼️ Logo</label>
-        <input type="file" name="logo">
+        <input type="file" name="logo" accept="image/*">
     </div>
 
     {% if perfil.logo %}
-        <p>Logo actual:</p>
-        <img src="{{ perfil.logo.url }}" style="max-height:80px;">
+    <div class="grupo">
+        <p><strong>Logo actual:</strong></p>
+        <img src="{{ perfil.logo.url }}"
+        style="
+        max-height:120px;
+        border-radius:10px;
+        border:1px solid #ddd;
+        padding:5px;
+        background:white;">
+    </div>
     {% endif %}
 
     <div class="botones">

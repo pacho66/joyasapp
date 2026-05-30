@@ -385,9 +385,13 @@ nav ul li a:hover {
 {% endblock %}
 
 <!-- WHATSAPP -->
-<a href="#" id="whatsapp-flotante" target="_blank">
+{% if perfil.whatsapp %}
+<a href="https://wa.me/57{{ perfil.whatsapp }}"
+   id="whatsapp-flotante"
+   target="_blank">
     📱 WhatsApp - <span id="whatsapp-info">0 productos - $0</span>
 </a>
+{% endif %}
 
 <!-- SCRIPT -->
 <script>
