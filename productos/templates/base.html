@@ -358,43 +358,67 @@ nav ul li a:hover {
 
 </nav>
 
-<!-- BANNER -->
-
+<!-- ========================= -->
+<!-- BANNER TEXTO -->
+<!-- ========================= -->
+{% if perfil.banner_texto %}
 <div class="banner-top">
-    {{ perfil.banner_texto|default:"🎉 Bienvenido a tu tienda" }}
+    {{ perfil.banner_texto }}
 </div>
+{% endif %}
 
-<!-- 🖼️ BANNER IMAGEN -->
+<!-- ========================= -->
+<!-- BANNER IMAGEN -->
+<!-- ========================= -->
 <div class="banner-container position-relative">
+
     {% if perfil.banner %}
-        <img src="{{ perfil.banner.url }}" class="banner-img">
+        <img src="{{ perfil.banner.url }}" class="banner-img" alt="Banner">
     {% else %}
-        <img src="{% static 'img/banner.jpg' %}" class="banner-img">
+        <img src="{% static 'img/banner.jpg' %}" class="banner-img" alt="Banner">
     {% endif %}
 
     <div class="banner-text">
-    <h2>{{ perfil.nombre_tienda }}</h2>
 
-    {% if perfil.banner_texto %}
-        <p>{{ perfil.banner_texto }}</p>
-    {% endif %}
+        {% if perfil.nombre_tienda %}
+            <h2>{{ perfil.nombre_tienda }}</h2>
+        {% endif %}
+
+        {% if perfil.banner_texto %}
+            <p>{{ perfil.banner_texto }}</p>
+        {% endif %}
+
+    </div>
+
 </div>
 
+<!-- ========================= -->
 <!-- CONTENIDO -->
+<!-- ========================= -->
 {% block content %}
 {% endblock %}
 
+<!-- ========================= -->
 <!-- WHATSAPP -->
+<!-- ========================= -->
 {% if perfil.whatsapp %}
 <a href="https://wa.me/57{{ perfil.whatsapp }}"
    id="whatsapp-flotante"
    target="_blank">
-    📱 WhatsApp - <span id="whatsapp-info">0 productos - $0</span>
+
+    📱 WhatsApp -
+    <span id="whatsapp-info">
+        0 productos - $0
+    </span>
+
 </a>
 {% endif %}
 
-<!-- SCRIPT -->
+<!-- ========================= -->
+<!-- SCRIPTS -->
+<!-- ========================= -->
 <script>
+
 function toggleMenu(){
     document.getElementById("menu-lista").classList.toggle("show");
 }

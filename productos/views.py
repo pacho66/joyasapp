@@ -552,6 +552,8 @@ def dashboard(request):
     'tipo': tipo,
     'today': hoy,
 
+    'perfil': perfil,
+
     # ==========================
     # 💰 VENTAS
     # ==========================
