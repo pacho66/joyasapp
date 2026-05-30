@@ -301,6 +301,25 @@ def productos_por_categoria(request, categoria_id):
         'productos': productos
     }) 
 
+@login_required
+def crear_categoria(request):
+
+    if request.method == 'POST':
+
+        nombre = request.POST.get('nombre')
+
+        Categoria.objects.create(
+            nombre=nombre,
+            usuario=request.user
+        )
+
+        return redirect('dashboard')
+
+    return render(
+        request,
+        'crear_categoria.html'
+    )
+
 
 @login_required
 def detalle_producto(request, id, slug):
@@ -346,6 +365,35 @@ def productos_top(request):
     return render(request, 'top_productos.html', {
         'top': top
     })
+
+@login_required
+def crear_producto(request):
+
+    categorias = Categoria.objects.filter(
+        usuario=request.user
+    )
+
+    if request.method == 'POST':
+
+        Producto.objects.create(
+            usuario=request.user,
+            nombre=request.POST.get('nombre'),
+            descripcion=request.POST.get('descripcion'),
+            categoria_id=request.POST.get('categoria'),
+            precio_detal=request.POST.get('precio'),
+            stock=request.POST.get('stock'),
+            imagen_principal=request.FILES.get('imagen')
+        )
+
+        return redirect('dashboard')
+
+    return render(
+        request,
+        'crear_producto.html',
+        {
+            'categorias': categorias
+        }
+    )
 
 @login_required(login_url='/login/')
 def dashboard(request):
