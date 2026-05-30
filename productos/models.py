@@ -18,8 +18,9 @@ class Perfil(models.Model):
     # EMPRESA
     nombre_tienda = models.CharField(max_length=120)
     banner = models.ImageField(upload_to='banners/', blank=True, null=True)
+    banner_texto = models.TextField(blank=True, default="")
     logo = models.ImageField(upload_to='logos/', blank=True, null=True)
-    color_primario = models.CharField(max_length=7, default='#28a745')
+    color_primario = models.CharField(max_length=7, default="#122216")
     color_secundario = models.CharField(max_length=7, default='#000000')
 
     # CONTACTO
