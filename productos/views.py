@@ -374,6 +374,8 @@ def crear_producto(request):
     )
 
     if request.method == 'POST':
+        print("PRODUCTO RECIBIDO")
+        print(request.POST)
 
         Producto.objects.create(
             usuario=request.user,
