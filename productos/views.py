@@ -439,14 +439,7 @@ def editar_producto(request, id):
     if request.method == 'POST':
 
         producto.nombre = request.POST.get('nombre')
-        producto.descripcion = request.POST.get('descripcion')
-        #producto.categoria_id = request.POST.get('categoria')
-        producto.precio_detal = request.POST.get('precio')
-        producto.stock = request.POST.get('stock')
-
-        if request.FILES.get('imagen'):
-            producto.imagen_principal = request.FILES.get('imagen')
-
+        
         producto.save()
 
         return redirect('mis_productos')
