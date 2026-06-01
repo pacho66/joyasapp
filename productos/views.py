@@ -441,6 +441,8 @@ def editar_producto(request, id):
         producto.nombre = request.POST.get('nombre')
         producto.descripcion = request.POST.get('descripcion')
         producto.categoria_id = request.POST.get('categoria')
+        if categoria:
+            producto.categoria_id = categoria
         producto.precio_detal = request.POST.get('precio')
         producto.stock = request.POST.get('stock')
 
