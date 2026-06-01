@@ -422,7 +422,43 @@ def eliminar_producto(request, id):
 
     producto.delete()
 
-    return redirect('mis_productos')    
+    return redirect('mis_productos')
+
+@login_required
+def editar_producto(request, id):
+
+    producto = Producto.objects.get(
+        id=id,
+        usuario=request.user
+    )
+
+    categorias = Categoria.objects.filter(
+        usuario=request.user
+    )
+
+    if request.method == 'POST':
+
+        producto.nombre = request.POST.get('nombre')
+        producto.descripcion = request.POST.get('descripcion')
+        producto.categoria_id = request.POST.get('categoria')
+        producto.precio_detal = request.POST.get('precio')
+        producto.stock = request.POST.get('stock')
+
+        if request.FILES.get('imagen'):
+            producto.imagen_principal = request.FILES.get('imagen')
+
+        producto.save()
+
+        return redirect('mis_productos')
+
+    return render(
+        request,
+        'editar_producto.html',
+        {
+            'producto': producto,
+            'categorias': categorias
+        }
+    )    
 
 @login_required(login_url='/login/')
 def dashboard(request):
