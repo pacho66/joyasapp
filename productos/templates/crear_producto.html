@@ -2,69 +2,53 @@
 
 {% block content %}
 
-<div style="
-max-width:600px;
-margin:auto;
-padding:20px;">
+<div style="max-width:600px;margin:auto;padding:20px;">
 
-<h2>✏️ Editar Producto</h2>
+<h2>💎 Nuevo Producto</h2>
 
-<form method="POST"
-      enctype="multipart/form-data">
+<form method="POST" enctype="multipart/form-data">
 
 {% csrf_token %}
 
-<input
-type="text"
+<input type="text"
 name="nombre"
-value="{{ producto.nombre }}"
-required
-style="
-width:100%;
-padding:12px;">
+placeholder="Nombre producto"
+required>
 
 <br><br>
 
 <select name="categoria" required>
 
-{% for categoria in categorias %}
-
-<option
-value="{{ categoria.id }}"
-
-{% if categoria.id == producto.categoria.id %}
-selected
-{% endif %}>
-
-{{ categoria.nombre }}
-
+<option value="">
+Seleccione categoría
 </option>
 
+{% for categoria in categorias %}
+<option value="{{ categoria.id }}">
+{{ categoria.nombre }}
+</option>
 {% endfor %}
 
 </select>
 
 <br><br>
 
-<input
-type="number"
+<input type="number"
 name="precio"
-value="{{ producto.precio_detal }}">
+placeholder="Precio detal">
 
 <br><br>
 
-<input
-type="number"
+<input type="number"
 name="stock"
-value="{{ producto.stock }}">
+placeholder="Stock">
 
 <br><br>
 
 <textarea
 name="descripcion"
-style="
-width:100%;
-height:120px;">{{ producto.descripcion }}</textarea>
+placeholder="Descripción">
+</textarea>
 
 <br><br>
 
@@ -75,17 +59,8 @@ accept="image/*">
 
 <br><br>
 
-<button
-type="submit"
-style="
-padding:12px 20px;
-background:#25D366;
-color:white;
-border:none;
-border-radius:8px;">
-
-💾 Guardar Cambios
-
+<button type="submit">
+💾 Guardar Producto
 </button>
 
 </form>

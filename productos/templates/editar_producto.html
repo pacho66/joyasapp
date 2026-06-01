@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div style="max-width:600px;margin:auto;padding:20px;">
+
+<h2>✏️ Editar Producto</h2>
+
+<form method="POST" enctype="multipart/form-data">
+
+{% csrf_token %}
+
+<input
+type="text"
+name="nombre"
+value="{{ producto.nombre }}"
+required>
+
+<br><br>
+
+<input
+type="number"
+name="precio"
+value="{{ producto.precio_detal }}">
+
+<br><br>
+
+<input
+type="number"
+name="stock"
+value="{{ producto.stock }}">
+
+<br><br>
+
+<textarea
+name="descripcion">{{ producto.descripcion }}</textarea>
+
+<br><br>
+
+<button type="submit">
+💾 Guardar Cambios
+</button>
+
+</form>
+
+</div>
+
+{% endblock %}
