@@ -40,11 +40,10 @@ border-radius:10px;">
 💰 ${{ producto.precio_detal }}
 </p>
 
-<a href="#">
-✏️ Editar
+<a href="{% url 'eliminar_producto' producto.id %}"
+style="color:red;">
+🗑️ Eliminar
 </a>
-
-|
 
 <a href="#">
 🗑️ Eliminar

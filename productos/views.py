@@ -412,6 +412,18 @@ def mis_productos(request):
         }
     )
 
+@login_required
+def eliminar_producto(request, id):
+
+    producto = Producto.objects.get(
+        id=id,
+        usuario=request.user
+    )
+
+    producto.delete()
+
+    return redirect('mis_productos')    
+
 @login_required(login_url='/login/')
 def dashboard(request):
     usuario = request.user
