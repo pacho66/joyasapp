@@ -397,6 +397,21 @@ def crear_producto(request):
         }
     )
 
+@login_required
+def mis_productos(request):
+
+    productos = Producto.objects.filter(
+        usuario=request.user
+    ).order_by('-id')
+
+    return render(
+        request,
+        'mis_productos.html',
+        {
+            'productos': productos
+        }
+    )
+
 @login_required(login_url='/login/')
 def dashboard(request):
     usuario = request.user
