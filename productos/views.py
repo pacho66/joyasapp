@@ -456,7 +456,7 @@ def editar_producto(request, id):
         'editar_producto.html',
         {
             'producto': producto,
-            'categorias': categorias
+            'categorias': categorias,
         }
     )    
 
