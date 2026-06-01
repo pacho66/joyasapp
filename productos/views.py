@@ -438,12 +438,8 @@ def editar_producto(request, id):
 
     if request.method == 'POST':
 
-        print("POST RECIBIDO")
-        print(request.POST)
-
         producto.nombre = request.POST.get('nombre')
-
-        print("Nombre:", producto.nombre)
+        producto.descripcion = request.POST.get('descripcion')
 
         producto.save()
 
