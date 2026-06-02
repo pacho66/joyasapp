@@ -386,7 +386,7 @@ def crear_producto(request):
             imagen_principal=request.FILES.get('imagen')
         )
 
-        return redirect('mis_productos')
+        return HttpResponse('PRODUCTO GUARDADO')
 
     return render(
         request,
