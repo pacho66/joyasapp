@@ -386,7 +386,7 @@ def crear_producto(request):
             imagen_principal=request.FILES.get('imagen')
         )
 
-        return redirect('dashboard')
+        return redirect('mis_productos')
 
     return render(
         request,
