@@ -374,6 +374,8 @@ def crear_producto(request):
     )
 
     if request.method == 'POST':
+        print("CLOUD NAME:", os.getenv("CLOUDINARY_CLOUD_NAME"))
+        print("API KEY:", os.getenv("CLOUDINARY_API_KEY"))
         print("PRODUCTO RECIBIDO")
         print(request.POST)
         print("FILES:")
