@@ -3,6 +3,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from django.utils.text import slugify
 import uuid
+from cloudinary.models import CloudinaryField
 
 class Perfil(models.Model):
     PLANES = [
@@ -93,7 +94,7 @@ class Producto(models.Model):
     talla = models.CharField(max_length=50, null=True, blank=True)
     colores_disponibles = models.JSONField(default=list, blank=True)
     tallas_disponibles = models.JSONField(default=list, blank=True)
-    imagen_principal = models.ImageField(upload_to='productos/', blank=True, null=True)
+    imagen_principal = CloudinaryField('imagen',blank=True,null=True)
     video = models.FileField(upload_to='productos/videos/', blank=True, null=True)
     certificado = models.FileField(upload_to='certificados/', blank=True, null=True)
     tipo_venta = models.CharField(max_length=20,choices=[('unidad', 'Por unidad'), ('gramo', 'Por gramos')],default='unidad')

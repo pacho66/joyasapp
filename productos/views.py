@@ -374,12 +374,7 @@ def crear_producto(request):
     )
 
     if request.method == 'POST':
-        print("PRODUCTO RECIBIDO")
-        print(request.POST)
-        print("FILES:")
-        print(request.FILES)
-        print(request.FILES.get('imagen'))
-
+        
         Producto.objects.create(
             usuario=request.user,
             nombre=request.POST.get('nombre'),
@@ -390,6 +385,8 @@ def crear_producto(request):
             imagen_principal=request.FILES.get('imagen')
         )
 
+        print("IMAGEN:", producto.imagen_principal)
+        print("NAME:", producto.imagen_principal.name)
         return redirect('dashboard')
 
     return render(
