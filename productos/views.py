@@ -366,6 +366,7 @@ def productos_top(request):
         'top': top
     })
 
+
 @login_required
 def crear_producto(request):
 
@@ -375,7 +376,6 @@ def crear_producto(request):
 
     if request.method == 'POST':
 
-       
         Producto.objects.create(
             usuario=request.user,
             nombre=request.POST.get('nombre'),
@@ -385,11 +385,6 @@ def crear_producto(request):
             stock=request.POST.get('stock'),
             imagen_principal=request.FILES.get('imagen')
         )
-
-    if producto.imagen_principal:
-        #print("IMAGEN:", producto.imagen_principal)
-        #print("NAME:", producto.imagen_principal.name)
-
 
         return redirect('dashboard')
 
