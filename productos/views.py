@@ -385,8 +385,6 @@ def crear_producto(request):
             imagen_principal=request.FILES.get('imagen')
         )
 
-        print("IMAGEN:", producto.imagen_principal)
-        print("NAME:", producto.imagen_principal.name)
         return redirect('dashboard')
 
     return render(
