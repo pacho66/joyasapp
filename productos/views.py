@@ -378,6 +378,7 @@ def crear_producto(request):
         print(request.POST)
         print("FILES:")
         print(request.FILES)
+        print(request.FILES.get('imagen'))
 
         Producto.objects.create(
             usuario=request.user,
