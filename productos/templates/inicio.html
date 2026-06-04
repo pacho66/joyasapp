@@ -66,8 +66,8 @@ margin:5px;
 
     {% if producto.imagen_principal %}
         <img src="{{ producto.imagen_principal.url }}"
-             alt="{{ producto.nombre }}"
-             class="producto-img">
+            class="producto-img"
+            alt="{{ producto.nombre }}">
     {% endif %}
 
     <h4>{{ producto.nombre }}</h4>

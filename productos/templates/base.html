@@ -308,33 +308,34 @@ nav ul li a:hover {
 /* 🛍️ PRODUCTOS */
 /* ========================= */
 
+
 .productos-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-    gap:20px;
-    padding:20px 0;
+    grid-template-columns:repeat(2,1fr);
+    gap:15px;
+    padding:15px;
 }
 
 .producto-card{
     background:#fff;
     border:1px solid #ddd;
     border-radius:12px;
-    padding:15px;
+    padding:10px;
     text-align:center;
     box-shadow:0 2px 8px rgba(0,0,0,.08);
-    transition:0.3s;
-}
-
-.producto-card:hover{
-    transform:translateY(-3px);
-    box-shadow:0 6px 15px rgba(0,0,0,.12);
 }
 
 .producto-img{
     width:100%;
-    height:220px;
+    aspect-ratio:1/1;
     object-fit:cover;
     border-radius:10px;
+}
+
+@media(min-width:768px){
+    .productos-grid{
+        grid-template-columns:repeat(4,1fr);
+    }
 }
 
 .precio{
