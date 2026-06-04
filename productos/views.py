@@ -424,6 +424,20 @@ def eliminar_producto(request, id):
     return redirect('mis_productos')
 
 @login_required
+def eliminar_imagen_producto(request, id):
+
+    producto = get_object_or_404(
+        Producto,
+        id=id,
+        usuario=request.user
+    )
+
+    producto.imagen_principal = None
+    producto.save()
+
+    return redirect('editar_producto', id=id)
+
+@login_required
 def editar_producto(request, id):
 
     producto = Producto.objects.get(
