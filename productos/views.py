@@ -366,6 +366,7 @@ def productos_top(request):
         'top': top
     })
 
+
 @login_required
 def crear_producto(request):
 
@@ -385,7 +386,7 @@ def crear_producto(request):
             imagen_principal=request.FILES.get('imagen')
         )
 
-        return HttpResponse("PRODUCTO GUARDADO")
+        return redirect('mis_productos')
 
     return render(
         request,
