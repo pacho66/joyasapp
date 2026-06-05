@@ -369,7 +369,6 @@ def productos_top(request):
         'top': top
     })
 
-
 @login_required
 def crear_producto(request):
 
@@ -383,13 +382,56 @@ def crear_producto(request):
             usuario=request.user,
             nombre=request.POST.get('nombre'),
             descripcion=request.POST.get('descripcion'),
+
             categoria_id=request.POST.get('categoria'),
-            precio_detal=request.POST.get('precio'),
-            stock=request.POST.get('stock'),
-            imagen_principal=request.FILES.get('imagen')
+
+            tipo_venta=request.POST.get(
+                'tipo_venta'
+            ) or 'unidad',
+
+            precio_detal=request.POST.get(
+                'precio_detal'
+            ) or 0,
+
+            precio_semimayor=request.POST.get(
+                'precio_semimayor'
+            ) or 0,
+
+            precio_mayor=request.POST.get(
+                'precio_mayor'
+            ) or 0,
+
+            peso_producto=request.POST.get(
+                'peso_producto'
+            ) or 0,
+
+            precio_por_gramo_detal=request.POST.get(
+                'precio_por_gramo_detal'
+            ) or 0,
+
+            precio_por_gramo_semimayor=request.POST.get(
+                'precio_por_gramo_semimayor'
+            ) or 0,
+
+            precio_por_gramo_mayor=request.POST.get(
+                'precio_por_gramo_mayor'
+            ) or 0,
+
+            destacado=(
+                request.POST.get('destacado')
+                == 'on'
+            ),
+
+            stock=request.POST.get(
+                'stock'
+            ) or 0,
+
+            imagen_principal=request.FILES.get(
+                'imagen_principal'
+            )
         )
 
-        return redirect('mis_productos')
+        return redirect('dashboard')
 
     return render(
         request,
