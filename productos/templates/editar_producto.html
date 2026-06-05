@@ -18,12 +18,54 @@ required>
 
 <br><br>
 
-<label>Precio Detal</label>
+<label>Tipo de venta</label>
+<select name="tipo_venta">
+    <option value="unidad">Por unidad</option>
+    <option value="gramo">Por gramos</option>
+</select>
 
-<input
-type="text"
-name="precio"
-value="{{ producto.precio_detal }}">
+<br><br>
+
+<label>Precio Detal</label>
+<input type="number" step="0.01" name="precio_detal">
+
+<br><br>
+
+<label>Precio SemiMayorista</label>
+<input type="number" step="0.01" name="precio_semimayor">
+
+<br><br>
+
+<label>Precio Mayorista</label>
+<input type="number" step="0.01" name="precio_mayor">
+
+<br><br>
+
+<label>Peso del producto (gramos)</label>
+<input type="number" step="0.01" name="peso_producto">
+
+<br><br>
+
+<label>Precio gramo detal</label>
+<input type="number" step="0.01" name="precio_por_gramo_detal">
+
+<br><br>
+
+<label>Precio gramo semimayorista</label>
+<input type="number" step="0.01" name="precio_por_gramo_semimayor">
+
+<br><br>
+
+<label>Precio gramo mayorista</label>
+<input type="number" step="0.01" name="precio_por_gramo_mayor">
+
+<br><br>
+
+<label>
+<input type="checkbox" name="destacado">
+Producto destacado
+
+</label>
 
 <br><br>
 
