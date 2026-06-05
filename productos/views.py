@@ -330,6 +330,8 @@ def detalle_producto(request, id, slug):
         usuario=request.user
     )
 
+    tiene_variantes = producto.variantes.exists()
+
     session_key = request.session.session_key
     cantidad_en_carrito = 0
 
@@ -353,6 +355,7 @@ def detalle_producto(request, id, slug):
 
     return render(request, 'detalle_producto.html', {
         'producto': producto,
+        'tiene_variantes': tiene_variantes,
         'stock_disponible': stock_disponible,
         'tiene_stock': tiene_stock
 })

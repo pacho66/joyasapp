@@ -380,7 +380,7 @@ function comprarWhatsApp(){
     // 🔥 VALIDACIONES
     let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
 
-    if (!color) {
+    if (variantes.length > 0 && !color) {
         alert("Selecciona un color");
         return;
     }
