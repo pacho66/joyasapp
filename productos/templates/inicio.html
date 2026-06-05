@@ -32,7 +32,8 @@
 
 <p><strong>${{ producto.precio_detal }}</strong></p>
 
-<a href="#" style="
+<a href="{% url 'agregar_al_carrito' producto.id %}"
+style="
 background:#28a745;
 color:white;
 padding:8px 12px;
@@ -46,7 +47,7 @@ margin:5px;
 
 <br>
 
-<a href="#">
+<a href="{% url 'detalle_producto' producto.id producto.slug %}">
 👁️ Ver producto
 </a>
 
