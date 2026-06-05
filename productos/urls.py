@@ -23,6 +23,7 @@ urlpatterns = [
     path('mis-productos/',views.mis_productos,name='mis_productos'),
     path('productos/eliminar/<int:id>/',views.eliminar_producto,name='eliminar_producto'),
     path('productos/editar/<int:id>/',views.editar_producto,name='editar_producto'),
+    path('productos/<int:id>/eliminar-imagen/',views.eliminar_imagen_producto,name='eliminar_imagen_producto'),
     path('categoria/<int:categoria_id>/', views.productos_por_categoria, name='productos_por_categoria'),
     path('categorias/nueva/',views.crear_categoria,name='crear_categoria'),
     path('top-productos/', views.productos_top, name='top_productos'),
