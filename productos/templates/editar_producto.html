@@ -2,90 +2,154 @@
 
 {% block content %}
 
-<div style="max-width:600px;margin:auto;padding:20px;">
+<div style="max-width:600px; margin:auto; padding:20px;">
 
-<h2>✏️ Editar Producto</h2>
+    <h2>✏️ Editar Producto</h2>
 
-<form method="POST" enctype="multipart/form-data">
+    <form method="POST" enctype="multipart/form-data">
 
-{% csrf_token %}
+        {% csrf_token %}
 
-<input
-type="text"
-name="nombre"
-value="{{ producto.nombre }}"
-required>
+        <label>Nombre</label>
+        <input
+            type="text"
+            name="nombre"
+            value="{{ producto.nombre }}"
+            required>
 
-<br><br>
+        <br><br>
 
-<label>Tipo de venta</label>
-<select name="tipo_venta">
-    <option value="unidad">Por unidad</option>
-    <option value="gramo">Por gramos</option>
-</select>
+        <label>Tipo de venta</label>
+        <select name="tipo_venta">
 
-<br><br>
+            <option value="unidad"
+                {% if producto.tipo_venta == 'unidad' %}selected{% endif %}>
+                Por unidad
+            </option>
 
-<label>Precio Detal</label>
-<input type="number" step="0.01" name="precio_detal">
+            <option value="gramo"
+                {% if producto.tipo_venta == 'gramo' %}selected{% endif %}>
+                Por gramos
+            </option>
 
-<br><br>
+        </select>
 
-<label>Precio SemiMayorista</label>
-<input type="number" step="0.01" name="precio_semimayor">
+        <br><br>
 
-<br><br>
+        <label>Precio Detal</label>
+        <input
+            type="number"
+            step="0.01"
+            name="precio_detal"
+            value="{{ producto.precio_detal }}">
 
-<label>Precio Mayorista</label>
-<input type="number" step="0.01" name="precio_mayor">
+        <br><br>
 
-<br><br>
+        <label>Precio SemiMayorista</label>
+        <input
+            type="number"
+            step="0.01"
+            name="precio_semimayor"
+            value="{{ producto.precio_semimayor }}">
 
-<label>Peso del producto (gramos)</label>
-<input type="number" step="0.01" name="peso_producto">
+        <br><br>
 
-<br><br>
+        <label>Precio Mayorista</label>
+        <input
+            type="number"
+            step="0.01"
+            name="precio_mayor"
+            value="{{ producto.precio_mayor }}">
 
-<label>Precio gramo detal</label>
-<input type="number" step="0.01" name="precio_por_gramo_detal">
+        <br><br>
 
-<br><br>
+        <label>Peso del producto (gramos)</label>
+        <input
+            type="number"
+            step="0.01"
+            name="peso_producto"
+            value="{{ producto.peso_producto }}">
 
-<label>Precio gramo semimayorista</label>
-<input type="number" step="0.01" name="precio_por_gramo_semimayor">
+        <br><br>
 
-<br><br>
+        <label>Precio gramo detal</label>
+        <input
+            type="number"
+            step="0.01"
+            name="precio_por_gramo_detal"
+            value="{{ producto.precio_por_gramo_detal }}">
 
-<label>Precio gramo mayorista</label>
-<input type="number" step="0.01" name="precio_por_gramo_mayor">
+        <br><br>
 
-<br><br>
+        <label>Precio gramo semimayorista</label>
+        <input
+            type="number"
+            step="0.01"
+            name="precio_por_gramo_semimayor"
+            value="{{ producto.precio_por_gramo_semimayor }}">
 
-<label>
-<input type="checkbox" name="destacado">
-Producto destacado
+        <br><br>
 
-</label>
+        <label>Precio gramo mayorista</label>
+        <input
+            type="number"
+            step="0.01"
+            name="precio_por_gramo_mayor"
+            value="{{ producto.precio_por_gramo_mayor }}">
 
-<br><br>
+        <br><br>
 
-<input
-type="number"
-name="stock"
-value="{{ producto.stock }}">
+        <label>
+            <input
+                type="checkbox"
+                name="destacado"
+                {% if producto.destacado %}checked{% endif %}>
+            Producto destacado
+        </label>
 
-<br><br>
+        <br><br>
 
-<textarea
-name="descripcion">{{ producto.descripcion }}</textarea>
+        <label>Stock</label>
+        <input
+            type="number"
+            name="stock"
+            value="{{ producto.stock }}">
 
-<br><br>
+        <br><br>
 
-<button type="submit">
-💾 Guardar Cambios
-</button>
+        <label>Descripción</label>
 
-</form>
+        <textarea
+            name="descripcion"
+            rows="5"
+            style="width:100%;">{{ producto.descripcion }}</textarea>
+
+        <br><br>
+
+        {% if producto.imagen_principal %}
+            <p><strong>Imagen actual</strong></p>
+
+            <img
+                src="{{ producto.imagen_principal.url }}"
+                width="180"
+                style="border-radius:10px;">
+        {% endif %}
+
+        <br><br>
+
+        <label>Cambiar imagen</label>
+
+        <input
+            type="file"
+            name="imagen_principal">
+
+        <br><br>
+
+        <button type="submit">
+            💾 Guardar Cambios
+        </button>
+
+    </form>
 
 </div>
 
