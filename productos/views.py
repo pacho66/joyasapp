@@ -380,6 +380,7 @@ def crear_producto(request):
 
         Producto.objects.create(
             usuario=request.user,
+
             nombre=request.POST.get('nombre'),
 
             referencia=request.POST.get('referencia'),
@@ -436,7 +437,15 @@ def crear_producto(request):
 
             imagen_principal=request.FILES.get(
                 'imagen_principal'
-            )
+            ),
+
+            certificado=request.FILES.get(
+                'certificado'
+            ),
+
+            video=request.FILES.get(
+                'video'
+            ),
         )
 
         return redirect('dashboard')
