@@ -321,14 +321,17 @@ def crear_categoria(request):
     )
 
 
-@login_required
+
 def detalle_producto(request, id, slug):
     producto = get_object_or_404(
         Producto,
         id=id,
         slug=slug,
-        usuario=request.user
     )
+
+    perfil_tienda = Perfil.objects.filter(
+        user=producto.usuario
+    ).first()
 
     tiene_variantes = producto.variantes.exists()
 
@@ -355,6 +358,7 @@ def detalle_producto(request, id, slug):
 
     return render(request, 'detalle_producto.html', {
         'producto': producto,
+        'perfil_tienda': perfil_tienda,
         'tiene_variantes': tiene_variantes,
         'stock_disponible': stock_disponible,
         'tiene_stock': tiene_stock

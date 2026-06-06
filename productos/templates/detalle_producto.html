@@ -237,7 +237,9 @@ $ {{ producto.precio_mayor|default:0|moneda }}
 
 {% elif tiene_stock %}
 
-    <input type="hidden" id="whatsapp-numero" value="{{ request.user.perfil.whatsapp }}">
+    <input type="hidden"
+    id="whatsapp-numero"
+    value="{{ perfil_tienda.whatsapp }}">
 
     <button id="btn-carrito" onclick="agregarCarrito()"
     style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;">
