@@ -389,10 +389,6 @@ def crear_producto(request):
                 'tipo_venta'
             ) or 'unidad',
 
-            precio_costo=request.POST.get(
-                'precio_costo'
-            ) or 0,
-
             precio_detal=request.POST.get(
                 'precio_detal'
             ) or 0,
@@ -425,6 +421,11 @@ def crear_producto(request):
                 request.POST.get('destacado')
                 == 'on'
             ),
+
+            precio_costo=request.POST.get(
+                'precio_costo'
+            ) or 0,
+
 
             stock=request.POST.get(
                 'stock'
@@ -508,6 +509,10 @@ def editar_producto(request, id):
                 'categoria'
             )
 
+        producto.precio_costo = (
+             request.POST.get('precio_costo') or 0
+        )
+
         producto.stock = (
             request.POST.get('stock') or 0
         )
@@ -528,10 +533,6 @@ def editar_producto(request, id):
         # TIPO VENTA
         producto.tipo_venta = (
             request.POST.get('tipo_venta') or 'unidad'
-        )
-
-        producto.precio_costo = (
-             request.POST.get('precio_costo') or 0
         )
 
         # PESO
