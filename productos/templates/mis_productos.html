@@ -50,19 +50,47 @@ border-radius:10px;">
 💰 ${{ producto.precio_detal }}
 </p>
 
-<a href="{% url 'eliminar_producto' producto.id %}"
-style="color:red;">
-🗑️ Eliminar
-</a>
+<div style="
+    display:flex;
+    gap:10px;
+    margin-top:15px;
+    flex-wrap:wrap;
+">
 
-<a href="{% url 'eliminar_imagen_producto' producto.id %}">
-🗑️ Eliminar imagen
-</a>
+    <a href="{% url 'editar_producto' producto.id %}"
+    style="
+        background:#007bff;
+        color:white;
+        padding:8px 12px;
+        text-decoration:none;
+        border-radius:6px;
+    ">
+        ✏️ Editar
+    </a>
 
-<a href="{% url 'editar_producto' producto.id %}">
-✏️ Editar
-</a>
+    <a href="{% url 'eliminar_imagen_producto' producto.id %}"
+    style="
+        background:#ffc107;
+        color:black;
+        padding:8px 12px;
+        text-decoration:none;
+        border-radius:6px;
+    ">
+        🖼️ Eliminar imagen
+    </a>
 
+    <a href="{% url 'eliminar_producto' producto.id %}"
+    style="
+        background:#dc3545;
+        color:white;
+        padding:8px 12px;
+        text-decoration:none;
+        border-radius:6px;
+    ">
+        🗑️ Eliminar producto
+    </a>
+
+</div>
 </div>
 
 {% empty %}
