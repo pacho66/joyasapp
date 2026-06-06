@@ -35,7 +35,7 @@
         </select>
 
         <br><br>
-        
+
         <label>Precio de costo</label>
         <input
             type="number"
@@ -134,6 +134,15 @@
             style="width:100%;">{{ producto.descripcion }}</textarea>
 
         <br><br>
+
+        <label>SKU / Referencia</label>
+
+        <input
+            type="text"
+            name="referencia"
+            value="{{ producto.referencia }}">
+
+        <br><br>    
 
         {% if producto.imagen_principal %}
             <p><strong>Imagen actual</strong></p>

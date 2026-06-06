@@ -381,6 +381,9 @@ def crear_producto(request):
         Producto.objects.create(
             usuario=request.user,
             nombre=request.POST.get('nombre'),
+
+            referencia=request.POST.get('referencia'),
+
             descripcion=request.POST.get('descripcion'),
 
             categoria_id=request.POST.get('categoria'),
@@ -503,6 +506,10 @@ def editar_producto(request, id):
 
         producto.nombre = request.POST.get('nombre')
         producto.descripcion = request.POST.get('descripcion')
+
+        producto.referencia = request.POST.get(
+                'referencia'
+        )
 
         if request.POST.get('categoria'):
             producto.categoria_id = request.POST.get(
