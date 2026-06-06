@@ -389,6 +389,10 @@ def crear_producto(request):
                 'tipo_venta'
             ) or 'unidad',
 
+            precio_costo=request.POST.get(
+                'precio_costo'
+            ) or 0,
+
             precio_detal=request.POST.get(
                 'precio_detal'
             ) or 0,
@@ -524,6 +528,10 @@ def editar_producto(request, id):
         # TIPO VENTA
         producto.tipo_venta = (
             request.POST.get('tipo_venta') or 'unidad'
+        )
+
+        producto.precio_costo = (
+             request.POST.get('precio_costo') or 0
         )
 
         # PESO

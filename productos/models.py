@@ -72,19 +72,8 @@ class Categoria(models.Model):
 class Producto(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     nombre = models.CharField(max_length=200)
-    slug = models.SlugField(
-    max_length=220,
-    unique=True,
-    blank=True,
-    null=True
-)
-    referencia = models.CharField(
-    max_length=50,
-    unique=True,
-    blank=True,
-    null=True,
-    verbose_name="SKU"
-)
+    slug = models.SlugField(max_length=220,unique=True,blank=True,null=True)
+    referencia = models.CharField(max_length=50,unique=True,blank=True,null=True,verbose_name="SKU")
     descripcion = models.TextField()
     categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE)
     destacado = models.BooleanField(default=False)
@@ -99,6 +88,7 @@ class Producto(models.Model):
     certificado = models.FileField(upload_to='certificados/', blank=True, null=True)
     tipo_venta = models.CharField(max_length=20,choices=[('unidad', 'Por unidad'), ('gramo', 'Por gramos')],default='unidad')
     peso_producto = models.DecimalField(max_digits=6,decimal_places=2,null=True,blank=True,help_text="Peso del producto en gramos")
+    precio_costo = models.DecimalField(max_digits=12,decimal_places=2,default=0,verbose_name="Precio de costo")
     precio_detal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     precio_semimayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     precio_mayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
