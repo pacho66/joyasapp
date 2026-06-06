@@ -76,10 +76,17 @@ body{
 }
 
 .botones{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:12px;
     margin-bottom:20px;
+}
+
+.btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:48px;
 }
 
 .btn{
@@ -113,6 +120,18 @@ body{
     transition:0.3s;
 }
 
+.grid-dashboard{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+}
+
+@media(max-width:768px){
+    .grid-dashboard{
+        grid-template-columns:1fr;
+    }
+}
+
 .seccion:hover{
     transform:translateY(-2px);
 }
@@ -123,13 +142,17 @@ body{
     color:var(--texto);
 }
 
-.seccion{
-    min-height:300px;
+.seccion-grafica{
+    background:white;
+    border-radius:14px;
+    padding:18px;
+    margin-bottom:20px;
+    height:420px;
 }
 
-.seccion canvas{
+.seccion-grafica canvas{
     width:100% !important;
-    height:100% !important;
+    height:320px !important;
 }
 
 .filtros{
@@ -430,10 +453,12 @@ th{
 <!-- ========================= -->
 <!-- 📊 GRÁFICA VENTAS -->
 <!-- ========================= -->
-<div class="seccion">
-    <h3>📊 Ventas últimos días</h3>
-    <canvas id="graficaVentas"></canvas>
-</div>
+<div class="grid-dashboard">
+
+    <div class="seccion">
+        <h3>📊 Ventas últimos días</h3>
+        <canvas id="graficaVentas"></canvas>
+    </div>
 
 <!-- ========================= -->
 <!-- 💰 FINANZAS PRO -->
@@ -473,9 +498,9 @@ th{
 <!-- 📊 GRÁFICA FINANZAS -->
 <!-- ========================= -->
 <div class="seccion">
-    <h3>📊 Flujo financiero</h3>
-    <canvas id="graficaFinanzas"></canvas>
-</div>
+        <h3>📊 Flujo financiero</h3>
+        <canvas id="graficaFinanzas"></canvas>
+    </div>
 
 <!-- ACCIONES -->
 <div class="botones">
