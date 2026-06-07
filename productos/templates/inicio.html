@@ -80,7 +80,7 @@
 
 .productos-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
     gap:20px;
 }
 
@@ -89,19 +89,16 @@
     border-radius:15px;
     overflow:hidden;
     box-shadow:0 4px 12px rgba(0,0,0,.08);
-    transition:.3s;
-    text-align:center;
-    padding-bottom:15px;
-}
-
-.producto-card:hover{
-    transform:translateY(-5px);
 }
 
 .producto-img{
     width:100%;
     height:220px;
     object-fit:cover;
+}
+
+.producto-info{
+    padding:15px;
 }
 
 .precio{
@@ -129,7 +126,7 @@
     display:flex;
     flex-direction:column;
     gap:10px;
-    padding:10px;
+    margin-top:15px;
 }
 
 .btn-carrito{
@@ -138,6 +135,7 @@
     text-decoration:none;
     padding:10px;
     border-radius:8px;
+    text-align:center;
 }
 
 .btn-ver{
@@ -146,14 +144,15 @@
     text-decoration:none;
     padding:10px;
     border-radius:8px;
+    text-align:center;
 }
 
 .btn-whatsapp{
     position:fixed;
     right:20px;
     bottom:20px;
-    width:60px;
-    height:60px;
+    width:65px;
+    height:65px;
     background:#25D366;
     color:white;
     border-radius:50%;
@@ -161,102 +160,185 @@
     align-items:center;
     justify-content:center;
     text-decoration:none;
-    font-size:28px;
+    font-size:30px;
+    z-index:9999;
     box-shadow:0 5px 15px rgba(0,0,0,.25);
 }
 
-</style><div class="hero"><h1>{{ perfil.nombre_negocio|default:"PG Joyas" }}</h1>
+</style>
 
-<p>
-    Joyas exclusivas para cada ocasión
-</p>
+<div class="hero">
 
-<a href="#productos" class="btn-principal">
-    Ver catálogo
+    <h1>{{ perfil.nombre_negocio|default:"PG Joyas" }}</h1>
+
+    <p>
+        Joyas exclusivas para cada ocasión
+    </p>
+
+    <a href="#productos" class="btn-principal">
+        Ver catálogo
+    </a>
+
+</div>
+
+<div class="redes">
+
+    {% if perfil.instagram %}
+    <a href="https://instagram.com/{{ perfil.instagram }}" target="_blank">
+        Instagram
+    </a>
+    {% endif %}
+
+    {% if perfil.facebook %}
+    <a href="{{ perfil.facebook }}" target="_blank">
+        Facebook
+    </a>
+    {% endif %}
+
+    {% if perfil.tiktok %}
+    <a href="https://tiktok.com/@{{ perfil.tiktok }}" target="_blank">
+        TikTok
+    </a>
+    {% endif %}
+
+</div>
+
+<div class="buscador">
+
+    <form method="GET">
+
+        <input
+            type="text"
+            name="q"
+            placeholder="Buscar productos...">
+
+        <button type="submit">
+            🔍 Buscar
+        </button>
+
+    </form>
+
+</div>
+
+<h2>⭐ Productos destacados</h2>
+
+<div class="destacados-scroll">
+
+{% for producto in destacados %}
+
+<div class="producto-card">
+
+    {% if producto.imagen_principal %}
+    <img src="{{ producto.imagen_principal.url }}"
+         class="producto-img">
+    {% endif %}
+
+    <div class="producto-info">
+
+        <h4>{{ producto.nombre }}</h4>
+
+        <p class="precio">
+            ${{ producto.precio_detal }}
+        </p>
+
+        <div class="acciones-producto">
+
+            <a href="{% url 'agregar_al_carrito' producto.id %}"
+               class="btn-carrito">
+                🛒 Agregar al carrito
+            </a>
+
+            <a href="{% url 'detalle_producto' producto.id producto.slug %}"
+               class="btn-ver">
+                👁️ Ver producto
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+<h2 id="productos">🛍️ Todos los productos</h2>
+
+<div class="productos-grid">
+
+{% for producto in productos %}
+
+<div class="producto-card">
+
+    {% if producto.imagen_principal %}
+    <img src="{{ producto.imagen_principal.url }}"
+         class="producto-img"
+         alt="{{ producto.nombre }}">
+    {% endif %}
+
+    <div class="producto-info">
+
+        <h4>{{ producto.nombre }}</h4>
+
+        <p class="precio">
+            ${{ producto.precio_detal }}
+        </p>
+
+        {% if producto.precio_semimayor %}
+        <p>
+            Semi: ${{ producto.precio_semimayor }}
+        </p>
+        {% endif %}
+
+        {% if producto.precio_mayor %}
+        <p>
+            Mayor: ${{ producto.precio_mayor }}
+        </p>
+        {% endif %}
+
+        {% if producto.stock > 10 %}
+            <p class="stock-ok">✅ Disponible</p>
+        {% elif producto.stock > 0 %}
+            <p class="stock-poco">🔥 Últimas unidades</p>
+        {% else %}
+            <p class="stock-agotado">❌ Agotado</p>
+        {% endif %}
+
+        <div class="acciones-producto">
+
+            <a href="{% url 'agregar_al_carrito' producto.id %}"
+               class="btn-carrito">
+                🛒 Agregar al carrito
+            </a>
+
+            <a href="{% url 'detalle_producto' producto.id producto.slug %}"
+               class="btn-ver">
+                👁️ Ver producto
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% empty %}
+
+<p>No hay productos disponibles.</p>
+
+{% endfor %}
+
+</div>
+
+{% if perfil.whatsapp %}
+
+<a href="https://wa.me/{{ perfil.whatsapp }}"
+   target="_blank"
+   class="btn-whatsapp">
+   💬
 </a>
 
-</div><div class="redes">{% if perfil.instagram %}
-<a href="https://instagram.com/{{ perfil.instagram }}" target="_blank">
-Instagram
-</a>
 {% endif %}
-
-{% if perfil.facebook %}
-<a href="{{ perfil.facebook }}" target="_blank">
-Facebook
-</a>
-{% endif %}
-
-{% if perfil.tiktok %}
-<a href="https://tiktok.com/@{{ perfil.tiktok }}" target="_blank">
-TikTok
-</a>
-{% endif %}
-
-</div><div class="buscador"><form method="GET"><input
-type="text"
-name="q"
-placeholder="Buscar productos...">
-
-<button type="submit">
-🔍 Buscar
-</button></form></div><h2>⭐ Productos destacados</h2><div class="destacados-scroll">{% for producto in destacados %}
-
-<div class="producto-card">{% if producto.imagen_principal %}
-<img src="{{ producto.imagen_principal.url }}"
-class="producto-img">
-{% endif %}
-
-<h4>{{ producto.nombre }}</h4><p class="precio">
-${{ producto.precio_detal }}
-</p><a href="{% url 'detalle_producto' producto.id producto.slug %}"
-class="btn-ver">
-👁️ Ver producto
-</a>
-
-</div>{% endfor %}
-
-</div><h2 id="productos">🛍️ Todos los productos</h2><div class="productos-grid">{% for producto in productos %}
-
-<div class="producto-card">{% if producto.imagen_principal %}
-<img src="{{ producto.imagen_principal.url }}"
-class="producto-img"
-alt="{{ producto.nombre }}">
-{% endif %}
-
-<h4>{{ producto.nombre }}</h4><p class="precio">
-${{ producto.precio_detal }}
-</p>{% if producto.stock > 10 %}
-
-<p class="stock-ok">
-✅ Disponible
-</p>{% elif producto.stock > 0 %}
-
-<p class="stock-poco">
-🔥 Últimas unidades
-</p>{% else %}
-
-<p class="stock-agotado">
-❌ Agotado
-</p>
-{% endif %}<div class="acciones-producto"><a href="{% url 'detalle_producto' producto.id producto.slug %}"
-class="btn-ver">
-
-👁️ Ver producto
-
-</a></div></div>{% empty %}
-
-<p>No hay productos disponibles.</p>{% endfor %}
-
-</div>{% if perfil.whatsapp %}
-
-<a
-href="https://wa.me/{{ perfil.whatsapp }}"
-target="_blank"
-class="btn-whatsapp">
-
-💬
-
-</a>{% endif %}
 
 {% endblock %}
