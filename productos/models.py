@@ -89,6 +89,38 @@ class Producto(models.Model):
     tipo_venta = models.CharField(max_length=20,choices=[('unidad', 'Por unidad'), ('gramo', 'Por gramos')],default='unidad')
     peso_producto = models.DecimalField(max_digits=6,decimal_places=2,null=True,blank=True,help_text="Peso del producto en gramos")
     precio_costo = models.DecimalField(max_digits=12,decimal_places=2,default=0,verbose_name="Precio de costo")
+    @property
+    def utilidad_detal(self):
+        if self.precio_detal and self.precio_costo:
+            return self.precio_detal - self.precio_costo
+        return 0
+
+    @property
+    def utilidad_semimayor(self):
+        if self.precio_semimayor and self.precio_costo:
+            return self.precio_semimayor - self.precio_costo
+        return 0
+
+    @property
+    def utilidad_mayor(self):
+        if self.precio_mayor and self.precio_costo:
+            return self.precio_mayor - self.precio_costo
+        return 0
+    
+    @property
+    def stock_total(self):
+
+        if self.variantes.exists():
+            return sum(
+                v.stock
+                for v in self.variantes.all()
+        )
+
+        return self.stock
+
+    def __str__(self):
+        return self.nombre
+    
     precio_detal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     precio_semimayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     precio_mayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

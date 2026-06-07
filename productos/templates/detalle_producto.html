@@ -85,20 +85,32 @@ Uso exclusivo para joyas en <strong>oro 18K, diamantes y esmeraldas</strong>.
 {% for p in productos_relacionados %}
 <div style="width:150px; text-align:center;">
 <a href="{% url 'detalle_producto' p.id p.slug %}">
-{% if p.imagen %}
-<img src="{{ p.imagen.url }}" width="120">
+{% if p.imagen_principal %}
+<img src="{{ p.imagen_principal }}" width="120">
 {% endif %}
 <p>{{ p.nombre }}</p>
 <p>$ {{ p.precio_detal|moneda }}</p>
-{% if p.stock > 10 %}
-<p style="color:green;font-weight:bold;">✅ Disponible</p>
-{% elif p.stock > 3 %}
-<p style="color:orange;font-weight:bold;">⚠ Quedan {{ p.stock }} unidades</p>
-{% elif p.stock > 0 %}
-<p style="color:red;font-weight:bold;">🔥 Solo quedan {{ p.stock }} unidades!</p>
+{% if p.stock_total > 10 %}
+<p style="color:green;font-weight:bold;">
+✅ Disponible
+</p>
+
+{% elif p.stock_total > 3 %}
+<p style="color:orange;font-weight:bold;">
+⚠️ Quedan {{ p.stock_total }} unidades
+</p>
+
+{% elif p.stock_total > 0 %}
+<p style="color:red;font-weight:bold;">
+🔥 Solo quedan {{ p.stock_total }} unidades
+</p>
+
 {% else %}
-<p style="color:red;font-weight:bold;">❌ Producto agotado</p>
+<p style="color:red;font-weight:bold;">
+❌ Producto agotado
+</p>
 {% endif %}
+
 </a>
 </div>
 {% endfor %}
