@@ -83,14 +83,19 @@ PRUEBA INICIO
 }
 
 .productos-grid{
-    display:grid !important;
-    grid-template-columns:repeat(auto-fill,minmax(280px,1fr)) !important;
-    gap:20px !important;
-}
-.producto-card{
-    border:2px solid blue !important;
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:20px;
+    padding:20px 0;
 }
 
+.producto-card{
+    background:#fff;
+    border:1px solid #ddd;
+    border-radius:15px;
+    overflow:hidden;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+}
 .producto-img{
     width:100%;
     aspect-ratio:1/1;
@@ -262,17 +267,6 @@ PRUEBA INICIO
 
 {% endfor %}
 
-<h2>PRUEBA GRID</h2>
-
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:20px;background:red;">
-
-<div style="background:yellow;">1</div>
-<div style="background:yellow;">2</div>
-<div style="background:yellow;">3</div>
-<div style="background:yellow;">4</div>
-
-</div>
-
 </div>
 
 <h2 id="productos">🛍️ Todos los productos</h2>
@@ -284,9 +278,10 @@ PRUEBA INICIO
 <div class="producto-card">
 
     {% if producto.imagen_principal %}
-    <img src="{{ producto.imagen_principal.url }}"
-         class="producto-img"
-         alt="{{ producto.nombre }}">
+    <img
+        src="{{ producto.imagen_principal.url }}"
+        class="producto-img"
+        alt="{{ producto.nombre }}">
     {% endif %}
 
     <div class="producto-info">
