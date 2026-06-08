@@ -126,6 +126,20 @@
 
         <br><br>
 
+        <h3>🎨 Variantes</h3>
+
+        <textarea
+            name="variantes"
+            rows="8">
+
+        {% for variante in producto.variantes.all %}
+        {{ variante.color }}|{{ variante.talla }}|{{ variante.stock }}
+        {% endfor %}
+
+        </textarea>
+
+        <br><br>
+
         <label>Descripción</label>
 
         <textarea
