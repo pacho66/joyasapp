@@ -174,15 +174,39 @@ class ProductoImagen(models.Model):
     def __str__(self):
         return f"Imagen de {self.producto.nombre}"
 
+
 class ProductoVariante(models.Model):
-    producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='variantes')
-    color = models.CharField(max_length=50, null=True, blank=True)
-    talla = models.CharField(max_length=50, null=True, blank=True)
-    stock = models.PositiveIntegerField(default=0)
+    producto = models.ForeignKey(
+        Producto,
+        on_delete=models.CASCADE,
+        related_name='variantes'
+    )
 
-    def __str__(self):
-        return f"{self.producto.nombre} - {self.color or ''} {self.talla or ''}"    
+    color = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True
+    )
 
+    talla = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True
+    )
+
+    stock = models.PositiveIntegerField(
+        default=0
+    )
+
+    class Meta:
+        unique_together = (
+            'producto',
+            'color',
+            'talla'
+        )
+
+    def _str_(self):
+        return f"{self.producto.nombre} - {self.color or ''} {self.talla or ''}"
 
 class CarritoItem(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
