@@ -296,18 +296,6 @@
             ${{ producto.precio_detal }}
         </p>
 
-        {% if producto.precio_semimayor %}
-        <p>
-            Semi: ${{ producto.precio_semimayor }}
-        </p>
-        {% endif %}
-
-        {% if producto.precio_mayor %}
-        <p>
-            Mayor: ${{ producto.precio_mayor }}
-        </p>
-        {% endif %}
-
         {% if producto.stock > 10 %}
             <p class="stock-ok">✅ Disponible</p>
         {% elif producto.stock > 0 %}
