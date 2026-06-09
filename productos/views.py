@@ -694,150 +694,121 @@ def eliminar_imagen_producto(request, id):
 
     return redirect('editar_producto', id=id)
 
+
 @login_required
 def editar_producto(request, id):
 
     producto = Producto.objects.get(
-        id=id,
-        usuario=request.user
-    )
+    id=id,
+    usuario=request.user
+)
 
     categorias = Categoria.objects.filter(
-        usuario=request.user
-    )
+    usuario=request.user
+)
 
     if request.method == 'POST':
 
         producto.nombre = request.POST.get('nombre')
         producto.descripcion = request.POST.get('descripcion')
+        producto.referencia = request.POST.get('referencia')
 
-        producto.referencia = request.POST.get(
-                'referencia'
-        )
+    if request.POST.get('categoria'):
+        producto.categoria_id = request.POST.get('categoria')
 
-        if request.POST.get('categoria'):
-            producto.categoria_id = request.POST.get(
-                'categoria'
-            )
-
-        producto.precio_costo = (
-             request.POST.get('precio_costo') or 0
-        )
-
-        producto.stock = (
-            request.POST.get('stock') or 0
-        )
+        producto.precio_costo = request.POST.get('precio_costo') or 0
+        producto.stock = request.POST.get('stock') or 0
 
         # PRECIOS UNIDAD
-        producto.precio_detal = (
-            request.POST.get('precio_detal') or 0
-        )
-
-        producto.precio_semimayor = (
-            request.POST.get('precio_semimayor') or 0
-        )
-
-        producto.precio_mayor = (
-            request.POST.get('precio_mayor') or 0
-        )
+        producto.precio_detal = request.POST.get('precio_detal') or 0
+        producto.precio_semimayor = request.POST.get('precio_semimayor') or 0
+        producto.precio_mayor = request.POST.get('precio_mayor') or 0
 
         # TIPO VENTA
-        producto.tipo_venta = (
-            request.POST.get('tipo_venta') or 'unidad'
-        )
+        producto.tipo_venta = request.POST.get('tipo_venta') or 'unidad'
 
         # PESO
-        producto.peso_producto = (
-            request.POST.get('peso_producto') or 0
-        )
+        producto.peso_producto = request.POST.get('peso_producto') or 0
 
         # PRECIOS POR GRAMO
         producto.precio_por_gramo_detal = (
-            request.POST.get(
-                'precio_por_gramo_detal'
-            ) or 0
-        )
+    request.POST.get('precio_por_gramo_detal') or 0
+    )
 
         producto.precio_por_gramo_semimayor = (
-            request.POST.get(
-                'precio_por_gramo_semimayor'
-            ) or 0
-        )
+    request.POST.get('precio_por_gramo_semimayor') or 0
+    )
 
         producto.precio_por_gramo_mayor = (
-            request.POST.get(
-                'precio_por_gramo_mayor'
-            ) or 0
-        )
+    request.POST.get('precio_por_gramo_mayor') or 0
+    )
 
         # DESTACADO
         producto.destacado = (
-            request.POST.get('destacado') == 'on'
+    request.POST.get('destacado') == 'on'
+    )
+
+        # ARCHIVOS
+    if request.FILES.get('imagen_principal'):
+        producto.imagen_principal = request.FILES.get(
+            'imagen_principal'
         )
 
-        # CAMBIAR IMAGEN PRINCIPAL
-        if request.FILES.get('imagen_principal'):
-            producto.imagen_principal = (
-                request.FILES.get(
-                    'imagen_principal'
-                )
-            )
+    if request.FILES.get('certificado'):
+        producto.certificado = request.FILES.get(
+            'certificado'
+        )
 
-        # CERTIFICADO
-        if request.FILES.get('certificado'):
-            producto.certificado = (
-                request.FILES.get(
-                    'certificado'
-                )
-            )
+    if request.FILES.get('video'):
+        producto.video = request.FILES.get(
+            'video'
+        )
 
-        # VIDEO
-        if request.FILES.get('video'):
-            producto.video = (
-                request.FILES.get(
-                    'video'
-                )
-            )
+    producto.save()
 
-        producto.save()
+    # BORRAR VARIANTES ACTUALES
+    producto.variantes.all().delete()
 
-        producto.variantes.all().delete()
-
-        variantes = request.POST.get(
-            'variantes',
-            ''
-)
-
-        for linea in variantes.splitlines():
-
-            linea = linea.strip()
-
-            if not linea:
-                continue
-
-            datos = linea.split('|')
-
-            if len(datos) != 3:
-                continue
-
-        ProductoVariante.objects.create(
-            producto=producto,
-            color=datos[0].strip(),
-            talla=datos[1].strip(),
-            
-        stock=int(datos[2].strip())
+    # CREAR VARIANTES NUEVAS
+    variantes = request.POST.get(
+        'variantes',
+        ''
     )
+
+    for linea in variantes.splitlines():
+
+        linea = linea.strip()
+
+        if not linea:
+            continue
+
+        datos = linea.split('|')
+
+        if len(datos) != 3:
+            continue
+
+        try:
+
+            ProductoVariante.objects.create(
+                producto=producto,
+                color=datos[0].strip(),
+                talla=datos[1].strip(),
+                stock=int(datos[2].strip())
+            )
+
+        except ValueError:
+            continue
 
         return redirect('mis_productos')
 
     return render(
         request,
         'editar_producto.html',
-        {
-            'producto': producto,
-            'categorias': categorias,
-        }
-    )
+    {
+        'producto': producto,
+        'categorias': categorias,
+    }
+)
 
 @login_required(login_url='/login/')
 def dashboard(request):
