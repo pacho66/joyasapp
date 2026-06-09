@@ -824,7 +824,8 @@ def editar_producto(request, id):
             producto=producto,
             color=datos[0].strip(),
             talla=datos[1].strip(),
-            stock=int(datos[2].strip())
+            
+        stock=int(datos[2].strip())
     )
 
         return redirect('mis_productos')
