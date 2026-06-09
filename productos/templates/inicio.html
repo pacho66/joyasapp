@@ -78,14 +78,12 @@
     margin-bottom:40px;
 }
 
-.productos-grid{
+.catalogo-grid{
     display:grid;
-    grid-template-columns:repeat(4,1fr);
+    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
     gap:20px;
     padding:20px 0;
-    border:3px solid red;
 }
-
 .producto-card{
     background:yellow;
     border:2px solid blue;
@@ -266,7 +264,7 @@
 
 <h2 id="productos">🛍️ Todos los productos</h2>
 
-<div class="productos-grid">
+<div class="catalogo-grid">
 
 {% for producto in productos %}
 
