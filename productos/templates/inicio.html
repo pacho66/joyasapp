@@ -78,15 +78,26 @@
     margin-bottom:40px;
 }
 
-.catalogo-grid{
+.producto-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
-    gap:20px;
-    padding:20px 0;
+    grid-template-columns:repeat(2,1fr);
+    gap:15px;
+    padding:15px;
 }
+
+@media(min-width:768px){
+    .producto-grid{
+        grid-template-columns:repeat(4,1fr);
+    }
+}
+
 .producto-card{
-    background:yellow;
-    border:2px solid blue;
+    background:white;
+    border-radius:12px;
+    overflow:hidden;
+    box-shadow:0 2px 10px rgba(0,0,0,.1);
+    text-align:center;
+    padding:15px;
 }
 
 .producto-img{
@@ -264,7 +275,7 @@
 
 <h2 id="productos">🛍️ Todos los productos</h2>
 
-<div class="catalogo-grid">
+<div class="producto-grid">
 
 {% for producto in productos %}
 
