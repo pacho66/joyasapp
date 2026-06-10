@@ -1,149 +1,312 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<div style="max-width: 600px; margin: auto; padding: 20px; font-family: sans-serif;">
 
-    <h2>💎 Nuevo Producto</h2>
+<style>
+:root {
+    --azul: #2563eb;
+    --borde: #e2e8f0;
+    --fondo: #f8fafc;
+    --texto: #0f172a;
+    --muted: #64748b;
+    --blanco: #ffffff;
+    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+}
+
+body {
+    background: var(--fondo);
+    color: var(--texto);
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.container-formulario {
+    max-width: 900px;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+.header-formulario {
+    margin-bottom: 24px;
+}
+
+.header-formulario h1 {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0;
+}
+
+/* Tarjetas contenedor del formulario */
+.form-card {
+    background: var(--blanco);
+    border-radius: 16px;
+    border: 1px solid var(--borde);
+    box-shadow: var(--shadow);
+    padding: 28px;
+    margin-bottom: 24px;
+}
+
+.form-card h3 {
+    margin: 0 0 20px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--azul);
+    border-bottom: 2px solid var(--fondo);
+    padding-bottom: 8px;
+}
+
+/* Diseño de Filas y Columnas seguras (CSS Grid) */
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+/* Elemento de formulario estándar */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+/* Forzar que ocupe todo el ancho si es necesario */
+.full-width {
+    grid-column: span 2;
+}
+
+label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--texto);
+}
+
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    font-size: 14px;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--azul);
+}
+
+/* Estilizado para inputs de archivos (Evita que se vayan a la derecha) */
+.file-box {
+    background: var(--fondo);
+    border: 2px dashed var(--borde);
+    padding: 14px;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.file-box input[type="file"] {
+    width: 100%;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+/* Checkbox bonito */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.checkbox-group input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+/* Botones */
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-primary { background: var(--azul); color: white; }
+.btn-secondary { background: #e2e8f0; color: var(--texto); }
+
+/* =======================================
+   📱 RESPONSIVE (Celulares)
+   ======================================= */
+@media (max-width: 768px) {
+    .grid-2, .grid-3, .grid-4 {
+        grid-template-columns: 1fr !important; /* Todo pasa a una sola columna en vertical */
+    }
+    .full-width {
+        grid-column: span 1;
+    }
+    .form-card {
+        padding: 16px;
+    }
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+    .form-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+</style>
+
+<div class="container-formulario">
+    <div class="header-formulario">
+        <h1>➕ Crear Nuevo Producto</h1>
+    </div>
 
     <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
 
-        <div style="margin-bottom: 15px;">
-            <label for="nombre" style="display: block; font-weight: bold; margin-bottom: 5px;">Nombre</label>
-            <input type="text" id="nombre" name="nombre" placeholder="Nombre producto" required style="width: 100%; padding: 8px; box-sizing: border-box;">
-        </div>
-
-        <div style="margin-bottom: 15px;">
-            <label for="categoria" style="display: block; font-weight: bold; margin-bottom: 5px;">Categoría</label>
-            <select id="categoria" name="categoria" required style="width: 100%; padding: 8px;">
-                <option value="">Seleccione categoría</option>
-                {% for categoria in categorias %}
-                    <option value="{{ categoria.id }}">{{ categoria.nombre }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div style="margin-bottom: 15px;">
-            <label for="tipo_venta" style="display: block; font-weight: bold; margin-bottom: 5px;">Tipo de venta</label>
-            <select id="tipo_venta" name="tipo_venta" style="width: 100%; padding: 8px;">
-                <option value="unidad">Por unidad</option>
-                <option value="gramo">Por gramos</option>
-            </select>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-            <div>
-                <label for="precio_costo" style="display: block; font-weight: bold; margin-bottom: 5px;">Precio de costo</label>
-                <input type="number" step="0.01" id="precio_costo" name="precio_costo" style="width: 100%; padding: 8px;">
-            </div>
-            <div>
-                <label for="precio_detal" style="display: block; font-weight: bold; margin-bottom: 5px;">Precio Detal</label>
-                <input type="number" step="0.01" id="precio_detal" name="precio_detal" style="width: 100%; padding: 8px;">
-            </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-            <div>
-                <label for="precio_semimayor" style="font-weight: bold;">SemiMayorista</label>
-                <input type="number" step="0.01" id="precio_semimayor" name="precio_semimayor" style="width: 100%; padding: 8px; margin-top: 5px;">
-            </div>
-            <div>
-                <label for="precio_mayor" style="font-weight: bold;">Mayorista</label>
-                <input type="number" step="0.01" id="precio_mayor" name="precio_mayor" style="width: 100%; padding: 8px; margin-top: 5px;">
-            </div>
-            <div>
-                <label for="stock" style="font-weight: bold;">Stock Total</label>
-                <input type="number" id="stock" name="stock" style="width: 100%; padding: 8px; margin-top: 5px;">
-            </div>
-        </div>
-
-        <fieldset style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
-            <legend style="padding: 0 5px; font-weight: bold;">Datos por Gramo</legend>
+        <div class="form-card">
+            <h3>📦 Información Básica</h3>
             
-            <div style="margin-bottom: 10px;">
-                <label for="peso_producto">Peso producto (gramos)</label>
-                <input type="number" step="0.01" id="peso_producto" name="peso_producto" style="width: 100%; padding: 8px;">
+            <div class="grid-2">
+                <div class="form-group full-width">
+                    <label for="nombre">Nombre del Producto</label>
+                    <input type="text" id="nombre" name="nombre" required placeholder="Ej: Anillo de Plata">
+                </div>
+                
+                <div class="form-group">
+                    <label for="referencia">Referencia / SKU</label>
+                    <input type="text" id="referencia" name="referencia" placeholder="Ej: REF-001">
+                </div>
+
+                <div class="form-group">
+                    <label for="categoria">Categoría</label>
+                    <select id="categoria" name="categoria">
+                        <option value="">Selecciona una categoría</option>
+                        {% for cat in categorias %}
+                            <option value="{{ cat.id }}">{{ cat.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="descripcion">Descripción</label>
+                    <textarea id="descripcion" name="descripcion" rows="3" placeholder="Detalles del producto..."></textarea>
+                </div>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-                <div>
-                    <label for="precio_por_gramo_detal">Gramo Detal</label>
-                    <input type="number" step="0.01" id="precio_por_gramo_detal" name="precio_por_gramo_detal" style="width: 100%; padding: 8px;">
+        </div>
+
+        <div class="form-card">
+            <h3>💰 Precios y Stock</h3>
+            
+            <div class="grid-3">
+                <div class="form-group">
+                    <label for="precio_costo">Precio Costo</label>
+                    <input type="number" step="any" id="precio_costo" name="precio_costo" placeholder="0">
                 </div>
-                <div>
-                    <label for="precio_por_gramo_semimayor">Gramo Semimayor</label>
-                    <input type="number" step="0.01" id="precio_por_gramo_semimayor" name="precio_por_gramo_semimayor" style="width: 100%; padding: 8px;">
+
+                <div class="form-group">
+                    <label for="stock">Stock Disponible</label>
+                    <input type="number" id="stock" name="stock" placeholder="0">
                 </div>
-                <div>
-                    <label for="precio_por_gramo_mayor">Gramo Mayorista</label>
-                    <input type="number" step="0.01" id="precio_por_gramo_mayor" name="precio_por_gramo_mayor" style="width: 100%; padding: 8px;">
+
+                <div class="form-group">
+                    <label for="tipo_venta">Tipo de Venta</label>
+                    <select id="tipo_venta" name="tipo_venta">
+                        <option value="unidad">Por Unidad</option>
+                        <option value="gramo">Por Gramo</option>
+                    </select>
                 </div>
             </div>
-        </fieldset>
 
-        <div style="margin-bottom: 15px;">
-            <label>
-                <input type="checkbox" name="destacado"> <strong>Producto destacado</strong>
-            </label>
+            <div class="grid-3" style="margin-top: 10px;">
+                <div class="form-group">
+                    <label for="precio_detal">Precio Detal</label>
+                    <input type="number" step="any" id="precio_detal" name="precio_detal" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="precio_semimayor">Precio Semimayor</label>
+                    <input type="number" step="any" id="precio_semimayor" name="precio_semimayor" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="precio_mayor">Precio Mayor</label>
+                    <input type="number" step="any" id="precio_mayor" name="precio_mayor" placeholder="0">
+                </div>
+            </div>
         </div>
 
-        <div style="margin-bottom: 15px;">
-            <label for="descripcion" style="display: block; font-weight: bold; margin-bottom: 5px;">Descripción</label>
-            <textarea id="descripcion" name="descripcion" rows="5" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; resize:vertical;"></textarea>
+        <div class="form-card">
+            <h3>📁 Archivos y Certificados</h3>
+            
+            <div class="grid-3">
+                <div class="form-group">
+                    <label>Imagen Principal</label>
+                    <div class="file-box">
+                        <input type="file" id="imagen_principal" name="imagen_principal" accept="image/*">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Certificado (PDF/Imagen)</label>
+                    <div class="file-box">
+                        <input type="file" id="certificado" name="certificado">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Video Promocional</label>
+                    <div class="file-box">
+                        <input type="file" id="video" name="video" accept="video/*">
+                    </div>
+                </div>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="destacado" name="destacado">
+                <label for="destacado">🌟 Destacar este producto en la tienda</label>
+            </div>
         </div>
 
-        <div style="margin-bottom: 15px; background: #f9f9f9; padding: 15px; border-radius: 8px;">
-            <h3>🎨 Variantes</h3>
-            <label for="variantes" style="display:block; margin-bottom:5px; font-size: 0.9em; color: #555;">Formato: Color|Talla|Stock (Uno por línea)</label>
-            <textarea id="variantes" name="variantes" rows="5" placeholder="Ejemplo:&#10;Rojo|5|3&#10;Azul|6|1" style="width:100%; font-family: monospace; padding: 8px;"></textarea>
+        <div class="form-card">
+            <h3>🎨 Variantes (Color | Talla | Stock)</h3>
+            <div class="form-group">
+                <label for="variantes">Ingresa una variante por línea utilizando el separador |</label>
+                <textarea id="variantes" name="variantes" rows="4" placeholder="Blanco | S | 10&#10;Negro | M | 5"></textarea>
+            </div>
         </div>
 
-        <div style="margin-bottom: 15px;">
-            <label for="referencia" style="display: block; font-weight: bold; margin-bottom: 5px;">SKU / Referencia</label>
-            <input type="text" id="referencia" name="referencia" placeholder="SKU o referencia" style="width: 100%; padding: 8px;">
+        <div class="form-actions">
+            <a href="{% url 'mis_productos' %}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Guardar Producto</button>
         </div>
 
-        
-        <div style="margin-bottom: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-
-        <div>
-            <label for="imagen_principal" style="display:block; font-weight:bold;">
-                Imagen Principal
-            </label>
-            <input
-                type="file"
-                id="imagen_principal"
-                name="imagen_principal"
-                accept="image/*"
-                style="margin-top:5px;">
-        </div>
-
-        <div>
-            <label for="certificado" style="display:block; font-weight:bold;">
-                Certificado
-            </label>
-            <input
-                type="file"
-                id="certificado"
-                name="certificado"
-                style="margin-top:5px;">
-        </div>
-
-        <div>
-            <label for="video" style="display:block; font-weight:bold;">
-                Video
-            </label>
-            <input
-                type="file"
-                id="video"
-                name="video"
-                accept="video/*"
-                style="margin-top:5px;">
-        </div>
-
-        </div>
-        <button type="submit" style="width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">
-            💾 Guardar Producto
-        </button>
     </form>
 </div>
+
 {% endblock %}
