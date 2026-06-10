@@ -756,8 +756,11 @@ def editar_producto(request, id):
             producto.video = request.FILES.get(
                 'video'
             )
-
+        print("ENTRE AL SAVE")
+        
         producto.save()
+
+        print("PASE EL SAVE")
 
         producto.variantes.all().delete()
 
