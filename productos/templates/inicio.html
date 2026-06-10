@@ -80,7 +80,7 @@
     border-color: var(--color-primario);
 }
 
-/* --- Buscador Optimizado --- */
+/* --- Buscador Unificado (Evita colapsos y apilamientos) --- */
 .buscador {
     display: flex;
     justify-content: center;
@@ -92,39 +92,45 @@
     display: flex;
     width: 100%;
     max-width: 550px;
-    gap: 8px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    overflow: hidden; /* Esto fusiona el input y el botón en una sola pieza limpia */
+    background: white;
+    transition: all 0.3s ease;
+}
+
+/* Iluminación elegante cuando el usuario hace clic para escribir */
+.buscador form:focus-within {
+    border-color: #111111;
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
 }
 
 .buscador input {
     flex: 1;
+    min-width: 0; /* ¡CRUCIAL! Evita que el input se encoja como un cuadro pequeño en móviles */
     padding: 14px 18px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    font-size: 15px;
+    border: none !important; /* Remueve el borde individual del input */
     outline: none;
-    transition: var(--transicion);
-}
-
-.buscador input:focus {
-    border-color: var(--color-primario);
-    box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+    background: transparent;
+    font-size: 15px;
+    display: block; /* Normaliza el comportamiento interno */
+    width: 100%;
 }
 
 .buscador button {
     padding: 14px 22px;
-    background: var(--color-primario);
+    background: #111111;
     color: white;
-    border: none;
-    border-radius: 10px;
+    border: none !important; /* Remueve bordes adicionales */
     font-weight: 600;
     cursor: pointer;
-    transition: var(--transicion);
+    white-space: nowrap; /* ¡CRUCIAL! Evita que el texto 'Buscar' o el emoji se apilen verticalmente */
+    transition: background 0.3s ease;
 }
 
 .buscador button:hover {
-    background: #333;
+    background: #333333;
 }
-
 /* --- Títulos de Secciones --- */
 h2 {
     font-size: 24px;
