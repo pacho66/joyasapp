@@ -51,28 +51,29 @@
             </div>
         </fieldset>
 
+        
         <fieldset class="grid-2-col">
             <legend>Costos y Precios (Unidad / Global)</legend>
-            
-            <div class="form-group">
-                <label for="precio_costo">Precio de costo</label>
-                <input type="text" id="precio_costo" name="precio_costo" value="{{ producto.precio_costo }}">
-            </div>
+    
+        <div class="form-group">
+            <label for="precio_costo">Precio de costo</label>
+            <input type="number" step="0.01" id="precio_costo" name="precio_costo" value="{{ "%.2f"|format(producto.precio_costo) }}">
+        </div>
 
-            <div class="form-group">
-                <label for="precio_detal">Precio Detal</label>
-                <input type="number" step="0.01" id="precio_detal" name="precio_detal" value="{{ producto.precio_detal }}">
-            </div>
+        <div class="form-group">
+            <label for="precio_detal">Precio Detal</label>
+            <input type="number" step="0.01" id="precio_detal" name="precio_detal" value="{{ "%.2f"|format(producto.precio_detal) }}">
+        </div>
 
-            <div class="form-group">
-                <label for="precio_semimayor">Precio SemiMayorista</label>
-                <input type="number" step="0.01" id="precio_semimayor" name="precio_semimayor" value="{{ producto.precio_semimayor }}">
-            </div>
+        <div class="form-group">
+            <label for="precio_semimayor">Precio SemiMayorista</label>
+            <input type="number" step="0.01" id="precio_semimayor" name="precio_semimayor" value="{{ "%.2f"|format(producto.precio_semimayor) }}">
+        </div>
 
-            <div class="form-group">
-                <label for="precio_mayor">Precio Mayorista</label>
-                <input type="number" step="0.01" id="precio_mayor" name="precio_mayor" value="{{ producto.precio_mayor }}">
-            </div>
+        <div class="form-group">
+            <label for="precio_mayor">Precio Mayorista</label>
+            <input type="number" step="0.01" id="precio_mayor" name="precio_mayor" value="{{ "%.2f"|format(producto.precio_mayor) }}">
+        </div>
         </fieldset>
 
         <fieldset class="grid-2-col">
