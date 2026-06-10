@@ -296,9 +296,9 @@
             ${{ producto.precio_detal }}
         </p>
 
-        {% if producto.stock > 10 %}
+        {% if producto.stock_total > 10 %}
             <p class="stock-ok">✅ Disponible</p>
-        {% elif producto.stock > 0 %}
+        {% elif producto.stock_total > 0 %}
             <p class="stock-poco">🔥 Últimas unidades</p>
         {% else %}
             <p class="stock-agotado">❌ Agotado</p>
