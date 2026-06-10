@@ -2,645 +2,687 @@
 {% block content %}
 
 <style>
-:root{
-    --azul:#0d6efd;
-    --verde:#198754;
-    --naranja:#fd7e14;
-    --morado:#6f42c1;
-    --gris:#343a40;
-    --fondo:#f6f8fb;
-    --texto:#212529;
-    --muted:#6c757d;
-    --blanco:#ffffff;
-    --borde:#e9ecef;
+:root {
+    --azul: #2563eb;
+    --azul-soft: #eff6ff;
+    --verde: #16a34a;
+    --verde-soft: #f0fdf4;
+    --naranja: #ea580c;
+    --naranja-soft: #fff7ed;
+    --morado: #7c3aed;
+    --morado-soft: #f5f3ff;
+    --rojo: #dc2626;
+    --rojo-soft: #fef2f2;
+    --gris: #4b5563;
+    --gris-soft: #f3f4f6;
+    --fondo: #f8fafc;
+    --texto: #0f172a;
+    --muted: #64748b;
+    --blanco: #ffffff;
+    --borde: #e2e8f0;
+    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
 }
 
-body{
-    background:var(--fondo);
+body {
+    background: var(--fondo);
+    color: var(--texto);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
-.container-dashboard{
-    max-width:1250px;
-    margin:auto;
-    padding:20px;
-    font-family:Arial,sans-serif;
+.container-dashboard {
+    max-width: 1400px;
+    margin: auto;
+    padding: 24px;
 }
 
-.topbar{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-    flex-wrap:wrap;
-    margin-bottom:18px;
+/* --- ENCABEZADO Y ADVERTENCIAS --- */
+.header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 28px;
 }
 
-.titulo{
-    font-size:28px;
-    margin:0;
-    color:var(--texto);
+.titulo-seccion h1 {
+    font-size: 32px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.5px;
 }
 
-.sub{
-    color:var(--muted);
-    font-size:14px;
-    margin-top:4px;
+.sub {
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: 4px;
 }
 
-.grid-metricas{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
-    gap:14px;
-    margin-bottom:22px;
+.header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
 }
 
-.card{
-    background:var(--blanco);
-    border-radius:14px;
-    padding:16px;
-    border:1px solid var(--borde);
-    box-shadow:0 6px 18px rgba(0,0,0,.04);
+.alerta-morosos {
+    background: var(--rojo);
+    color: white;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+    transition: transform 0.2s;
+}
+.alerta-morosos:hover {
+    transform: translateY(-2px);
 }
 
-.card h4{
-    margin:0;
-    font-size:13px;
-    color:var(--muted);
-    font-weight:600;
+/* --- MENÚ DASHBOARD SUPERIOR --- */
+.menu-dashboard {
+    margin-bottom: 24px;
 }
 
-.card h2{
-    margin:8px 0 0;
-    font-size:24px;
-    color:var(--texto);
+.menu-dashboard-toggle {
+    display: none;
+    background: var(--texto);
+    color: white;
+    padding: 14px;
+    text-align: center;
+    border-radius: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: var(--shadow);
 }
 
-.botones{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-    gap:12px;
-    margin-bottom:20px;
+.menu-dashboard-links {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--blanco);
+    padding: 8px;
+    border-radius: 14px;
+    border: 1px solid var(--borde);
+    box-shadow: var(--shadow);
 }
 
-.btn{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    min-height:48px;
+.menu-dashboard-links a {
+    text-decoration: none;
+    background: transparent;
+    color: var(--gris);
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
 }
 
-.btn{
-    text-decoration:none;
-    color:#fff;
-    padding:10px 14px;
-    border-radius:10px;
-    font-size:14px;
-    font-weight:700;
-    transition:.2s;
+.menu-dashboard-links a:hover {
+    background: var(--gris-soft);
+    color: var(--texto);
 }
 
-.btn:hover{
-    opacity:.92;
-    transform:translateY(-1px);
+/* --- REJILLAS Y CONTENEDORES --- */
+.grid-metricas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
 }
 
-.azul{background:var(--azul);}
-.verde{background:var(--verde);}
-.naranja{background:var(--naranja);}
-.morado{background:var(--morado);}
-.gris{background:var(--gris);}
-
-.seccion{
-    background:var(--blanco);
-    padding:18px;
-    border-radius:14px;
-    border:1px solid var(--borde);
-    box-shadow:0 6px 18px rgba(0,0,0,.06);
-    margin-bottom:20px;
-    transition:0.3s;
+.card-kpi {
+    background: var(--blanco);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid var(--borde);
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
 }
 
-.grid-dashboard{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:20px;
+.card-kpi h4 {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
 }
 
-@media(max-width:768px){
-    .grid-dashboard{
-        grid-template-columns:1fr;
+.card-kpi h2 {
+    margin: 12px 0 0;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--texto);
+}
+
+/* --- FINANZAS PRO STYLES (Corregidos y agregados) --- */
+.grid-finanzas {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.fin-card {
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--borde);
+}
+.fin-card h4 { margin: 0; font-size: 12px; color: var(--muted); text-transform: uppercase; }
+.fin-card h2 { margin: 6px 0 0; font-size: 20px; font-weight: 700; }
+
+.fin-card.ingreso { background: var(--verde-soft); border-color: rgba(22, 163, 74, 0.2); color: var(--verde); }
+.fin-card.costo { background: var(--naranja-soft); border-color: rgba(234, 88, 12, 0.2); color: var(--naranja); }
+.fin-card.gasto { background: var(--rojo-soft); border-color: rgba(220, 38, 38, 0.2); color: var(--rojo); }
+.fin-card.utilidad { background: var(--azul-soft); border-color: rgba(37, 99, 235, 0.2); color: var(--azul); grid-column: span 2; }
+.fin-card.utilidad small { display: block; margin-top: 4px; color: var(--muted); font-weight: bold; }
+
+/* --- BLOQUE DE BOTONES DE ACCIÓN --- */
+.botones-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 28px;
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    color: white;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+}
+
+.btn-rojo { background: var(--rojo); }
+.btn-azul { background: var(--azul); }
+.btn-verde { background: var(--verde); }
+.btn-naranja { background: var(--naranja); }
+.btn-morado { background: var(--morado); }
+.btn-gris { background: var(--gris); }
+
+/* --- SECCIONES PRINCIPALES --- */
+.main-dashboard-layout {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.seccion-card {
+    background: var(--blanco);
+    padding: 24px;
+    border-radius: 16px;
+    border: 1px solid var(--borde);
+    box-shadow: var(--shadow);
+}
+
+.seccion-card h3 {
+    margin: 0 0 20px 0;
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.full-width {
+    grid-column: span 2;
+}
+
+.canvas-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+/* --- FILTROS --- */
+.filtros-container {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.filtros-container a {
+    text-decoration: none;
+    background: var(--gris-soft);
+    color: var(--texto);
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.filtros-container a:hover {
+    background: var(--borde);
+}
+
+/* --- ACCIONES RÁPIDAS COBRAR --- */
+.lista-cobros-rapidos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.cobro-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--gris-soft);
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.btn-cobrar-sm {
+    background: var(--rojo);
+    color: white;
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+/* --- TABLAS RESPONSIVAS --- */
+.table-wrap {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--borde);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 14px;
+}
+
+th {
+    background: var(--gris-soft);
+    color: var(--gris);
+    padding: 14px;
+    font-weight: 700;
+}
+
+td {
+    padding: 14px;
+    border-bottom: 1px solid var(--borde);
+    color: var(--texto);
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+/* --- BADGES Y DETALLES --- */
+.badge {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-block;
+}
+
+.badge.ok { background: var(--verde-soft); color: var(--verde); }
+.badge.pen { background: var(--naranja-soft); color: var(--naranja); }
+.badge.can { background: var(--rojo-soft); color: var(--rojo); }
+
+.whatsapp-link {
+    background: #25D366;
+    color: white;
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* =======================================
+   📱 RESPONSIVE (MEDIA QUERIES PERFECTAS)
+   ======================================= */
+@media (max-width: 1024px) {
+    .main-dashboard-layout {
+        grid-template-columns: 1fr;
+    }
+    .full-width {
+        grid-column: span 1;
     }
 }
 
-.seccion:hover{
-    transform:translateY(-2px);
-}
-
-.seccion h3{
-    margin:0 0 14px 0;
-    font-size:18px;
-    color:var(--texto);
-}
-
-.seccion-grafica{
-    background:white;
-    border-radius:14px;
-    padding:18px;
-    margin-bottom:20px;
-    height:420px;
-}
-
-.seccion-grafica canvas{
-    width:100% !important;
-    height:320px !important;
-}
-
-.filtros{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-}
-
-.filtros a{
-    text-decoration:none;
-    background:#eef2f7;
-    color:#222;
-    padding:8px 12px;
-    border-radius:8px;
-    font-size:14px;
-}
-
-.table-wrap{
-    overflow-x:auto;
-}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-    min-width:650px;
-}
-
-th,td{
-    padding:11px;
-    border-bottom:1px solid #f1f1f1;
-    text-align:left;
-    font-size:14px;
-}
-
-th{
-    background:#fafafa;
-    color:#555;
-}
-
-.badge{
-    padding:6px 10px;
-    border-radius:20px;
-    font-size:12px;
-    font-weight:700;
-}
-
-.ok{background:#e9f7ef;color:#198754;}
-.pen{background:#fff3cd;color:#856404;}
-.can{background:#fdeaea;color:#b02a37;}
-
-.whatsapp{
-    background:#25D366;
-    color:#fff;
-    text-decoration:none;
-    padding:7px 10px;
-    border-radius:8px;
-    font-size:13px;
-    font-weight:700;
-}
-
-/* MENU DASHBOARD */
-.menu-dashboard{
-    margin-bottom:15px;
-}
-
-.menu-dashboard-toggle{
-    display:none;
-    background:#111;
-    color:white;
-    padding:12px;
-    text-align:center;
-    border-radius:8px;
-    font-weight:bold;
-    cursor:pointer;
-}
-
-.menu-dashboard-links{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-}
-
-.menu-dashboard-links a{
-    text-decoration:none;
-    background:#111;
-    color:white;
-    padding:8px 12px;
-    border-radius:8px;
-    font-size:14px;
-}
-
-@media(max-width:768px){
-
-    .menu-dashboard-toggle{
-        display:block;
+@media (max-width: 768px) {
+    .container-dashboard {
+        padding: 16px;
     }
 
-    .menu-dashboard-links{
-        display:none;
-        flex-direction:column;
-        gap:8px;
-        margin-top:10px;
+    .header-flex {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
     }
 
-    .menu-dashboard-links.show{
-        display:flex;
+    .header-actions {
+        width: 100%;
     }
 
-    .container-dashboard{
-        padding:14px;
+    .header-actions .btn {
+        width: 100%;
     }
 
-    .titulo{
-        font-size:22px;
+    .menu-dashboard-toggle {
+        display: block;
     }
 
-    .card h2{
-        font-size:19px;
+    .menu-dashboard-links {
+        display: none;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 8px;
+        padding: 8px;
     }
 
-    .btn{
-        font-size:13px;
-        padding:9px 12px;
+    .menu-dashboard-links.show {
+        display: flex;
+    }
+
+    .grid-metricas {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .card-kpi {
+        padding: 14px;
+    }
+
+    .card-kpi h2 {
+        font-size: 20px;
+    }
+
+    .botones-panel {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .seccion-card {
+        padding: 16px;
     }
 }
 </style>
 
 <div class="container-dashboard">
 
-<!-- MENU DASHBOARD -->
-<div class="menu-dashboard">
-
-    <div class="menu-dashboard-toggle" onclick="toggleMenuDash()">
-        ☰ Opciones Dashboard
+    <!-- MENU DASHBOARD -->
+    <div class="menu-dashboard">
+        <div class="menu-dashboard-toggle" onclick="toggleMenuDash()">
+            ☰ Opciones Dashboard
+        </div>
+        <div id="menu-dash-lista" class="menu-dashboard-links">
+            <a href="{% url 'dashboard' %}">📊 Inicio</a>
+            <a href="{% url 'estadisticas' %}">📈 Estadísticas</a>
+            <a href="{% url 'ganancias' %}">💰 Ganancias</a>
+            <a href="{% url 'inventario' %}">📦 Inventario</a>
+            <a href="{% url 'lista_gastos' %}">📊 Gastos</a>
+            <a href="{% url 'configurar_negocio' %}">⚙️ Configurar</a>
+        </div>
     </div>
 
-    <div id="menu-dash-lista" class="menu-dashboard-links">
+    <!-- ENCABEZADO -->
+    <div class="header-flex">
+        <div>
+            <h1 class="titulo-seccion">📊 Dashboard</h1>
+            <div class="sub">Control total de tu negocio</div>
+            
+            {% if morosos_count > 0 %}
+            <a href="{% url 'dashboard' %}?tipo=morosos" style="text-decoration:none;">
+                <div class="alerta-morosos">
+                    ⚠️ {{ morosos_count }} clientes en mora — Ver cartera
+                </div>
+            </a>
+            {% endif %}
+        </div>
 
-        <a href="{% url 'dashboard' %}">📊 Inicio</a>
-        <a href="{% url 'estadisticas' %}">📈 Estadísticas</a>
-        <a href="{% url 'ganancias' %}">💰 Ganancias</a>
-        <a href="{% url 'inventario' %}">📦 Inventario</a>
-        <a href="{% url 'lista_gastos' %}">📊 Gastos</a>
-        <a href="{% url 'configurar_negocio' %}">⚙️ Configurar</a>
-
-    </div>
-
-</div>
-
-<!-- ENCABEZADO -->
-
-<div class="topbar">
-
-    <div>
-
-        <h1 class="titulo">📊 Dashboard</h1>
-
-        <div style="text-align:center; margin:20px;">
-            <a href="{% url 'lista_gastos' %}" style="
-                background:#dc3545;
-                color:white;
-                padding:10px 15px;
-                border-radius:8px;
-                text-decoration:none;
-            ">
+        <div class="header-actions">
+            <a href="{% url 'lista_gastos' %}" class="btn btn-rojo">
                 📊 Ver gastos
             </a>
         </div>
+    </div>
 
-        <div class="sub">
-            Control total de tu negocio
+    <!-- BOTONES DE ACCIÓN RÁPIDA -->
+    <div class="botones-panel">
+        <a href="{% url 'modificar_banner' %}" class="btn btn-gris">🖼️ Banner</a>
+        <a href="{% url 'estadisticas' %}" class="btn btn-azul">📈 Estadísticas</a>
+        <a href="{% url 'ganancias' %}" class="btn btn-verde">💰 Ganancias</a>
+        <a href="{% url 'inventario' %}" class="btn btn-naranja">📦 Inventario</a>
+        <a href="{% url 'whatsapp_segmento' %}?tipo=vip" class="btn btn-morado">📲 WA VIP</a>
+        <a href="{% url 'configurar_negocio' %}" class="btn btn-gris">⚙️ Ajustes</a>
+        <a href="{% url 'crear_producto' %}" class="btn btn-verde">➕ Producto</a>
+        <a href="{% url 'crear_categoria' %}" class="btn btn-azul">📂 Categoría</a>
+        <a href="{% url 'mis_productos' %}" class="btn btn-azul">📦 Mis Productos</a>
+    </div>
+
+    <!-- ========================= -->
+    <!-- 📊 MÉTRICAS (KPIs)        -->
+    <!-- ========================= -->
+    <div class="grid-metricas">
+        <div class="card-kpi" style="border-left: 4px solid var(--verde);">
+            <h4>💰 Ventas Hoy</h4>
+            <h2>${{ total_hoy|floatformat:0 }}</h2>
+        </div>
+        <div class="card-kpi">
+            <h4>💰 Ventas Ayer</h4>
+            <h2>${{ total_ayer|floatformat:0 }}</h2>
+        </div>
+        <div class="card-kpi">
+            <h4>💰 Total General</h4>
+            <h2>${{ total_general|floatformat:0 }}</h2>
+        </div>
+        <div class="card-kpi">
+            <h4>📦 Pedidos Hoy</h4>
+            <h2>{{ pedidos_hoy }}</h2>
+        </div>
+        <div class="card-kpi">
+            <h4>📦 Pedidos Totales</h4>
+            <h2>{{ total_pedidos }}</h2>
+        </div>
+        <div class="card-kpi">
+            <h4>👥 Clientes</h4>
+            <h2>{{ total_clientes }}</h2>
+        </div>
+        <div class="card-kpi" style="border-left: 4px solid var(--morado);">
+            <h4>💎 Clientes VIP</h4>
+            <h2>{{ clientes_vip }}</h2>
+        </div>
+        <div class="card-kpi">
+            <h4>💵 Ticket Promedio</h4>
+            <h2>${{ ticket_promedio|floatformat:0 }}</h2>
+        </div>
+    </div>
+
+    <!-- ========================= -->
+    <!-- PANEL PRINCIPAL (SECCIONES) -->
+    <!-- ========================= -->
+    <div class="main-dashboard-layout">
+
+        <!-- GRÁFICA VENTAS -->
+        <div class="seccion-card">
+            <h3>📊 Ventas últimos días</h3>
+            <div class="canvas-container">
+                <canvas id="graficaVentas"></canvas>
+            </div>
         </div>
 
-        {% if morosos_count > 0 %}
+        <!-- FINANZAS PRO -->
+        <div class="seccion-card">
+            <h3>💰 Finanzas del negocio</h3>
+            <div class="grid-finanzas">
+                <div class="fin-card ingreso">
+                    <h4>Ingresos</h4>
+                    <h2>${{ total_ingresos|floatformat:0 }}</h2>
+                </div>
+                <div class="fin-card costo">
+                    <h4>Costos</h4>
+                    <h2>${{ total_costos|floatformat:0 }}</h2>
+                </div>
+                <div class="fin-card gasto">
+                    <h4>Gastos</h4>
+                    <h2>${{ total_gastos|floatformat:0 }}</h2>
+                </div>
+                <div class="fin-card utilidad">
+                    <h4>Utilidad</h4>
+                    <h2>${{ utilidad|floatformat:0 }}</h2>
+                    <small>{{ margen|floatformat:1 }}% margen</small>
+                </div>
+            </div>
+        </div>
 
-        <a href="{% url 'dashboard' %}?tipo=morosos"
-           style="text-decoration:none;">
+        <!-- GRÁFICA FINANZAS -->
+        <div class="seccion-card full-width">
+            <h3>📊 Flujo financiero</h3>
+            <div class="canvas-container" style="height: 260px;">
+                <canvas id="graficaFinanzas"></canvas>
+            </div>
+        </div>
 
-            <div style="
-                background:#ff4d4d;
-                color:white;
-                padding:12px;
-                margin-top:10px;
-                border-radius:10px;
-                font-weight:bold;
-                transition:0.3s;
-                cursor:pointer;
-            "
-            onmouseover="this.style.transform='scale(1.02)'"
-            onmouseout="this.style.transform='scale(1)'">
-
-                ⚠️ {{ morosos_count }} clientes en mora — Ver cartera
-
+        <!-- FILTROS Y CLIENTES -->
+        <div class="seccion-card full-width">
+            <h3>👥 Gestión de Clientes</h3>
+            
+            <div class="filtros-container">
+                <a href="?tipo=vip">💎 VIP</a>
+                <a href="?tipo=nuevos">🆕 Nuevos</a>
+                <a href="?tipo=dormidos">😴 Dormidos</a>
+                <a href="?">🔄 Todos</a>
             </div>
 
-        </a>
+            <!-- Acciones Rápidas Cobrar -->
+            <div class="lista-cobros-rapidos">
+                {% for cliente in clientes_filtrados %}
+                <div class="cobro-item">
+                    <span>{{ cliente.nombre }}</span>
+                    <a href="{% url 'cobrar_cliente' cliente.id %}" class="btn-cobrar-sm">
+                        💬 Cobrar
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
 
-        {% endif %}
+            <!-- Tabla de Clientes -->
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Teléfono</th>
+                            <th>Total Compras</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cliente in clientes_filtrados %}
+                        <tr>
+                            <td><strong>{{ cliente.nombre }}</strong></td>
+                            <td>{{ cliente.telefono }}</td>
+                            <td>${{ cliente.total_compras|floatformat:0 }}</td>
+                            <td>
+                                <a class="whatsapp-link" href="https://wa.me/57{{ cliente.telefono }}">
+                                    📲 WhatsApp
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--muted); padding: 20px;">No hay clientes</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-    </div>
-
-    <!-- BOTONES -->
-    <div class="botones">
-
-        <a href="{% url 'modificar_banner' %}"
-           class="btn gris">
-            🖼️ Modificar Banner
-        </a>
-
-        <a href="{% url 'estadisticas' %}" class="btn azul">
-            📈 Estadísticas
-        </a>
-
-        <a href="{% url 'ganancias' %}" class="btn verde">
-            💰 Ganancias
-        </a>
-
-        <a href="{% url 'inventario' %}" class="btn naranja">
-            📦 Inventario
-        </a>
-
-        <a href="{% url 'whatsapp_segmento' %}?tipo=vip"
-           class="btn morado">
-            📲 WhatsApp VIP
-        </a>
-
-        <a href="{% url 'configurar_negocio' %}"
-           class="btn gris">
-            ⚙️ Configurar
-        </a>
-
-        <a href="{% url 'crear_producto' %}"
-            class="btn verde">
-            ➕ Producto
-        </a>
-
-        <a href="{% url 'crear_categoria' %}"
-            class="btn azul">
-            📂 Categoría
-        </a>
-
-        <a href="{% url 'mis_productos' %}"
-            class="btn azul">
-            📦 Mis Productos
-        </a>
-
-    </div>
-
-</div>
-
-<!-- ========================= -->
-<!-- 📊 MÉTRICAS (KPIs) -->
-<!-- ========================= -->
-<div class="grid-metricas">
-
-<div class="card">
-<h4>💰 Ventas Hoy</h4>
-<h2>${{ total_hoy|floatformat:0 }}</h2>
-</div>
-
-<div class="card">
-<h4>💰 Ventas Ayer</h4>
-<h2>${{ total_ayer|floatformat:0 }}</h2>
-</div>
-
-<div class="card">
-<h4>💰 Total General</h4>
-<h2>${{ total_general|floatformat:0 }}</h2>
-</div>
-
-<div class="card">
-<h4>📦 Pedidos Hoy</h4>
-<h2>{{ pedidos_hoy }}</h2>
-</div>
-
-<div class="card">
-<h4>📦 Pedidos Totales</h4>
-<h2>{{ total_pedidos }}</h2>
-</div>
-
-<div class="card">
-<h4>👥 Clientes</h4>
-<h2>{{ total_clientes }}</h2>
-</div>
-
-<div class="card">
-<h4>💎 Clientes VIP</h4>
-<h2>{{ clientes_vip }}</h2>
-</div>
-
-<div class="card">
-<h4>💵 Ticket Promedio</h4>
-<h2>${{ ticket_promedio|floatformat:0 }}</h2>
-</div>
-
-</div>
-
-<!-- ========================= -->
-<!-- 📊 GRÁFICA VENTAS -->
-<!-- ========================= -->
-<div class="grid-dashboard">
-
-    <div class="seccion">
-        <h3>📊 Ventas últimos días</h3>
-        <canvas id="graficaVentas"></canvas>
-    </div>
-
-<!-- ========================= -->
-<!-- 💰 FINANZAS PRO -->
-<!-- ========================= -->
-<div class="seccion">
-
-<h3>💰 Finanzas del negocio</h3>
-
-<div class="grid-finanzas">
-
-    <div class="fin-card ingreso">
-        <h4>Ingresos</h4>
-        <h2>${{ total_ingresos|floatformat:0 }}</h2>
-    </div>
-
-    <div class="fin-card costo">
-        <h4>Costos</h4>
-        <h2>${{ total_costos|floatformat:0 }}</h2>
-    </div>
-
-    <div class="fin-card gasto">
-        <h4>Gastos</h4>
-        <h2>${{ total_gastos|floatformat:0 }}</h2>
-    </div>
-
-    <div class="fin-card utilidad">
-        <h4>Utilidad</h4>
-        <h2>${{ utilidad|floatformat:0 }}</h2>
-        <small>{{ margen|floatformat:1 }}% margen</small>
-    </div>
-
-</div>
-
-</div>
-
-<!-- ========================= -->
-<!-- 📊 GRÁFICA FINANZAS -->
-<!-- ========================= -->
-<div class="seccion">
-        <h3>📊 Flujo financiero</h3>
-        <canvas id="graficaFinanzas"></canvas>
-    </div>
-
-<!-- ACCIONES -->
-<div class="botones">
-
-<a href="{% url 'estadisticas' %}" class="btn azul">📈 Estadísticas</a>
-
-<a href="{% url 'ganancias' %}" class="btn verde">💰 Ganancias</a>
-
-<a href="{% url 'inventario' %}" class="btn naranja">📦 Inventario</a>
-
-<a href="{% url 'whatsapp_segmento' %}?tipo=vip" class="btn morado">📲 VIP</a>
-
-</div>
-
-<!-- FILTROS -->
-<div class="seccion">
-
-<h3>🎯 Filtrar Clientes</h3>
-
-<div class="filtros">
-<a href="?tipo=vip">💎 VIP</a>
-<a href="?tipo=nuevos">🆕 Nuevos</a>
-<a href="?tipo=dormidos">😴 Dormidos</a>
-<a href="?">🔄 Todos</a>
-</div>
-
-</div>
-
-<!-- CLIENTES -->
-<div class="seccion">
-
-<h3>👥 Clientes</h3>
-
-{% for cliente in clientes_filtrados %}
-    <div>
-        {{ cliente.nombre }}
-
-        <a href="{% url 'cobrar_cliente' cliente.id %}" 
-           class="btn btn-danger">
-            💬 Cobrar
-        </a>
+        <!-- PEDIDOS RECIENTES -->
+        <div class="seccion-card full-width">
+            <h3>📦 Pedidos Recientes</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Orden</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                            <th>Factura</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pedido in pedidos_recientes %}
+                        <tr>
+                            <td>#{{ pedido.numero_orden }}</td>
+                            <td><strong>${{ pedido.total|floatformat:0 }}</strong></td>
+                            <td>
+                                {% if pedido.estado == 'pagado' %}
+                                <span class="badge ok">Pagado</span>
+                                {% elif pedido.estado == 'pendiente' %}
+                                <span class="badge pen">Pendiente</span>
+                                {% else %}
+                                <span class="badge can">{{ pedido.estado }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a class="btn btn-azul" style="padding: 6px 12px; font-size: 12px; display: inline-flex;" href="{% url 'detalle_pedido' pedido.id %}">
+                                    Ver
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--muted); padding: 20px;">No hay pedidos</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
     </div>
-{% endfor %}
-
-<div class="table-wrap">
-<table>
-
-<tr>
-<th>Nombre</th>
-<th>Teléfono</th>
-<th>Total Compras</th>
-<th>Acción</th>
-</tr>
-
-{% for cliente in clientes_filtrados %}
-<tr>
-<td>{{ cliente.nombre }}</td>
-<td>{{ cliente.telefono }}</td>
-<td>${{ cliente.total_compras|floatformat:0 }}</td>
-<td>
-<a class="whatsapp"
-href="https://wa.me/57{{ cliente.telefono }}">
-WhatsApp
-</a>
-</td>
-</tr>
-{% empty %}
-<tr>
-<td colspan="4">No hay clientes</td>
-</tr>
-{% endfor %}
-
-</table>
-</div>
-
-</div>
-
-<!-- PEDIDOS -->
-<div class="seccion">
-
-<h3>📦 Pedidos Recientes</h3>
-
-<div class="table-wrap">
-<table>
-
-<tr>
-<th>Orden</th>
-<th>Total</th>
-<th>Estado</th>
-<th>Factura</th>
-</tr>
-
-{% for pedido in pedidos_recientes %}
-<tr>
-<td>{{ pedido.numero_orden }}</td>
-<td>${{ pedido.total|floatformat:0 }}</td>
-
-<td>
-{% if pedido.estado == 'pagado' %}
-<span class="badge ok">Pagado</span>
-{% elif pedido.estado == 'pendiente' %}
-<span class="badge pen">Pendiente</span>
-{% else %}
-<span class="badge can">{{ pedido.estado }}</span>
-{% endif %}
-</td>
-
-<td>
-<a class="btn azul"
-style="padding:6px 10px;font-size:12px;"
-href="{% url 'detalle_pedido' pedido.id %}">
-Ver
-</a>
-</td>
-
-</tr>
-{% empty %}
-<tr>
-<td colspan="4">No hay pedidos</td>
-</tr>
-{% endfor %}
-
-</table>
-</div>
-
-</div>
-
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+// Función nativa para el menú responsive
+function toggleMenuDash() {
+    const menu = document.getElementById('menu-dash-lista');
+    menu.classList.toggle('show');
+}
+
 document.addEventListener("DOMContentLoaded", function(){
 
     // =========================
     // 📊 GRÁFICA VENTAS
     // =========================
     const ctx = document.getElementById('graficaVentas');
-
     if(ctx){
         new Chart(ctx, {
             type: 'line',
@@ -649,40 +691,13 @@ document.addEventListener("DOMContentLoaded", function(){
                 datasets: [{
                     label: 'Ventas',
                     data: {{ totales|safe }},
-                    borderColor: '#25D366',
-                    backgroundColor: 'rgba(37, 211, 102, 0.2)',
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
-    }
-
-    // =========================
-    // 💰 GRÁFICA FINANZAS
-    // =========================
-    const ctx2 = document.getElementById('graficaFinanzas');
-
-    if(ctx2){
-        new Chart(ctx2, {
-            type: 'bar',
-            data: {
-                labels: ['Ingresos', 'Gastos', 'Utilidad'],
-                datasets: [{
-                    data: [
-                        {{ total_ingresos }},
-                        {{ total_gastos }},
-                        {{ utilidad }}
-                    ],
-                    backgroundColor: [
-                        '#198754',
-                        '#dc3545',
-                        '#0d6efd'
-                    ]
+                    borderColor: '#16a34a',
+                    backgroundColor: 'rgba(22, 163, 74, 0.08)',
+                    tension: 0.3,
+                    fill: true,
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#16a34a'
                 }]
             },
             options: {
@@ -695,6 +710,38 @@ document.addEventListener("DOMContentLoaded", function(){
         });
     }
 
+    // =========================
+    // 💰 GRÁFICA FINANZAS
+    // =========================
+    const ctx2 = document.getElementById('graficaFinanzas');
+    if(ctx2){
+        new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: ['Ingresos', 'Gastos', 'Utilidad'],
+                datasets: [{
+                    data: [
+                        {{ total_ingresos }},
+                        {{ total_gastos }},
+                        {{ utilidad }}
+                    ],
+                    backgroundColor: [
+                        '#16a34a',
+                        '#dc2626',
+                        '#2563eb'
+                    ],
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
 });
 </script>
 
