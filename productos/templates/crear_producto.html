@@ -1,197 +1,125 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div style="max-width: 600px; margin: auto; padding: 20px; font-family: sans-serif;">
 
-<div style="max-width:600px;margin:auto;padding:20px;">
+    <h2>💎 Nuevo Producto</h2>
 
-<h2>💎 Nuevo Producto</h2>
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
 
-<form method="POST" enctype="multipart/form-data">
+        <div style="margin-bottom: 15px;">
+            <label for="nombre" style="display: block; font-weight: bold; margin-bottom: 5px;">Nombre</label>
+            <input type="text" id="nombre" name="nombre" placeholder="Nombre producto" required style="width: 100%; padding: 8px; box-sizing: border-box;">
+        </div>
 
-{% csrf_token %}
+        <div style="margin-bottom: 15px;">
+            <label for="categoria" style="display: block; font-weight: bold; margin-bottom: 5px;">Categoría</label>
+            <select id="categoria" name="categoria" required style="width: 100%; padding: 8px;">
+                <option value="">Seleccione categoría</option>
+                {% for categoria in categorias %}
+                    <option value="{{ categoria.id }}">{{ categoria.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
-<label>Nombre</label>
-<input type="text"
-name="nombre"
-placeholder="Nombre producto"
-required>
+        <div style="margin-bottom: 15px;">
+            <label for="tipo_venta" style="display: block; font-weight: bold; margin-bottom: 5px;">Tipo de venta</label>
+            <select id="tipo_venta" name="tipo_venta" style="width: 100%; padding: 8px;">
+                <option value="unidad">Por unidad</option>
+                <option value="gramo">Por gramos</option>
+            </select>
+        </div>
 
-<br><br>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+            <div>
+                <label for="precio_costo" style="display: block; font-weight: bold; margin-bottom: 5px;">Precio de costo</label>
+                <input type="number" step="0.01" id="precio_costo" name="precio_costo" style="width: 100%; padding: 8px;">
+            </div>
+            <div>
+                <label for="precio_detal" style="display: block; font-weight: bold; margin-bottom: 5px;">Precio Detal</label>
+                <input type="number" step="0.01" id="precio_detal" name="precio_detal" style="width: 100%; padding: 8px;">
+            </div>
+        </div>
 
-<label>Categoría</label>
-<select name="categoria" required>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+            <div>
+                <label for="precio_semimayor" style="font-weight: bold;">SemiMayorista</label>
+                <input type="number" step="0.01" id="precio_semimayor" name="precio_semimayor" style="width: 100%; padding: 8px; margin-top: 5px;">
+            </div>
+            <div>
+                <label for="precio_mayor" style="font-weight: bold;">Mayorista</label>
+                <input type="number" step="0.01" id="precio_mayor" name="precio_mayor" style="width: 100%; padding: 8px; margin-top: 5px;">
+            </div>
+            <div>
+                <label for="stock" style="font-weight: bold;">Stock Total</label>
+                <input type="number" id="stock" name="stock" style="width: 100%; padding: 8px; margin-top: 5px;">
+            </div>
+        </div>
 
-<option value="">
-Seleccione categoría
-</option>
+        <fieldset style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
+            <legend style="padding: 0 5px; font-weight: bold;">Datos por Gramo</legend>
+            
+            <div style="margin-bottom: 10px;">
+                <label for="peso_producto">Peso producto (gramos)</label>
+                <input type="number" step="0.01" id="peso_producto" name="peso_producto" style="width: 100%; padding: 8px;">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                <div>
+                    <label for="precio_por_gramo_detal">Gramo Detal</label>
+                    <input type="number" step="0.01" id="precio_por_gramo_detal" name="precio_por_gramo_detal" style="width: 100%; padding: 8px;">
+                </div>
+                <div>
+                    <label for="precio_por_gramo_semimayor">Gramo Semimayor</label>
+                    <input type="number" step="0.01" id="precio_por_gramo_semimayor" name="precio_por_gramo_semimayor" style="width: 100%; padding: 8px;">
+                </div>
+                <div>
+                    <label for="precio_por_gramo_mayor">Gramo Mayorista</label>
+                    <input type="number" step="0.01" id="precio_por_gramo_mayor" name="precio_por_gramo_mayor" style="width: 100%; padding: 8px;">
+                </div>
+            </div>
+        </fieldset>
 
-{% for categoria in categorias %}
-<option value="{{ categoria.id }}">
-{{ categoria.nombre }}
-</option>
-{% endfor %}
+        <div style="margin-bottom: 15px;">
+            <label>
+                <input type="checkbox" name="destacado"> <strong>Producto destacado</strong>
+            </label>
+        </div>
 
-</select>
+        <div style="margin-bottom: 15px;">
+            <label for="descripcion" style="display: block; font-weight: bold; margin-bottom: 5px;">Descripción</label>
+            <textarea id="descripcion" name="descripcion" rows="5" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; resize:vertical;"></textarea>
+        </div>
 
-<br><br>
+        <div style="margin-bottom: 15px; background: #f9f9f9; padding: 15px; border-radius: 8px;">
+            <h3>🎨 Variantes</h3>
+            <label for="variantes" style="display:block; margin-bottom:5px; font-size: 0.9em; color: #555;">Formato: Color|Talla|Stock (Uno por línea)</label>
+            <textarea id="variantes" name="variantes" rows="5" placeholder="Ejemplo:&#10;Rojo|5|3&#10;Azul|6|1" style="width:100%; font-family: monospace; padding: 8px;"></textarea>
+        </div>
 
-<label>Tipo de venta</label>
-<select name="tipo_venta">
-    <option value="unidad">Por unidad</option>
-    <option value="gramo">Por gramos</option>
-</select>
+        <div style="margin-bottom: 15px;">
+            <label for="referencia" style="display: block; font-weight: bold; margin-bottom: 5px;">SKU / Referencia</label>
+            <input type="text" id="referencia" name="referencia" placeholder="SKU o referencia" style="width: 100%; padding: 8px;">
+        </div>
 
-<br><br>
+        <div style="margin-bottom: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+            <div>
+                <label for="imagen_principal" style="display:block; font-weight:bold;">Imagen Principal</label>
+                <input type="file" id="imagen_principal" name="imagen_principal" accept="image/*" style="margin-top:5px;">
+            </div>
+            <div>
+                <label for="certificado" style="display:block; font-weight:bold;">Certificado</label>
+                <input type="file" id="certificado" name="certificado" style="margin-top:5px;">
+            </div>
+            <div>
+                <label for="video" style="display:block; font-weight:bold;">Video</label>
+                <input type="file" id="video" name="video" accept="video/*" style="margin-top:5px;">
+            </div>
+        </div>
 
-
-<label>Precio de costo</label>
-<input type="number"
-step="0.01"
-name="precio_costo">
-
-<br><br>
-
-<label>Precio Detal</label>
-<input type="number"
-step="0.01"
-name="precio_detal">
-
-<br><br>
-
-<label>Precio SemiMayorista</label>
-<input type="number"
-step="0.01"
-name="precio_semimayor">
-
-<br><br>
-
-<label>Precio Mayorista</label>
-<input type="number"
-step="0.01"
-name="precio_mayor">
-
-<br><br>
-
-<label>Stock</label>
-<input type="number"
-name="stock">
-
-<br><br>
-
-<label>Peso producto (gramos)</label>
-<input type="number"
-step="0.01"
-name="peso_producto">
-
-<br><br>
-
-<label>Precio gramo detal</label>
-<input type="number"
-step="0.01"
-name="precio_por_gramo_detal">
-
-<br><br>
-
-<label>Precio gramo semimayorista</label>
-<input type="number"
-step="0.01"
-name="precio_por_gramo_semimayor">
-
-<br><br>
-
-<label>Precio gramo mayorista</label>
-<input type="number"
-step="0.01"
-name="precio_por_gramo_mayor">
-
-<br><br>
-
-<label>
-<input type="checkbox"
-name="destacado">
-Producto destacado
-</label>
-
-<br><br>
-
-<label>Descripción</label>
-<textarea
-    name="descripcion"
-    rows="8"
-    style="
-        width:100%;
-        min-height:180px;
-        padding:12px;
-        border:1px solid #ddd;
-        border-radius:8px;
-        resize:vertical;
-    ">
-</textarea>
-
-<br><br>
-
-<h3>🎨 Variantes</h3>
-
-<p>
-Color | Talla | Stock
-</p>
-
-<textarea
-name="variantes"
-rows="6"
-placeholder="Ejemplo:
-
-Rojo|5|3
-Rojo|6|2
-Azul|5|4
-Azul|6|1
-
-">
-</textarea>
-
-<br><br>
-
-<label>SKU / Referencia</label>
-
-<input
-    type="text"
-    name="referencia"
-    placeholder="SKU o referencia">
-
-<br><br>
-
-<label>Imagen principal</label>
-
-<input
-type="file"
-name="imagen_principal"
-accept="image/*">
-
-<br><br>
-
-<label>Certificado</label>
-
-<input
-    type="file"
-    name="certificado">
-
-<br><br>
-
-<label>Video</label>
-
-<input
-    type="file"
-    name="video"
-    accept="video/*">
-
-<br><br>
-
-<button type="submit">
-💾 Guardar Producto
-</button>
-
-</form>
-
+        <button type="submit" style="width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">
+            💾 Guardar Producto
+        </button>
+    </form>
 </div>
-
 {% endblock %}
