@@ -3,341 +3,381 @@
 {% block content %}
 
 <style>
-
-.hero{
-    background:linear-gradient(135deg,#111,#333);
-    color:white;
-    text-align:center;
-    padding:60px 20px;
-    border-radius:15px;
-    margin-bottom:30px;
+/* --- Configuración y Variables de Estilo --- */
+:root {
+    --color-primario: #111111;
+    --color-acento: #25D366;
+    --color-precio: #198754;
+    --color-fondo-tarjeta: #ffffff;
+    --sombra-suave: 0 4px 15px rgba(0,0,0,0.06);
+    --sombra-hover: 0 8px 25px rgba(0,0,0,0.12);
+    --transicion: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-.hero h1{
-    font-size:38px;
-    margin-bottom:10px;
+/* --- Hero Section --- */
+.hero {
+    background: linear-gradient(135deg, #111111 0%, #2c2c2c 100%);
+    color: white;
+    text-align: center;
+    padding: 70px 20px;
+    border-radius: 16px;
+    margin-bottom: 35px;
+    box-shadow: var(--sombra-suave);
 }
 
-.hero p{
-    font-size:18px;
-    opacity:.9;
+.hero h1 {
+    font-size: 42px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
 }
 
-.btn-principal{
-    display:inline-block;
-    margin-top:15px;
-    background:#25D366;
-    color:white;
-    padding:12px 20px;
-    border-radius:8px;
-    text-decoration:none;
-    font-weight:bold;
+.hero p {
+    font-size: 18px;
+    opacity: .85;
+    margin-bottom: 25px;
 }
 
-.buscador{
-    text-align:center;
-    margin-bottom:30px;
+.btn-principal {
+    display: inline-block;
+    background: var(--color-acento);
+    color: white;
+    padding: 14px 28px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: var(--transicion);
 }
 
-.buscador input{
-    width:70%;
-    max-width:500px;
-    padding:12px;
-    border:1px solid #ddd;
-    border-radius:8px;
+.btn-principal:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(37, 211, 102, 0.4);
 }
 
-.buscador button{
-    padding:12px 18px;
-    background:black;
-    color:white;
-    border:none;
-    border-radius:8px;
+/* --- Redes Sociales --- */
+.redes {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 30px;
 }
 
-.redes{
-    display:flex;
-    justify-content:center;
-    gap:15px;
-    margin-bottom:25px;
+.redes a {
+    text-decoration: none;
+    background: #f8f9fa;
+    padding: 10px 18px;
+    border-radius: 30px;
+    color: #333;
+    font-weight: 500;
+    font-size: 14px;
+    border: 1px solid #eaeaea;
+    transition: var(--transicion);
 }
 
-.redes a{
-    text-decoration:none;
-    background:#f5f5f5;
-    padding:10px 15px;
-    border-radius:8px;
-    color:black;
+.redes a:hover {
+    background: var(--color-primario);
+    color: white;
+    border-color: var(--color-primario);
 }
 
-.destacados-scroll{
-    display:flex;
-    gap:20px;
-    overflow-x:auto;
-    padding-bottom:10px;
-    margin-bottom:40px;
+/* --- Buscador Optimizado --- */
+.buscador {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 40px;
+    padding: 0 15px;
 }
 
-.producto-grid{
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:15px;
-    padding:15px;
+.buscador form {
+    display: flex;
+    width: 100%;
+    max-width: 550px;
+    gap: 8px;
 }
 
-@media(min-width:768px){
-    .producto-grid{
-        grid-template-columns:repeat(4,1fr);
+.buscador input {
+    flex: 1;
+    padding: 14px 18px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+    transition: var(--transicion);
+}
+
+.buscador input:focus {
+    border-color: var(--color-primario);
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+}
+
+.buscador button {
+    padding: 14px 22px;
+    background: var(--color-primario);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transicion);
+}
+
+.buscador button:hover {
+    background: #333;
+}
+
+/* --- Títulos de Secciones --- */
+h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    padding-left: 5px;
+    font-weight: 700;
+}
+
+/* --- Tarjeta de Producto (Base) --- */
+.producto-card {
+    background: var(--color-fondo-tarjeta);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--sombra-suave);
+    text-align: center;
+    padding: 15px;
+    border: 1px solid #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: var(--transicion);
+}
+
+.producto-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--sombra-hover);
+}
+
+.producto-img {
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    display: block;
+    border-radius: 8px;
+    background-color: #f7f7f7;
+}
+
+.producto-info {
+    padding: 12px 5px 0 5px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.producto-info h4 {
+    font-size: 16px;
+    margin: 10px 0 6px 0;
+    color: #222;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.precio {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-precio);
+    margin-bottom: 10px;
+}
+
+/* --- Scroll Horizontal de Destacados --- */
+.destacados-scroll {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding: 10px 5px 25px 5px;
+    margin-bottom: 40px;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Fijamos un ancho estable para que no se aplasten en el scroll */
+.destacados-scroll .producto-card {
+    min-width: 260px;
+    max-width: 260px;
+    flex-shrink: 0;
+}
+
+/* --- Grid de Todos los Productos (Responsivo Fluido) --- */
+.producto-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    padding: 5px;
+    margin-bottom: 50px;
+}
+
+/* A partir de tablets/pantallas medianas calcula dinámicamente cuántas tarjetas caben */
+@media(min-width: 768px){
+    .producto-grid {
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
     }
 }
 
-.producto-card{
-    background:white;
-    border-radius:12px;
-    overflow:hidden;
-    box-shadow:0 2px 10px rgba(0,0,0,.1);
-    text-align:center;
-    padding:15px;
+/* --- Etiquetas de Stock --- */
+.stock-status {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: inline-block;
+    align-self: center;
+}
+.stock-ok { color: #198754; background: rgba(25, 135, 84, 0.08); }
+.stock-poco { color: #fd7e14; background: rgba(253, 126, 20, 0.08); }
+.stock-agotado { color: #dc3545; background: rgba(220, 53, 69, 0.08); }
+
+/* --- Acciones y Botones --- */
+.acciones-producto {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: auto; /* Empuja los botones al fondo para alineación perfecta */
 }
 
-.producto-img{
-    width:100%;
-    aspect-ratio:1/1;
-    object-fit:cover;
-    display:block;
+.btn-carrito, .btn-ver {
+    text-decoration: none;
+    padding: 11px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    transition: var(--transicion);
 }
 
-.producto-info{
-    padding:15px;
+.btn-carrito {
+    background: var(--color-acento);
+    color: white;
 }
 
-.precio{
-    font-size:18px;
-    font-weight:bold;
-    color:#198754;
+.btn-carrito:hover {
+    background: #1ebd54;
 }
 
-.stock-ok{
-    color:green;
-    font-weight:bold;
+.btn-ver {
+    background: #f1f1f1;
+    color: var(--color-primario);
 }
 
-.stock-poco{
-    color:#fd7e14;
-    font-weight:bold;
+.btn-ver:hover {
+    background: var(--color-primario);
+    color: white;
 }
 
-.stock-agotado{
-    color:red;
-    font-weight:bold;
+/* --- Botón Flotante de WhatsApp --- */
+.btn-whatsapp {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 60px;
+    height: 60px;
+    background: var(--color-acento);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 28px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    z-index: 99999;
+    transition: var(--transicion);
 }
 
-.acciones-producto{
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-    margin-top:15px;
+.btn-whatsapp:hover {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 8px 25px rgba(37, 211, 102, 0.3);
 }
-
-.btn-carrito{
-    background:#25D366;
-    color:white;
-    text-decoration:none;
-    padding:10px;
-    border-radius:8px;
-    text-align:center;
-}
-
-.btn-ver{
-    background:#111;
-    color:white;
-    text-decoration:none;
-    padding:10px;
-    border-radius:8px;
-    text-align:center;
-}
-
-.btn-whatsapp{
-    position:fixed;
-    right:20px;
-    bottom:20px;
-    width:60px;
-    height:60px;
-    background:#25D366;
-    color:white;
-    border-radius:50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    text-decoration:none;
-    font-size:28px;
-    box-shadow:0 5px 15px rgba(0,0,0,.25);
-    z-index:99999;
-}
-
 </style>
 
+<!-- ==================== CONTENIDO HTML ==================== -->
+
 <div class="hero">
-
     <h1>{{ perfil.nombre_negocio|default:"PG Joyas" }}</h1>
-
-    <p>
-        Joyas exclusivas para cada ocasión
-    </p>
-
-    <a href="#productos" class="btn-principal">
-        Ver catálogo
-    </a>
-
+    <p>Joyas exclusivas para cada ocasión</p>
+    <a href="#productos" class="btn-principal">Ver catálogo</a>
 </div>
 
 <div class="redes">
-
     {% if perfil.instagram %}
-    <a href="https://instagram.com/{{ perfil.instagram }}" target="_blank">
-        Instagram
-    </a>
+    <a href="https://instagram.com/{{ perfil.instagram }}" target="_blank">Instagram</a>
     {% endif %}
 
     {% if perfil.facebook %}
-    <a href="{{ perfil.facebook }}" target="_blank">
-        Facebook
-    </a>
+    <a href="{{ perfil.facebook }}" target="_blank">Facebook</a>
     {% endif %}
 
     {% if perfil.tiktok %}
-    <a href="https://tiktok.com/@{{ perfil.tiktok }}" target="_blank">
-        TikTok
-    </a>
+    <a href="https://tiktok.com/@{{ perfil.tiktok }}" target="_blank">TikTok</a>
     {% endif %}
-
 </div>
 
 <div class="buscador">
-
     <form method="GET">
-
-        <input
-            type="text"
-            name="q"
-            placeholder="Buscar productos...">
-
-        <button type="submit">
-            🔍 Buscar
-        </button>
-
+        <input type="text" name="q" placeholder="Buscar productos..." aria-label="Buscar productos">
+        <button type="submit">🔍 Buscar</button>
     </form>
-
 </div>
 
 <h2>⭐ Productos destacados</h2>
-
 <div class="destacados-scroll">
+    {% for producto in destacados %}
+    <div class="producto-card">
+        {% if producto.imagen_principal %}
+        <img src="{{ producto.imagen_principal.url }}" class="producto-img" alt="{{ producto.nombre }}">
+        {% endif %}
 
-{% for producto in destacados %}
+        <div class="producto-info">
+            <h4>{{ producto.nombre }}</h4>
+            <p class="precio">${{ producto.precio_detal }}</p>
 
-<div class="producto-card">
-
-    {% if producto.imagen_principal %}
-    <img src="{{ producto.imagen_principal.url }}"
-         class="producto-img">
-    {% endif %}
-
-    <div class="producto-info">
-
-        <h4>{{ producto.nombre }}</h4>
-
-        <p class="precio">
-            ${{ producto.precio_detal }}
-        </p>
-
-        <div class="acciones-producto">
-
-            <a href="{% url 'agregar_al_carrito' producto.id %}"
-               class="btn-carrito">
-                🛒 Agregar al carrito
-            </a>
-
-            <a href="{% url 'detalle_producto' producto.id producto.slug %}"
-               class="btn-ver">
-                👁️ Ver producto
-            </a>
-
+            <div class="acciones-producto">
+                <a href="{% url 'agregar_al_carrito' producto.id %}" class="btn-carrito">🛒 Agregar</a>
+                <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-ver">👁️ Ver detalle</a>
+            </div>
         </div>
-
     </div>
-
-</div>
-
-{% endfor %}
-
+    {% endfor %}
 </div>
 
 <h2 id="productos">🛍️ Todos los productos</h2>
-
 <div class="producto-grid">
-
-{% for producto in productos %}
-
-<div class="producto-card">
-
-    {% if producto.imagen_principal %}
-    <img
-        src="{{ producto.imagen_principal.url }}"
-        class="producto-img"
-        alt="{{ producto.nombre }}">
-    {% endif %}
-
-    <div class="producto-info">
-
-        <h4>{{ producto.nombre }}</h4>
-
-        <p class="precio">
-            ${{ producto.precio_detal }}
-        </p>
-
-        {% if producto.stock_total > 10 %}
-            <p class="stock-ok">✅ Disponible</p>
-        {% elif producto.stock_total > 0 %}
-            <p class="stock-poco">🔥 Últimas unidades</p>
-        {% else %}
-            <p class="stock-agotado">❌ Agotado</p>
+    {% for producto in productos %}
+    <div class="producto-card">
+        {% if producto.imagen_principal %}
+        <img src="{{ producto.imagen_principal.url }}" class="producto-img" alt="{{ producto.nombre }}">
         {% endif %}
 
-        <div class="acciones-producto">
+        <div class="producto-info">
+            <h4>{{ producto.nombre }}</h4>
+            <p class="precio">${{ producto.precio_detal }}</p>
 
-            <a href="{% url 'agregar_al_carrito' producto.id %}"
-               class="btn-carrito">
-                🛒 Agregar al carrito
-            </a>
+            {% if producto.stock_total > 10 %}
+                <p class="stock-status stock-ok">✅ Disponible</p>
+            {% elif producto.stock_total > 0 %}
+                <p class="stock-status stock-poco">🔥 Últimas unidades</p>
+            {% else %}
+                <p class="stock-status stock-agotado">❌ Agotado</p>
+            {% endif %}
 
-            <a href="{% url 'detalle_producto' producto.id producto.slug %}"
-               class="btn-ver">
-                👁️ Ver producto
-            </a>
-
+            <div class="acciones-producto">
+                <a href="{% url 'agregar_al_carrito' producto.id %}" class="btn-carrito">🛒 Agregar</a>
+                <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-ver">👁️ Ver detalle</a>
+            </div>
         </div>
-
     </div>
-
-</div>
-
-{% empty %}
-
-<p>No hay productos disponibles.</p>
-
-{% endfor %}
-
+    {% empty %}
+    <p style="grid-column: 1/-1; text-align: center; color: #666; padding: 40px 0;">No hay productos disponibles en este momento.</p>
+    {% endfor %}
 </div>
 
 {% if perfil.whatsapp %}
-
-<a href="https://wa.me/{{ perfil.whatsapp }}"
-   target="_blank"
-   class="btn-whatsapp">
-   💬   
-</a>
-
+<a href="https://wa.me/{{ perfil.whatsapp }}" target="_blank" class="btn-whatsapp" aria-label="Contacto por WhatsApp">💬</a>
 {% endif %}
 
 {% endblock %}
