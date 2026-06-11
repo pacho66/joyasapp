@@ -242,16 +242,31 @@
         width: 100%;
         box-sizing: border-box;
     }
+    
+    /* 📐 CLASES DE ALINEACIÓN (CSS GRID) */
     .grid-2-col {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 15px;
     }
-    .grid-2-col legend {
-        grid-column: span 2;
+    /* ✨ Nueva: Para alinear 3 precios en una sola línea */
+    .grid-3-col {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+    }
+    /* ✨ Nueva: Para alinear 4 campos en una sola línea (Costo, Detal, Semimayor, Mayor) */
+    .grid-4-col {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+    }
+
+    .grid-2-col legend, .grid-3-col legend, .grid-4-col legend {
+        grid-column: 1 / -1;
     }
     .full-width {
-        grid-column: span 2;
+        grid-column: 1 / -1;
     }
     .checkbox-group {
         flex-direction: row;
@@ -300,7 +315,12 @@
 
     .btn-volver:hover{
         background:#5a6268;
-}
-</style>
+    }
 
-{% endblock %}
+    /* 📱 RESPONSIVE: En celulares todo pasa a una sola columna para que no se aplaste */
+    @media (max-width: 600px) {
+        .grid-2-col, .grid-3-col, .grid-4-col {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
