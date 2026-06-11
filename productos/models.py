@@ -159,22 +159,21 @@ class Producto(models.Model):
             else:
                 return self.precio_detal
 
+    
     def save(self, *args, **kwargs):
-    # 1. Solo generamos el slug si el producto es nuevo (no tiene slug)
         if not self.slug:
             base_slug = slugify(self.nombre)
             slug = base_slug
             contador = 1
-        
-            # 2. Bucle infinito controlado: si el slug ya existe, busca el siguiente disponible
-            # Ejemplo: 'pulsera-chakras', luego 'pulsera-chakras-1', 'pulsera-chakras-2'...
-            while Producto.objects.filter(slug=slug).exists():
+
+            while Producto.objects.filter(
+                slug=slug
+             ).exclude(pk=self.pk).exists():
                 slug = f"{base_slug}-{contador}"
                 contador += 1
-            
+
             self.slug = slug
 
-        # 3. Guarda el producto normalmente
         super().save(*args, **kwargs)
 
 def _str_(self):
