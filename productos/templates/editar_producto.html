@@ -135,16 +135,13 @@
             </div>
 
             <hr>
-
-            <h4>Galería de imágenes</h4>
-
             
             <h4>Galería de imágenes</h4>
 
-                {% if producto.imagenes.all %}
+                {% if producto.imagenes.exists %}
                     <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
 
-                        {% for foto in producto.imagenes.all %}
+                        {% for foto in producto.imagenes.exists %}
                             {% if foto.imagen.url != producto.imagen_principal.url %}
                                 <div style="text-align:center;">
                                     <img src="{{ foto.imagen.url }}" style="width:120px; height:120px; object-fit:cover; border-radius:8px;">
