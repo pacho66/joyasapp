@@ -14,23 +14,7 @@
 <!-- 🖼️ IMAGEN PRINCIPAL -->
 <!-- ========================= -->
 
-<div class="contenedor-imagen">
 
-{% if producto.imagen_principal %}
-    <img 
-        id="imagen-principal" 
-        src="{{ producto.imagen_principal.url }}" 
-        class="imagen-principal"
-    >
-{% else %}
-    <img 
-        id="imagen-principal" 
-        src="/static/img/sin-imagen.jpg" 
-        class="imagen-principal"
-    >
-{% endif %}
-
-</div>
 
 <!-- ========================= -->
 <!-- 🖼️ GALERÍA -->
@@ -47,20 +31,22 @@ href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
 
         <div class="swiper-wrapper">
 
+            
             {% if producto.imagen_principal %}
             <div class="swiper-slide">
                 <img src="{{ producto.imagen_principal.url }}"
-                     alt="{{ producto.nombre }}">
+                alt="{{ producto.nombre }}">
             </div>
             {% endif %}
 
             {% for foto in producto.imagenes.all %}
-            <div class="swiper-slide">
-                <img src="{{ foto.imagen.url }}"
-                     alt="{{ producto.nombre }}">
-            </div>
+                {% if foto.imagen.url != producto.imagen_principal.url %}
+                <div class="swiper-slide">
+                    <img src="{{ foto.imagen.url }}"
+                    alt="{{ producto.nombre }}">
+                </div>
+                {% endif %}
             {% endfor %}
-
         </div>
 
         <div class="swiper-pagination"></div>
@@ -269,7 +255,7 @@ $ {{ producto.precio_mayor|default:0|moneda }}
         <p style="color:red;font-weight:bold;">Producto agotado</p>
     {% endif %}
 
-{% elif tiene_stock %}
+    {% elif tiene_stock %}
 
     <input type="hidden"
     id="whatsapp-numero"
@@ -280,7 +266,7 @@ $ {{ producto.precio_mayor|default:0|moneda }}
         🛒 Agregar al carrito
     </button>
 
-{% else %}
+    {% else %}
 
     <p style="color:red;font-weight:bold;">Producto agotado</p>
 
@@ -411,7 +397,11 @@ function comprarWhatsApp(){
     let color = document.getElementById("color")?.value || "";
     let talla = document.getElementById("talla")?.value || "";
 
-    let numero = document.getElementById("whatsapp-numero").value;
+    let campoWhatsapp =
+        document.getElementById("whatsapp-numero");
+
+    let numero =
+        campoWhatsapp ? campoWhatsapp.value : "";
 
     // 🔥 VALIDACIONES
     let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
@@ -666,7 +656,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 <script>
 new Swiper(".mySwiper", {
-    loop:true,
+    loop:false,
 
     pagination:{
         el:".swiper-pagination",
@@ -718,25 +708,6 @@ new Swiper(".mySwiper", {
     .swiper{
         height:320px;
     }
-}
-
-.contenedor-imagen{
-    display:flex;
-    justify-content:center;
-    margin-bottom:15px;
-}
-
-.imagen-principal{
-    width:100%;
-    max-width:420px;
-    border-radius:14px;
-    box-shadow:0 8px 25px rgba(0,0,0,.18);
-    cursor:zoom-in;
-    transition: transform .3s ease;
-}
-
-.imagen-principal:hover{
-    transform: scale(1.35);
 }
 
 /* GALERÍA */
