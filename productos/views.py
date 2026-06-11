@@ -427,15 +427,14 @@ def crear_producto(request):
         imagenes = request.FILES.getlist('galeria')
 
         for imagen in imagenes:
-            # 🛡️ ESCUDO ANTI-DUPLICADOS: Si el archivo tiene el mismo nombre que la principal, se salta
-            if imagen_principal and imagen.name == imagen_principal.name:
+            # 🛡️ ESCUDO POR PESO: Si mide exactamente los mismos bytes que la principal, se salta
+            if imagen_principal and imagen.size == imagen_principal.size:
                 continue
 
             ProductoImagen.objects.create(
                 producto=producto,
                 imagen=imagen
             )
-
         # ⚙️ PROCESAMIENTO DE VARIANTES
         variantes = request.POST.get('variantes', '')
 
@@ -592,15 +591,19 @@ def editar_producto(request, id):
 
         producto.save()
 
-        # 📸 Agregar nuevas imágenes a la galería
-
+        
+        # 📸 Agregar nuevas imágenes a la galería con protección por peso
         galeria = request.FILES.getlist('galeria')
 
         for imagen in galeria:
+            # 🛡️ ESCUDO POR PESO: Compara los bytes del archivo subido con la imagen principal actual
+            if producto.imagen_principal and imagen.size == producto.imagen_principal.size:
+                continue
+
             ProductoImagen.objects.create(
-            producto=producto,
-            imagen=imagen
-        )
+                producto=producto,
+                imagen=imagen
+            )
 
         producto.variantes.all().delete()
 
