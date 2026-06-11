@@ -374,7 +374,6 @@ def productos_top(request):
         'top': top
     })
 
-
 @login_required
 def crear_producto(request):
     categorias = Categoria.objects.filter(usuario=request.user)
@@ -388,16 +387,18 @@ def crear_producto(request):
                 request, 
                 f"La referencia '{referencia}' ya está asignada a otro producto. Usa una diferente."
             )
-            # Devolvemos la página con los datos ingresados para que no se borre nada
             return render(
                 request,
                 'crear_producto.html',
                 {
                     'categorias': categorias,
-                    'valores': request.POST,  # 👈 Enviamos los datos actuales al HTML
-                    'variantes_texto': request.POST.get('variantes', '')  # Conserva las variantes escritas
+                    'valores': request.POST,  
+                    'variantes_texto': request.POST.get('variantes', '')  
                 }
             )
+
+        # ✨ Capturamos la imagen principal aquí para usarla de escudo abajo
+        imagen_principal = request.FILES.get('imagen_principal')
 
         # 🚀 2. CREACIÓN SEGURA: Si la referencia está libre, el código continúa
         producto = Producto.objects.create(
@@ -417,20 +418,25 @@ def crear_producto(request):
             destacado=(request.POST.get('destacado') == 'on'),
             precio_costo=request.POST.get('precio_costo') or 0,
             stock=request.POST.get('stock') or 0,
-            imagen_principal=request.FILES.get('imagen_principal'),
+            imagen_principal=imagen_principal,  # 👈 Usamos la variable capturada
             certificado=request.FILES.get('certificado'),
             video=request.FILES.get('video'),
         )
 
-        # 🎨 3. PROCESAMIENTO DE VARIANTES
+        # 🎨 3. PROCESAMIENTO DE IMÁGENES DE GALERÍA
         imagenes = request.FILES.getlist('galeria')
 
         for imagen in imagenes:
-            ProductoImagen.objects.create(
-            producto=producto,
-            imagen=imagen
-        )
+            # 🛡️ ESCUDO ANTI-DUPLICADOS: Si el archivo tiene el mismo nombre que la principal, se salta
+            if imagen_principal and imagen.name == imagen_principal.name:
+                continue
 
+            ProductoImagen.objects.create(
+                producto=producto,
+                imagen=imagen
+            )
+
+        # ⚙️ PROCESAMIENTO DE VARIANTES
         variantes = request.POST.get('variantes', '')
 
         for linea in variantes.splitlines():
