@@ -374,144 +374,85 @@ def productos_top(request):
         'top': top
     })
 
+
 @login_required
 def crear_producto(request):
-
-    categorias = Categoria.objects.filter(
-        usuario=request.user
-    )
+    categorias = Categoria.objects.filter(usuario=request.user)
 
     if request.method == 'POST':
+        referencia = request.POST.get('referencia')
 
+        # 🛑 1. VALIDACIÓN ANTICRASH: Comprobar si la referencia ya existe
+        if referencia and Producto.objects.filter(referencia=referencia).exists():
+            messages.error(
+                request, 
+                f"La referencia '{referencia}' ya está asignada a otro producto. Usa una diferente."
+            )
+            # Devolvemos la página con los datos ingresados para que no se borre nada
+            return render(
+                request,
+                'crear_producto.html',
+                {
+                    'categorias': categorias,
+                    'valores': request.POST,  # 👈 Enviamos los datos actuales al HTML
+                    'variantes_texto': request.POST.get('variantes', '')  # Conserva las variantes escritas
+                }
+            )
+
+        # 🚀 2. CREACIÓN SEGURA: Si la referencia está libre, el código continúa
         producto = Producto.objects.create(
-
             usuario=request.user,
-
-            nombre=request.POST.get(
-                'nombre'
-            ),
-
-            referencia=request.POST.get(
-                'referencia'
-            ),
-
-            descripcion=request.POST.get(
-                'descripcion'
-            ),
-
-            categoria_id=request.POST.get(
-                'categoria'
-            ),
-
-            tipo_venta=request.POST.get(
-                'tipo_venta'
-            ) or 'unidad',
-
-            precio_detal=request.POST.get(
-                'precio_detal'
-            ) or 0,
-
-            precio_semimayor=request.POST.get(
-                'precio_semimayor'
-            ) or 0,
-
-            precio_mayor=request.POST.get(
-                'precio_mayor'
-            ) or 0,
-
-            peso_producto=request.POST.get(
-                'peso_producto'
-            ) or 0,
-
-            precio_por_gramo_detal=request.POST.get(
-                'precio_por_gramo_detal'
-            ) or 0,
-
-            precio_por_gramo_semimayor=request.POST.get(
-                'precio_por_gramo_semimayor'
-            ) or 0,
-
-            precio_por_gramo_mayor=request.POST.get(
-                'precio_por_gramo_mayor'
-            ) or 0,
-
-            destacado=(
-                request.POST.get(
-                    'destacado'
-                ) == 'on'
-            ),
-
-            precio_costo=request.POST.get(
-                'precio_costo'
-            ) or 0,
-
-            stock=request.POST.get(
-                'stock'
-            ) or 0,
-
-            imagen_principal=request.FILES.get(
-                'imagen_principal'
-            ),
-
-            certificado=request.FILES.get(
-                'certificado'
-            ),
-
-            video=request.FILES.get(
-                'video'
-            ),
+            nombre=request.POST.get('nombre'),
+            referencia=referencia,
+            descripcion=request.POST.get('descripcion'),
+            categoria_id=request.POST.get('categoria'),
+            tipo_venta=request.POST.get('tipo_venta') or 'unidad',
+            precio_detal=request.POST.get('precio_detal') or 0,
+            precio_semimayor=request.POST.get('precio_semimayor') or 0,
+            precio_mayor=request.POST.get('precio_mayor') or 0,
+            peso_producto=request.POST.get('peso_producto') or 0,
+            precio_por_gramo_detal=request.POST.get('precio_por_gramo_detal') or 0,
+            precio_por_gramo_semimayor=request.POST.get('precio_por_gramo_semimayor') or 0,
+            precio_por_gramo_mayor=request.POST.get('precio_por_gramo_mayor') or 0,
+            destacado=(request.POST.get('destacado') == 'on'),
+            precio_costo=request.POST.get('precio_costo') or 0,
+            stock=request.POST.get('stock') or 0,
+            imagen_principal=request.FILES.get('imagen_principal'),
+            certificado=request.FILES.get('certificado'),
+            video=request.FILES.get('video'),
         )
 
-        variantes = request.POST.get(
-            'variantes',
-            ''
-        )
+        # 🎨 3. PROCESAMIENTO DE VARIANTES
+        variantes = request.POST.get('variantes', '')
 
         for linea in variantes.splitlines():
-
             linea = linea.strip()
-
             if not linea:
                 continue
 
             datos = linea.split('|')
-
             if len(datos) != 3:
                 continue
 
             try:
-
                 ProductoVariante.objects.create(
-
                     producto=producto,
-
                     color=datos[0].strip(),
-
                     talla=datos[1].strip(),
-
-                    stock=int(
-                        datos[2].strip()
-                    )
-
+                    stock=int(datos[2].strip())
                 )
-
             except ValueError:
                 pass
 
-        return redirect(
-            'dashboard'
-        )
+        messages.success(request, "¡Producto y sus variantes creados correctamente!")
+        return redirect('dashboard')
 
     return render(
-
         request,
-
         'crear_producto.html',
-
         {
             'categorias': categorias
         }
-
     )
 
 @login_required
@@ -757,7 +698,7 @@ def editar_producto(request, id):
                 'video'
             )
         print("ENTRE AL SAVE")
-        
+
         producto.save()
 
         print("PASE EL SAVE")
