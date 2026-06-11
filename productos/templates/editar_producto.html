@@ -22,18 +22,12 @@
 
             <div class="form-group">
                 <label for="categoria">Categoría</label>
-
                 <select id="categoria" name="categoria">
-
                     {% for categoria in categorias %}
-                    <option value="{{ categoria.id }}"
-                        {% if producto.categoria.id == categoria.id %}
-                            selected
-                        {% endif %}>
-            {{ categoria.nombre }}
+                    <option value="{{ categoria.id }}" {% if producto.categoria.id == categoria.id %}selected{% endif %}>
+                        {{ categoria.nombre }}
                     </option>
                     {% endfor %}
-
                 </select>
             </div>
 
@@ -51,32 +45,31 @@
             </div>
         </fieldset>
 
-    </fieldset>
-
-        <fieldset class="grid-2-col">
+        <fieldset class="grid-4-col">
             <legend>Costos y Precios (Unidad / Global)</legend>
 
-        <div class="form-group">
-            <label for="precio_costo">Precio de costo</label>
-            <input type="number" step="0.01" id="precio_costo" name="precio_costo" value="{{ producto.precio_costo|stringformat:".2f" }}">
-        </div>
+            <div class="form-group">
+                <label for="precio_costo">Precio de costo</label>
+                <input type="number" step="0.01" id="precio_costo" name="precio_costo" value="{{ producto.precio_costo|floatformat:2 }}">
+            </div>
 
-        <div class="form-group">
-            <label for="precio_detal">Precio Detal</label>
-            <input type="number" step="0.01" id="precio_detal" name="precio_detal" value="{{ producto.precio_detal|stringformat:".2f" }}">
-        </div>
+            <div class="form-group">
+                <label for="precio_detal">Precio Detal</label>
+                <input type="number" step="0.01" id="precio_detal" name="precio_detal" value="{{ producto.precio_detal|floatformat:2 }}">
+            </div>
 
-        <div class="form-group">
-            <label for="precio_semimayor">Precio SemiMayorista</label>
-            <input type="number" step="0.01" id="precio_semimayor" name="precio_semimayor" value="{{ producto.precio_semimayor|stringformat:".2f" }}">
-        </div>
+            <div class="form-group">
+                <label for="precio_semimayor">Precio SemiMayorista</label>
+                <input type="number" step="0.01" id="precio_semimayor" name="precio_semimayor" value="{{ producto.precio_semimayor|floatformat:2 }}">
+            </div>
 
-        <div class="form-group">
-            <label for="precio_mayor">Precio Mayorista</label>
-            <input type="number" step="0.01" id="precio_mayor" name="precio_mayor" value="{{ producto.precio_mayor|stringformat:".2f" }}">
-        </div>
-    </fieldset>
-        <fieldset class="grid-2-col">
+            <div class="form-group">
+                <label for="precio_mayor">Precio Mayorista</label>
+                <input type="number" step="0.01" id="precio_mayor" name="precio_mayor" value="{{ producto.precio_mayor|floatformat:2 }}">
+            </div>
+        </fieldset>
+
+        <fieldset class="grid-3-col">
             <legend>Configuración por Gramos</legend>
 
             <div class="form-group full-width">
@@ -111,7 +104,7 @@
             <div class="form-group">
                 <label for="variantes">🎨 Variantes (Formato: Color|Talla|Stock)</label>
                 <textarea id="variantes" name="variantes" rows="6">{% for variante in producto.variantes.all %}{{ variante.color }}|{{ variante.talla }}|{{ variante.stock }}{% if not forloop.last %}
-                {% endif %}{% endfor %}</textarea>
+{% endif %}{% endfor %}</textarea>
             </div>
 
             <div class="form-group">
@@ -128,61 +121,35 @@
                     <p><strong>Imagen actual:</strong></p>
                     <img src="{{ producto.imagen_principal.url }}" alt="{{ producto.nombre }}">
                 </div>
-                {% endif %}
+            {% endif %}
 
-                <div class="form-group">
-                    <label for="imagen_principal">Cambiar imagen</label>
-                    <input type="file"id="imagen_principal"name="imagen_principal"class="file-input"accept="image/*">
+            <div class="form-group">
+                <label for="imagen_principal">Cambiar imagen</label>
+                <input type="file" id="imagen_principal" name="imagen_principal" class="file-input" accept="image/*">
+            </div>
+
+            <hr>
+
+            <h4>Galería de imágenes</h4>
+
+            {% if producto.imagenes.all %}
+                <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+                    {% for foto in producto.imagenes.all %}
+                        <div style="text-align:center;">
+                            <img src="{{ foto.imagen.url }}" style="width:120px; height:120px; object-fit:cover; border-radius:8px;">
+                            <br>
+                            <a href="{% url 'eliminar_imagen_galeria' foto.id %}" style="color:red; font-size:12px; text-decoration:none;">
+                                🗑️ Eliminar
+                            </a>
+                        </div>
+                    {% endfor %}
                 </div>
+            {% endif %}
 
-                <hr>
-
-                <h4>Galería de imágenes</h4>
-
-                {% if producto.imagenes.all %}
-                    <div style="
-                        display:flex;
-                        flex-wrap:wrap;
-                        gap:10px;
-                        margin-bottom:15px;">
-
-                        {% for foto in producto.imagenes.all %}
-                            <div style="text-align:center;">
-
-                                <img src="{{ foto.imagen.url }}"
-                                    style="
-                                    width:120px;
-                                    height:120px;
-                                    object-fit:cover;
-                                    border-radius:8px;">
-
-                                <br>
-
-                                <a href="{% url 'eliminar_imagen_galeria' foto.id %}"
-                                    style="
-                                    color:red;
-                                    font-size:12px;
-                                    text-decoration:none;">
-                                    🗑️ Eliminar
-                                </a>
-
-                            </div>
-                        {% endfor %}
-
-                    </div>
-                {% endif %}
-
-                <div class="form-group">
-                    <label for="galeria">
-                        Agregar imágenes a la galería
-                    </label>
-
-                    <input type="file"
-                    id="galeria"
-                    name="galeria"
-                    multiple
-                    accept="image/*">
-                </div>
+            <div class="form-group">
+                <label for="galeria">Agregar imágenes a la galería</label>
+                <input type="file" id="galeria" name="galeria" multiple accept="image/*">
+            </div>
         </fieldset>
 
         <button type="submit" class="btn-submit">
@@ -190,8 +157,7 @@
         </button>
 
         <br>
-        <a href="{% url 'mis_productos' %}"
-            class="btn-volver">
+        <a href="{% url 'mis_productos' %}" class="btn-volver">
             ← Volver
         </a>
 
@@ -249,13 +215,11 @@
         grid-template-columns: 1fr 1fr;
         gap: 15px;
     }
-    /* ✨ Nueva: Para alinear 3 precios en una sola línea */
     .grid-3-col {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 15px;
     }
-    /* ✨ Nueva: Para alinear 4 campos en una sola línea (Costo, Detal, Semimayor, Mayor) */
     .grid-4-col {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -317,10 +281,11 @@
         background:#5a6268;
     }
 
-    /* 📱 RESPONSIVE: En celulares todo pasa a una sola columna para que no se aplaste */
+    /* 📱 RESPONSIVE */
     @media (max-width: 600px) {
         .grid-2-col, .grid-3-col, .grid-4-col {
             grid-template-columns: 1fr;
         }
     }
 </style>
+{% endblock %}
