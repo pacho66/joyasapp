@@ -38,18 +38,40 @@
 
 <h3>Galería</h3>
 
-<div class="galeria">
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
 
-{% for imagen in producto.imagenes.all %}
-    <img 
-        src="{{ imagen.imagen.url }}" 
-        class="miniatura"
-        onclick="cambiarImagen('{{ imagen.imagen.url }}', this)"
-    >
-{% endfor %}
+<div class="carousel-container">
+
+    <div class="swiper mySwiper">
+
+        <div class="swiper-wrapper">
+
+            {% if producto.imagen_principal %}
+            <div class="swiper-slide">
+                <img src="{{ producto.imagen_principal.url }}"
+                     alt="{{ producto.nombre }}">
+            </div>
+            {% endif %}
+
+            {% for foto in producto.imagenes.all %}
+            <div class="swiper-slide">
+                <img src="{{ foto.imagen.url }}"
+                     alt="{{ producto.nombre }}">
+            </div>
+            {% endfor %}
+
+        </div>
+
+        <div class="swiper-pagination"></div>
+
+        <div class="swiper-button-next"></div>
+
+        <div class="swiper-button-prev"></div>
+
+    </div>
 
 </div>
-
 <!-- 🎥 VIDEO PRODUCTO -->
 {% if producto.video %}
 <div style="margin:20px 0; text-align:center;">
@@ -640,9 +662,64 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
 </script>
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+<script>
+new Swiper(".mySwiper", {
+    loop:true,
+
+    pagination:{
+        el:".swiper-pagination",
+        clickable:true,
+    },
+
+    navigation:{
+        nextEl:".swiper-button-next",
+        prevEl:".swiper-button-prev",
+    },
+
+    grabCursor:true,
+});
+</script>
 
 <!-- Zoom de imagen -->
 <style>
+
+.carousel-container{
+    width:100%;
+    max-width:500px;
+    margin:auto;
+}
+
+.swiper{
+    width:100%;
+    height:420px;
+    border-radius:14px;
+    overflow:hidden;
+    background:#fff;
+}
+
+.swiper-slide img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+}
+
+.swiper-button-next,
+.swiper-button-prev{
+    color:#2563eb;
+}
+
+.swiper-pagination-bullet-active{
+    background:#2563eb !important;
+}
+
+@media(max-width:768px){
+    .swiper{
+        height:320px;
+    }
+}
+
 .contenedor-imagen{
     display:flex;
     justify-content:center;

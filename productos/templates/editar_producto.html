@@ -128,12 +128,61 @@
                     <p><strong>Imagen actual:</strong></p>
                     <img src="{{ producto.imagen_principal.url }}" alt="{{ producto.nombre }}">
                 </div>
-            {% endif %}
+                {% endif %}
 
-            <div class="form-group">
-                <label for="imagen_principal">Cambiar imagen</label>
-                <input type="file" id="imagen_principal" name="imagen_principal" class="file-input">
-            </div>
+                <div class="form-group">
+                    <label for="imagen_principal">Cambiar imagen</label>
+                    <input type="file"id="imagen_principal"name="imagen_principal"class="file-input"accept="image/*">
+                </div>
+
+                <hr>
+
+                <h4>Galería de imágenes</h4>
+
+                {% if producto.imagenes.all %}
+                    <div style="
+                        display:flex;
+                        flex-wrap:wrap;
+                        gap:10px;
+                        margin-bottom:15px;">
+
+                        {% for foto in producto.imagenes.all %}
+                            <div style="text-align:center;">
+
+                                <img src="{{ foto.imagen.url }}"
+                                    style="
+                                    width:120px;
+                                    height:120px;
+                                    object-fit:cover;
+                                    border-radius:8px;">
+
+                                <br>
+
+                                <a href="{% url 'eliminar_imagen_galeria' foto.id %}"
+                                    style="
+                                    color:red;
+                                    font-size:12px;
+                                    text-decoration:none;">
+                                    🗑️ Eliminar
+                                </a>
+
+                            </div>
+                        {% endfor %}
+
+                    </div>
+                {% endif %}
+
+                <div class="form-group">
+                    <label for="galeria">
+                        Agregar imágenes a la galería
+                    </label>
+
+                    <input type="file"
+                    id="galeria"
+                    name="galeria"
+                    multiple
+                    accept="image/*">
+                </div>
         </fieldset>
 
         <button type="submit" class="btn-submit">
@@ -253,4 +302,5 @@
         background:#5a6268;
 }
 </style>
+
 {% endblock %}

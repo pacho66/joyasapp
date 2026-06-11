@@ -205,6 +205,7 @@ input:focus, select:focus, textarea:focus {
 </style>
 
 <div class="container-formulario">
+
     <div class="header-formulario">
         <h1>➕ Crear Nuevo Producto</h1>
     </div>
@@ -212,7 +213,8 @@ input:focus, select:focus, textarea:focus {
     {% if messages %}
         {% for message in messages %}
             <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">
-                {% if message.tags == 'error' %}⚠️ {% else %}✨ {% endif %} {{ message }}
+                {% if message.tags == 'error' %}⚠️ {% else %}✨ {% endif %}
+                {{ message }}
             </div>
         {% endfor %}
     {% endif %}
@@ -222,16 +224,28 @@ input:focus, select:focus, textarea:focus {
 
         <div class="form-card">
             <h3>📦 Información Básica</h3>
-            
+
             <div class="grid-2">
+
                 <div class="form-group full-width">
                     <label for="nombre">Nombre del Producto</label>
-                    <input type="text" id="nombre" name="nombre" required placeholder="Ej: Anillo de Plata" value="{{ valores.nombre|default:'' }}">
+                    <input
+                        type="text"
+                        id="nombre"
+                        name="nombre"
+                        required
+                        placeholder="Ej: Anillo de Plata"
+                        value="{{ valores.nombre|default:'' }}">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="referencia">Referencia / SKU</label>
-                    <input type="text" id="referencia" name="referencia" placeholder="Ej: REF-001" value="{{ valores.referencia|default:'' }}">
+                    <input
+                        type="text"
+                        id="referencia"
+                        name="referencia"
+                        placeholder="Ej: REF-001"
+                        value="{{ valores.referencia|default:'' }}">
                 </div>
 
                 <div class="form-group">
@@ -239,103 +253,196 @@ input:focus, select:focus, textarea:focus {
                     <select id="categoria" name="categoria">
                         <option value="">Selecciona una categoría</option>
                         {% for cat in categorias %}
-                            <option value="{{ cat.id }}" {% if cat.id|slugify == valores.categoria|slugify %}selected{% endif %}>{{ cat.nombre }}</option>
+                            <option value="{{ cat.id }}" {% if cat.id|slugify == valores.categoria|slugify %}selected{% endif %}>
+                                {{ cat.nombre }}
+                            </option>
                         {% endfor %}
                     </select>
                 </div>
 
                 <div class="form-group full-width">
                     <label for="descripcion">Descripción</label>
-                    <textarea id="descripcion" name="descripcion" rows="3" placeholder="Detalles del producto...">{{ valores.descripcion|default:'' }}</textarea>
+                    <textarea
+                        id="descripcion"
+                        name="descripcion"
+                        rows="3"
+                        placeholder="Detalles del producto...">{{ valores.descripcion|default:'' }}</textarea>
                 </div>
+
             </div>
         </div>
 
         <div class="form-card">
             <h3>💰 Precios y Stock</h3>
-            
+
             <div class="grid-3">
+
                 <div class="form-group">
                     <label for="precio_costo">Precio Costo</label>
-                    <input type="number" step="any" id="precio_costo" name="precio_costo" placeholder="0" value="{{ valores.precio_costo|default:'' }}">
+                    <input
+                        type="number"
+                        step="any"
+                        id="precio_costo"
+                        name="precio_costo"
+                        placeholder="0"
+                        value="{{ valores.precio_costo|default:'' }}">
                 </div>
 
                 <div class="form-group">
                     <label for="stock">Stock Disponible</label>
-                    <input type="number" id="stock" name="stock" placeholder="0" value="{{ valores.stock|default:'' }}">
+                    <input
+                        type="number"
+                        id="stock"
+                        name="stock"
+                        placeholder="0"
+                        value="{{ valores.stock|default:'' }}">
                 </div>
 
                 <div class="form-group">
                     <label for="tipo_venta">Tipo de Venta</label>
                     <select id="tipo_venta" name="tipo_venta">
-                        <option value="unidad" {% if valores.tipo_venta == 'unidad' %}selected{% endif %}>Por Unidad</option>
-                        <option value="gramo" {% if valores.tipo_venta == 'gramo' %}selected{% endif %}>Por Gramo</option>
+                        <option value="unidad" {% if valores.tipo_venta == 'unidad' %}selected{% endif %}>
+                            Por Unidad
+                        </option>
+                        <option value="gramo" {% if valores.tipo_venta == 'gramo' %}selected{% endif %}>
+                            Por Gramo
+                        </option>
                     </select>
                 </div>
+
             </div>
 
-            <div class="grid-3" style="margin-top: 10px;">
+            <div class="grid-3" style="margin-top:10px;">
+
                 <div class="form-group">
                     <label for="precio_detal">Precio Detal</label>
-                    <input type="number" step="any" id="precio_detal" name="precio_detal" placeholder="0" value="{{ valores.precio_detal|default:'' }}">
+                    <input
+                        type="number"
+                        step="any"
+                        id="precio_detal"
+                        name="precio_detal"
+                        placeholder="0"
+                        value="{{ valores.precio_detal|default:'' }}">
                 </div>
+
                 <div class="form-group">
                     <label for="precio_semimayor">Precio Semimayor</label>
-                    <input type="number" step="any" id="precio_semimayor" name="precio_semimayor" placeholder="0" value="{{ valores.precio_semimayor|default:'' }}">
+                    <input
+                        type="number"
+                        step="any"
+                        id="precio_semimayor"
+                        name="precio_semimayor"
+                        placeholder="0"
+                        value="{{ valores.precio_semimayor|default:'' }}">
                 </div>
+
                 <div class="form-group">
                     <label for="precio_mayor">Precio Mayor</label>
-                    <input type="number" step="any" id="precio_mayor" name="precio_mayor" placeholder="0" value="{{ valores.precio_mayor|default:'' }}">
+                    <input
+                        type="number"
+                        step="any"
+                        id="precio_mayor"
+                        name="precio_mayor"
+                        placeholder="0"
+                        value="{{ valores.precio_mayor|default:'' }}">
                 </div>
+
             </div>
         </div>
 
         <div class="form-card">
             <h3>📁 Archivos y Certificados</h3>
-            
-            <div class="grid-3">
+
+            <div class="grid-4">
+
                 <div class="form-group">
                     <label>Imagen Principal</label>
                     <div class="file-box">
-                        <input type="file" id="imagen_principal" name="imagen_principal" accept="image/*">
+                        <input
+                            type="file"
+                            id="imagen_principal"
+                            name="imagen_principal"
+                            accept="image/*">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Galería de imágenes</label>
+                    <div class="file-box">
+                        <input
+                            type="file"
+                            id="galeria"
+                            name="galeria"
+                            multiple
+                            accept="image/*">
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Certificado (PDF/Imagen)</label>
                     <div class="file-box">
-                        <input type="file" id="certificado" name="certificado">
+                        <input
+                            type="file"
+                            id="certificado"
+                            name="certificado">
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Video Promocional</label>
                     <div class="file-box">
-                        <input type="file" id="video" name="video" accept="video/*">
+                        <input
+                            type="file"
+                            id="video"
+                            name="video"
+                            accept="video/*">
                     </div>
                 </div>
+
             </div>
 
             <div class="checkbox-group">
-                <input type="checkbox" id="destacado" name="destacado" {% if valores.destacado == 'on' %}checked{% endif %}>
-                <label for="destacado">🌟 Destacar este producto en la tienda</label>
+                <input
+                    type="checkbox"
+                    id="destacado"
+                    name="destacado"
+                    {% if valores.destacado == 'on' %}checked{% endif %}>
+
+                <label for="destacado">
+                    🌟 Destacar este producto en la tienda
+                </label>
             </div>
+
         </div>
 
         <div class="form-card">
             <h3>🎨 Variantes (Color | Talla | Stock)</h3>
+
             <div class="form-group">
-                <label for="variantes">Ingresa una variante por línea utilizando el separador |</label>
-                <textarea id="variantes" name="variantes" rows="4" placeholder="Blanco | S | 10&#10;Negro | M | 5">{{ variantes_texto|default:'' }}</textarea>
+                <label for="variantes">
+                    Ingresa una variante por línea utilizando el separador |
+                </label>
+
+                <textarea
+                    id="variantes"
+                    name="variantes"
+                    rows="4"
+                    placeholder="Color | Talla | Stock&#10;Blanco | S | 10&#10;Negro | M | 5">{{ variantes_texto|default:'' }}</textarea>
             </div>
         </div>
 
         <div class="form-actions">
-            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancelar</a>
-            <button type="submit" class="btn btn-primary">Guardar Producto</button>
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                Cancelar
+            </a>
+
+            <button type="submit" class="btn btn-primary">
+                Guardar Producto
+            </button>
         </div>
 
     </form>
+
 </div>
 
 {% endblock %}
