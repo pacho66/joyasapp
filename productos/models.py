@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.utils.text import slugify
 import uuid
 from cloudinary.models import CloudinaryField
+import random
 
 class Perfil(models.Model):
     PLANES = [
@@ -159,12 +160,25 @@ class Producto(models.Model):
                 return self.precio_detal
 
     def save(self, *args, **kwargs):
+    # 1. Solo generamos el slug si el producto es nuevo (no tiene slug)
         if not self.slug:
-            self.slug = slugify(self.nombre)
+            base_slug = slugify(self.nombre)
+            slug = base_slug
+            contador = 1
+        
+            # 2. Bucle infinito controlado: si el slug ya existe, busca el siguiente disponible
+            # Ejemplo: 'pulsera-chakras', luego 'pulsera-chakras-1', 'pulsera-chakras-2'...
+            while Producto.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{contador}"
+                contador += 1
+            
+            self.slug = slug
+
+        # 3. Guarda el producto normalmente
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        return self.nombre
+def _str_(self):
+    return self.nombre
 
 
 class ProductoImagen(models.Model):
