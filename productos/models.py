@@ -73,8 +73,8 @@ class Categoria(models.Model):
 class Producto(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     nombre = models.CharField(max_length=200)
-    slug = models.SlugField(max_length=220,unique=True,blank=True,null=True)
-    referencia = models.CharField(max_length=50,unique=True,blank=True,null=True,verbose_name="SKU")
+    slug = models.SlugField(max_length=220,blank=True,null=True)
+    referencia = models.CharField(max_length=50,blank=True,null=True,verbose_name="SKU")
     descripcion = models.TextField()
     categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE)
     destacado = models.BooleanField(default=False)
@@ -159,7 +159,17 @@ class Producto(models.Model):
             else:
                 return self.precio_detal
 
-    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['usuario', 'referencia'],
+                name='unique_referencia_por_usuario'
+            ),
+            models.UniqueConstraint(
+                fields=['usuario', 'slug'],
+                name='unique_slug_por_usuario'
+            ),
+        ]
     def save(self, *args, **kwargs):
         if not self.slug:
             base_slug = slugify(self.nombre)
@@ -175,10 +185,6 @@ class Producto(models.Model):
             self.slug = slug
 
         super().save(*args, **kwargs)
-
-def _str_(self):
-    return self.nombre
-
 
 class ProductoImagen(models.Model):
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='imagenes')
