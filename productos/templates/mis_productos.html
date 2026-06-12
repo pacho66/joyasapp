@@ -2,6 +2,8 @@
 
 {% block content %}
 
+{% load moneda %}
+
 <div style="padding:20px;">
 
 <h2>📦 Mis Productos</h2>
@@ -34,8 +36,22 @@ border-radius:10px;">
 
 <h3>{{ producto.nombre }}</h3>
 
+{% if producto.destacado %}
+<span style="
+background:#fff3cd;
+padding:5px 8px;
+border-radius:5px;
+font-size:12px;
+font-weight:bold;">
+⭐ DESTACADO
+</span>
+{% endif %}
 <p>
 🏷️ SKU: {{ producto.referencia }}
+</p>
+
+<p>
+📷 Imágenes: {{ producto.imagenes.count }}
 </p>
 
 <p>
@@ -45,32 +61,52 @@ border-radius:10px;">
 <p>
 📦 Stock: {{ producto.stock }}
 </p>
+{% if producto.stock_total > 20 %}
+<p style="color:green;font-weight:bold;">
+✅ Inventario alto
+</p>
+
+{% elif producto.stock_total > 5 %}
+<p style="color:orange;font-weight:bold;">
+⚠️ Inventario medio
+</p>
+
+{% elif producto.stock_total > 0 %}
+<p style="color:red;font-weight:bold;">
+🔥 Últimas unidades
+</p>
+
+{% else %}
+<p style="color:red;font-weight:bold;">
+❌ Agotado
+</p>
+{% endif %}
 
 <p>
-💰 ${{ producto.precio_detal }}
+💰 ${{ producto.precio_detal|moneda }}
 </p>
 
 <div>
-    💰 Detal: ${{ producto.precio_detal }}
+    💰 Detal: ${{ producto.precio_detal|moneda }}
 </div>
 
 <div>
-    🏭 Costo: ${{ producto.precio_costo }}
+    🏭 Costo: ${{ producto.precio_costo|moneda }}
 </div>
 
 <div style="color:green;font-weight:bold;">
     📈 Utilidad Detal:
-    ${{ producto.utilidad_detal }}
+    ${{ producto.utilidad_detal|moneda }}
 </div>
 
 <div style="color:#0d6efd;">
     📈 Utilidad SemiMayor:
-    ${{ producto.utilidad_semimayor }}
+    ${{ producto.utilidad_semimayor|moneda }}
 </div>
 
 <div style="color:#6f42c1;">
     📈 Utilidad Mayorista:
-    ${{ producto.utilidad_mayor }}
+    ${{ producto.utilidad_mayor|moneda }}
 </div>
 
 <div style="
