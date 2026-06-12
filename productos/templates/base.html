@@ -331,10 +331,9 @@ nav ul li a:hover {
 
 {% if perfil.whatsapp %}
 <a href="https://wa.me/57{{ perfil.whatsapp }}" id="whatsapp-flotante" target="_blank">
-    📱 WhatsApp - <span id="whatsapp-info">0 productos - $0</span>
+    📱 WhatsApp - <span id="whatsapp-info">{{ cantidad_carrito|default:0 }} prod. - ${{ total_carrito|default:0 }}</span>
 </a>
 {% endif %}
-
 <script>
 function toggleMenu(){
     document.getElementById("menu-lista").classList.toggle("show");
