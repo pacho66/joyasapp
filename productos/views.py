@@ -366,6 +366,15 @@ def productos_top(request):
         'top': top
     })
 
+def safe_float(val):
+    if not val:
+        return None
+    try:
+        # Esto limpia el número por si el celular envía comas en vez de puntos
+        return float(str(val).replace(',', '.'))
+    except ValueError:
+        return None
+
 @login_required
 def crear_producto(request):
     categorias = Categoria.objects.filter(usuario=request.user)
