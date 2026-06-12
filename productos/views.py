@@ -1375,7 +1375,6 @@ def comprar_whatsapp(request, producto_id=None):
         variante = None
         variante_id = request.GET.get('variante_id')
         if variante_id:
-            # 🔥 Corregido: Usa ProductoVariante en lugar de Variante
             variante = get_object_or_404(ProductoVariante, id=variante_id, producto=producto)
 
         if variante:
