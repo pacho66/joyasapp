@@ -1108,10 +1108,17 @@ def agregar_al_carrito(request, producto_id):
     color = request.POST.get('color') or None
     talla = request.POST.get('talla') or None
 
-    session_key = request.session.session_key
-    if not session_key:
+    # 1. Asegurar la sesión del visitante
+    if not request.session.session_key:
         request.session.create()
-        session_key = request.session.session_key
+    
+    session_key = request.session.session_key
+
+    # 🔥 EL FIX CRUCIAL: Forzar a Django a enviar la cookie 'sessionid' al navegador.
+    # Al meter un dato cualquiera en la sesión, el Middleware se ve obligado a guardar
+    # la cookie en el celular del cliente, manteniendo el mismo session_key en todo el sitio.
+    request.session['carrito_activo'] = True
+    request.session.modified = True
 
     # 🔥 OBTENER VARIANTE
     variante = obtener_variante(producto, color, talla)
@@ -1123,11 +1130,12 @@ def agregar_al_carrito(request, producto_id):
             'detalle_producto',
             id=producto.id,
             slug=producto.slug
-    )
+        )
 
     # 🔥 STOCK REAL
     stock_disponible = variante.stock
 
+    # Tu lógica de persistencia impecable tal como la tenías
     carrito_item, created = CarritoItem.objects.get_or_create(
         producto=producto,
         session_key=session_key,
@@ -1145,15 +1153,12 @@ def agregar_al_carrito(request, producto_id):
         else:
             carrito_item.cantidad += cantidad
             carrito_item.save()
-
     else:
         if cantidad > stock_disponible:
             messages.warning(request, "No hay suficiente stock disponible.")
             carrito_item.delete()
 
     return redirect('ver_carrito')
-    # si sí hay stock, no necesitas save (ya quedó creado correctamente)
-
 def ver_carrito(request):
     session_key = request.session.session_key
     if not session_key:
