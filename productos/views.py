@@ -1100,64 +1100,86 @@ def renovar_plan(perfil):
     perfil.save()    
 
 def agregar_al_carrito(request, producto_id):
-    cantidad = safe_int(request.POST.get('cantidad', 1), 1)
-    producto = get_object_or_404(
-        Producto,
-        id=producto_id
-    )
-    color = request.POST.get('color') or None
-    talla = request.POST.get('talla') or None
+    # 1. Asegurar que solo procese peticiones POST de formularios
+    if request.method == 'POST':
+        producto = get_object_or_404(Producto, id=producto_id)
+        
+        # Capturar datos directamente del formulario de detalle_producto.html
+        color_recibido = request.POST.get('color')
+        talla_recibido = request.POST.get('talla')
+        
+        # Validar de forma segura que la cantidad sea un número entero válido
+        try:
+            cantidad = int(request.POST.get('cantidad', 1))
+            if cantidad < 1:
+                cantidad = 1
+        except (ValueError, TypeError):
+            cantidad = 1
 
-    # 1. Asegurar la sesión del visitante
-    if not request.session.session_key:
-        request.session.create()
-    session_key = request.session.session_key
+        # 2. NORMALIZACIÓN: Si llegan vacíos o como texto 'None' por el HTML, los volvemos None reales
+        color = None if not color_recibido or str(color_recibido).strip() in ['None', ''] else str(color_recibido).strip()
+        talla = None if not talla_recibido or str(talla_recibido).strip() in ['None', ''] else str(talla_recibido).strip()
 
-    # 🔥 EL FIX CRUCIAL: Forzar a Django a enviar la cookie 'sessionid' al navegador.
-    # Al meter un dato cualquiera en la sesión, el Middleware se ve obligado a guardar
-    # la cookie en el celular del cliente, manteniendo el mismo session_key en todo el sitio.
-    request.session['carrito_activo'] = True
-    request.session.modified = True
+        # 3. BÚSQUEDA INTELIGENTE DE LA VARIANTE EN LA BASE DE DATOS UNIFICADA
+        filtros = Q(producto=producto)
 
-    # 🔥 OBTENER VARIANTE
-    variante = obtener_variante(producto, color, talla)
+        # Filtro dinámico de Color
+        if color:
+            filtros &= Q(color=color)
+        else:
+            # Si no viene color (ej. un anillo), busca registros donde sea NULL o esté vacío ""
+            filtros &= Q(color__isnull=True) | Q(color="")
 
-    # ❌ SI NO EXISTE → NO SE VENDE
-    if not variante:
-        messages.error(request, "Esta combinación no está disponible")
-        return redirect(
-            'detalle_producto',
-            id=producto.id,
-            slug=producto.slug
+        # Filtro dinámico de Talla / Gramos
+        if talla:
+            filtros &= Q(talla=talla)
+        else:
+            # Si no viene talla (ej. una pulsera), busca registros donde sea NULL o esté vacío ""
+            filtros &= Q(talla__isnull=True) | Q(talla="")
+
+        # Buscamos la primera variante que cumpla exactamente con el filtro cruzado
+        variante = producto.variantes.filter(filtros).first()
+
+        # 4. CONTROL DE VALIDACIONES Y SEGURIDAD EN INVENTARIO
+        if not variante:
+            messages.error(request, "La combinación seleccionada no está disponible en este momento.")
+            return redirect('detalle_producto', id=producto.id, slug=producto.slug)
+
+        if variante.stock < cantidad:
+            messages.error(request, f"Lo sentimos, solo quedan {variante.stock} unidades disponibles de esta opción.")
+            return redirect('detalle_producto', id=producto.id, slug=producto.slug)
+
+        # 5. CONTROL DE SESIONES PARA VISITANTES ANÓNIMOS
+        if not request.session.session_key:
+            request.session.create()
+        session_key = request.session.session_key
+
+        # 6. GUARDADO O ACTUALIZACIÓN EN EL CARRITO
+        item, created = CarritoItem.objects.get_or_create(
+            session_key=session_key,
+            producto=producto,
+            variante=variante,  # Amarrado directamente a la variante encontrada
+            defaults={'cantidad': cantidad}
         )
 
-    # 🔥 STOCK REAL
-    stock_disponible = variante.stock
+        if not created:
+            # Si ya existía el producto en el carrito, validamos que la suma no supere el stock de la variante
+            if item.cantidad + cantidad > variante.stock:
+                messages.error(request, f"No puedes agregar más unidades. Ya tienes {item.cantidad} en tu carrito y el stock total es de {variante.stock}.")
+                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
+            
+            item.cantidad += cantidad
+            item.save()
 
-    # Tu lógica de persistencia impecable tal como la tenías
-    carrito_item, created = CarritoItem.objects.get_or_create(
-        producto=producto,
-        session_key=session_key,
-        variante=variante,
-        defaults={
-            'cantidad': cantidad,
-            'color': color,
-            'talla': talla
-        }
-    )
+        messages.success(request, f"¡{producto.nombre} se agregó correctamente al carrito!")
+        return redirect('ver_carrito')
 
-    if not created:
-        if carrito_item.cantidad + cantidad > stock_disponible:
-            messages.warning(request, "No hay más unidades disponibles en inventario.")
-        else:
-            carrito_item.cantidad += cantidad
-            carrito_item.save()
-    else:
-        if cantidad > stock_disponible:
-            messages.warning(request, "No hay suficiente stock disponible.")
-            carrito_item.delete()
-
-    return redirect('ver_carrito')
+    # Si por alguna razón intentan ingresar por GET (un enlace directo viejo), los redirige a salvo
+    try:
+        producto_aux = Producto.objects.get(id=producto_id)
+        return redirect('detalle_producto', id=producto_aux.id, slug=producto_aux.slug)
+    except Producto.DoesNotExist:
+        return redirect('inicio')
 
 def ver_carrito(request):
     session_key = request.session.session_key
