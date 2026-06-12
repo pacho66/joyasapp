@@ -1,6 +1,6 @@
 from decimal import Decimal
 from productos.models import Categoria, CarritoItem
-from usuarios.models import Perfil
+from productos.models import Perfil
 
 def categorias_menu(request):
     # 1. Valores base iniciales
