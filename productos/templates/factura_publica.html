@@ -6,7 +6,7 @@
 
 <style>
 body{
-    font-family: Arial;
+    font-family: Arial, sans-serif;
     background:#f5f5f5;
     margin:0;
     padding:0;
@@ -17,6 +17,7 @@ body{
     margin:auto;
     background:white;
     padding:20px;
+    box-sizing: border-box;
 }
 
 /* HEADER */
@@ -46,21 +47,52 @@ body{
 .tabla{
     width:100%;
     border-collapse:collapse;
+    margin-bottom: 15px;
 }
 
 .tabla th, .tabla td{
     border-bottom:1px solid #ddd;
-    padding:8px;
+    padding:10px 8px;
     text-align:center;
+    font-size: 14px;
+}
+
+/* 📊 NUEVO BLOC DE DESGLOSE TRIBUTARIO */
+.desglose-contenedor {
+    margin: 15px 0;
+    padding: 5px 0;
+    border-top: 1px dashed #ddd;
+    border-bottom: 1px dashed #ddd;
+}
+
+.desglose-fila {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 4px;
+    font-size: 14px;
+    color: #444;
+}
+
+.desglose-fila.impuesto {
+    color: #666;
+}
+
+.desglose-fila.retencion {
+    color: #c0392b; /* Rojo sutil porque resta del total */
+    font-weight: 500;
 }
 
 /* TOTAL */
 .total{
-    font-size:20px;
+    font-size:22px;
     font-weight:bold;
     text-align:center;
-    margin:15px 0;
+    margin:20px 0;
     color: {{ color_primario }};
+    background: #fdfdfd;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #f0f0f0;
 }
 
 /* BOTONES */
@@ -73,6 +105,7 @@ body{
     text-align:center;
     text-decoration:none;
     font-weight:bold;
+    box-sizing: border-box;
 }
 
 .btn-pagar{
@@ -93,7 +126,9 @@ body{
 /* QR */
 .qr{
     text-align:center;
-    margin-top:20px;
+    margin-top:25px;
+    padding-top:15px;
+    border-top: 1px solid #eee;
 }
 </style>
 </head>
@@ -102,71 +137,84 @@ body{
 
 <div class="container">
 
-<!-- 🏪 EMPRESA -->
 <div class="header">
-    <h2 style="color: {{ color_primario }};">
+    <h2 style="color: {{ color_primario }}; margin-bottom: 5px;">
         {{ empresa_nombre }}
     </h2>
-    <p>NIT: {{ empresa_nit }}</p>
+    <p style="margin: 0; color: #666; font-size: 14px;">NIT: {{ empresa_nit }}</p>
 </div>
 
-<!-- 🔥 ESTADO -->
 <div class="estado pendiente">
     🟡 Pendiente de pago
 </div>
 
 <div class="titulo">
-    Pedido #{{ pedido.numero_orden }}
+    <strong>Pedido #{{ pedido.numero_orden }}</strong>
 </div>
 
-<p><strong>Fecha:</strong> {{ pedido.fecha|date:"d/m/Y" }}</p>
+<p style="font-size: 14px; color: #333;"><strong>Fecha:</strong> {{ pedido.fecha|date:"d/m/Y" }}</p>
 
-<hr>
+<hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
 
-<p><strong>Cliente:</strong> {{ pedido.cliente.nombre|default:"Consumidor final" }}</p>
+<p style="font-size: 14px; color: #333;"><strong>Cliente:</strong> {{ pedido.cliente.nombre|default:"Consumidor final" }}</p>
 
-<!-- 🛍️ PRODUCTOS -->
 <table class="tabla">
 <tr style="background: {{ color_primario }}; color:white;">
-    <th>Producto</th>
+    <th style="text-align: left; padding-left: 10px;">Producto</th>
     <th>Cant</th>
-    <th>Total</th>
+    <th style="text-align: right; padding-right: 10px;">Total</th>
 </tr>
 
 {% for item in items %}
 <tr>
-<td>{{ item.producto.nombre }}</td>
+<td style="text-align: left; padding-left: 10px;">{{ item.producto.nombre }}</td>
 <td>{{ item.cantidad }}</td>
-<td>${{ item.subtotal }}</td>
+<td style="text-align: right; padding-right: 10px;">${{ item.subtotal }}</td>
 </tr>
 {% endfor %}
 </table>
 
-<!-- 💰 TOTAL -->
-<div class="total">
-TOTAL: ${{ total_final }}
+<div class="desglose-contenedor">
+    <div class="desglose-fila">
+        <span>Subtotal:</span>
+        <span>${{ valor_subtotal }}</span>
+    </div>
+    
+    {% if valor_iva and valor_iva > 0 %}
+    <div class="desglose-fila impuesto">
+        <span>IVA (19%):</span>
+        <span>+ ${{ valor_iva }}</span>
+    </div>
+    {% endif %}
+
+    {% if valor_retefuente and valor_retefuente > 0 %}
+    <div class="desglose-fila retencion">
+        <span>Retefuente / ReteICA:</span>
+        <span>- ${{ valor_retefuente }}</span>
+    </div>
+    {% endif %}
 </div>
 
-<!-- 💳 BOTÓN STRIPE -->
+<div class="total">
+    TOTAL A PAGAR: ${{ total_final }}
+</div>
+
 <a href="{% url 'crear_checkout' pedido.id %}" class="btn btn-pagar">
-💳 Pagar con tarjeta
+    💳 Pagar con tarjeta
 </a>
 
-<!-- 📲 WHATSAPP -->
 <a href="https://wa.me/{{ empresa_telefono }}?text=Ya pagué el pedido {{ pedido.numero_orden }}" 
 class="btn btn-whatsapp">
-📲 Enviar comprobante
+    📲 Enviar comprobante por WhatsApp
 </a>
 
-<!-- ✅ YA PAGUÉ -->
 <a href="#" class="btn btn-confirmar">
-✅ Ya pagué
+    ✅ Confirmar Pago Directo
 </a>
 
-<!-- 🔳 QR -->
 <div class="qr">
-    <p>Escanea para pagar</p>
-    <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ total_final }}">
+    <p style="margin-bottom: 10px; font-size: 14px; color: #555;">Escanea para pagar</p>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ total_final }}" alt="QR de Pago">
 </div>
 
 </div>
