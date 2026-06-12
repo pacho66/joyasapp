@@ -1111,7 +1111,7 @@ def agregar_al_carrito(request, producto_id):
     # 1. Asegurar la sesión del visitante
     if not request.session.session_key:
         request.session.create()
-    
+    print(f"👉 AGREGANDO - Llave de sesión: {request.session.session_key}")
     session_key = request.session.session_key
 
     # 🔥 EL FIX CRUCIAL: Forzar a Django a enviar la cookie 'sessionid' al navegador.
@@ -1159,7 +1159,9 @@ def agregar_al_carrito(request, producto_id):
             carrito_item.delete()
 
     return redirect('ver_carrito')
+
 def ver_carrito(request):
+    print(f"🔍 MIRANDO CARRITO - Llave de sesión: {request.session.session_key}")
     session_key = request.session.session_key
     if not session_key:
         items = []
