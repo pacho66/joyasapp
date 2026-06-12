@@ -10,7 +10,7 @@
 
 <div style="background:#f9f9f9; padding:15px; border-radius:8px;">
 
-<p><b>📱 Nequi:</b> 3164826000</p>
+<p><b>📱 Nequi:</b> {{ pedido.usuario.perfil.whatsapp }}</p>
 <p><b>🏦 Transferencia:</b> Bancolombia</p>
 
 <br>
@@ -19,7 +19,8 @@
 Después de pagar, envía el comprobante por WhatsApp.
 </p>
 
-<a href="https://wa.me/573215280610?text=Hola,%20ya%20realicé%20el%20pago%20del%20pedido%20{{ pedido.numero_orden }}"
+{# 🔥 Corregido: El número de WhatsApp ahora cambia según el dueño de la joyería #}
+<a href="https://wa.me/{{ pedido.usuario.perfil.whatsapp }}?text=Hola,%20ya%20realicé%20el%20pago%20del%20pedido%20{{ pedido.numero_orden }}"
 style="
 background:#25D366;
 color:white;
@@ -34,7 +35,8 @@ margin-top:10px;
 
 <br><br>
 
-<a href="{% url 'confirmar_pago' pedido.id %}" style="
+{# 🔥 Corregido: Usa la vista pública con token para evitar el Error 500 #}
+<a href="{% url 'confirmar_pago_publico' pedido.token_publico %}" style="
 background:green;
 color:white;
 padding:10px 15px;

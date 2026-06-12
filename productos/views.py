@@ -45,6 +45,7 @@ from .utils import generar_link_whatsapp
 from django.http import HttpResponse
 from django.db.models.functions import TruncDate
 from .models import Producto, Categoria, ProductoVariante
+from .utils import generar_numero_orden, calcular_precio_producto, calcular_envio
 
 def safe_int(valor, default=1):
     try:
@@ -1358,105 +1359,47 @@ def eliminar_del_carrito(request, item_id):
     return redirect('ver_carrito')
 
 @transaction.atomic
-def comprar_whatsapp(request):
-    session_key = request.session.session_key
-
-    if not session_key:
-        messages.warning(request, "El carrito está vacío")
-        return redirect('ver_carrito')
-
-    # =====================================
-    # 🛒 OBTENER ÍTEMS DE LA SESIÓN ACTUAL
-    # =====================================
-    items = CarritoItem.objects.select_related(
-        'producto',
-        'variante'
-    ).filter(session_key=session_key)
-
-    if not items.exists():
-        messages.warning(request, "El carrito está vacío")
-        return redirect('ver_carrito')
-
-    # =====================================
-    # 🏪 IDENTIFICAR AL USUARIO DUEÑO DEL SAAS
-    # =====================================
-    # Extraemos al tendero directamente del primer producto en el carrito
-    usuario = items.first().producto.usuario
-
-    # =====================================
-    # 🔢 ORDEN
-    # =====================================
-    numero = generar_numero_orden(usuario)
-
-    # =====================================
-    # ⚙️ CONFIGURACIÓN
-    # =====================================
-    aplica_iva = request.GET.get('aplica_iva') == 'on'
-    es_retenedor = request.GET.get('es_retenedor') == 'on'
-    valor_descuento = request.GET.get('descuento', '0')
-
-    try:
-        porcentaje_descuento = Decimal(valor_descuento)
-    except:
-        porcentaje_descuento = Decimal('0')
-
-    if porcentaje_descuento < 0:
-        porcentaje_descuento = Decimal('0')
-    if porcentaje_descuento > 100:
-        porcentaje_descuento = Decimal('100')
-
-    # =====================================
-    # 👤 CLIENTE
-    # =====================================
-    cliente_nombre = request.GET.get('nombre', '').strip()
-    cliente_telefono = request.GET.get('telefono', '').strip()
-    cliente_email = request.GET.get('email', '').strip()
-    cliente_ciudad = request.GET.get('ciudad', '').strip()
-    cliente_direccion = request.GET.get('direccion', '').strip()
-    cliente_nit = request.GET.get('nit', '').strip()
-
-    # =====================================
-    # 💬 MENSAJE BASE
-    # =====================================
-    mensaje = f"🛍️ Hola, quiero comprar:\n"
-    mensaje += f"🧾 Orden: {numero}\n\n"
-
-    subtotal_general = Decimal('0')
-
-    # =====================================
-    # 🔥 VALIDAR STOCK + CALCULAR
-    # =====================================
+def comprar_whatsapp(request, producto_id=None):
+    """
+    Vista única para procesar compras de WhatsApp.
+    Si recibe 'producto_id', es una compra directa ("Comprar ya").
+    Si NO lo recibe, procesa todo el carrito de compras.
+    """
     resumen_items = []
+    items_carrito = None
+    es_compra_directa = producto_id is not None
 
-    for item in items:
-        producto = item.producto
-        variante = item.variante
-        cantidad = item.cantidad or 0
+    # =========================================================
+    # 🛒 PASO 1: DETECTAR EL MODO DE ENTRADA (DIRECTO O CARRITO)
+    # =========================================================
+    if es_compra_directa:
+        # Modo A: Viene de la ficha de un solo producto
+        producto = get_object_or_404(Producto, id=producto_id)
+        usuario = producto.usuario  # El joyero dueño de este producto
 
-        # 🔒 Seguridad extra SaaS: Validamos que todos correspondan al mismo tendero
-        if producto.usuario != usuario:
-            messages.warning(request, "Producto inválido en el carrito.")
-            return redirect('ver_carrito')
+        try:
+            cantidad = int(request.GET.get('cantidad', 1))
+        except ValueError:
+            cantidad = 1
 
-        # =================================
-        # STOCK VARIANTE
-        # =================================
+        # Capturar variante opcional enviada por la URL
+        variante = None
+        variante_id = request.GET.get('variante_id')
+        if variante_id:
+            variante = get_object_or_404(Variante, id=variante_id, producto=producto)
+
+        # 🔒 VALIDACIÓN DE STOCK PARA COMPRA DIRECTA
         if variante:
             if variante.stock < cantidad:
-                messages.warning(
-                    request,
-                    f"Sin stock suficiente para {producto.nombre}"
-                )
-                return redirect('ver_carrito')
+                messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
+                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
+        else:
+            if producto.tipo_venta != "gramo" and producto.stock < cantidad:
+                messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
+                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
 
-        # =================================
-        # MOTOR PRECIOS
-        # =================================
-        precio, gramos = calcular_precio_producto(
-            producto,
-            cantidad
-        )
-
+        # Ejecutar tu motor de precios
+        precio, gramos = calcular_precio_producto(producto, cantidad)
         precio = Decimal(precio)
 
         if gramos:
@@ -1466,13 +1409,12 @@ def comprar_whatsapp(request):
             subtotal = Decimal(cantidad) * precio
             linea = f"{producto.nombre} x{cantidad}"
 
-        subtotal_general += subtotal
-
+        # Lo empaquetamos en tu estructura exacta
         resumen_items.append({
-            'item': item,
+            'item': None, # No viene de la tabla CarritoItem
             'producto': producto,
             'variante': variante,
-            'amount_cantidad': cantidad, # Conservando tus referencias de asignación
+            'amount_cantidad': cantidad,
             'cantidad': cantidad,
             'precio': precio,
             'gramos': gramos,
@@ -1480,84 +1422,128 @@ def comprar_whatsapp(request):
             'linea': linea,
         })
 
-    # =====================================
-    # 💸 DESCUENTO
-    # =====================================
-    descuento = subtotal_general * (
-        porcentaje_descuento / Decimal('100')
-    )
+    else:
+        # Modo B: Tu lógica original de procesar todo el Carrito
+        session_key = request.session.session_key
+        if not session_key:
+            messages.warning(request, "El carrito está vacío")
+            return redirect('ver_carrito')
+
+        items_carrito = CarritoItem.objects.select_related('producto', 'variante').filter(session_key=session_key)
+        if not items_carrito.exists():
+            messages.warning(request, "El carrito está vacío")
+            return redirect('ver_carrito')
+
+        usuario = items_carrito.first().producto.usuario
+
+        for item in items_carrito:
+            producto = item.producto
+            variante = item.variante
+            cantidad = item.cantidad or 0
+
+            if producto.usuario != usuario:
+                messages.warning(request, "Producto inválido en el carrito.")
+                return redirect('ver_carrito')
+
+            # 🔒 VALIDACIÓN DE STOCK DESDE EL CARRITO
+            if variante:
+                if variante.stock < cantidad:
+                    messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
+                    return redirect('ver_carrito')
+            else:
+                if producto.tipo_venta != "gramo" and producto.stock < cantidad:
+                    messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
+                    return redirect('ver_carrito')
+
+            precio, gramos = calcular_precio_producto(producto, cantidad)
+            precio = Decimal(precio)
+
+            if gramos:
+                subtotal = Decimal(gramos) * precio
+                linea = f"{producto.nombre} ({gramos}g)"
+            else:
+                subtotal = Decimal(cantidad) * precio
+                linea = f"{producto.nombre} x{cantidad}"
+
+            resumen_items.append({
+                'item': item,
+                'producto': producto,
+                'variante': variante,
+                'amount_cantidad': cantidad,
+                'cantidad': cantidad,
+                'precio': precio,
+                'gramos': gramos,
+                'subtotal': subtotal,
+                'linea': linea,
+            })
+
+    # =========================================================
+    # 📊 PASO 2: LOGICA CENTRAL DE CÁLCULO (Exactamente tu código)
+    # =========================================================
+    numero = generar_numero_orden(usuario)
+
+    aplica_iva = request.GET.get('aplica_iva') == 'on'
+    es_retenedor = request.GET.get('es_retenedor') == 'on'
+    valor_descuento = request.GET.get('descuento', '0')
+
+    try:
+        porcentaje_descuento = Decimal(valor_descuento)
+    except:
+        porcentaje_descuento = Decimal('0')
+
+    porcentaje_descuento = max(Decimal('0'), min(Decimal('100'), porcentaje_descuento))
+
+    cliente_nombre = request.GET.get('nombre', '').strip()
+    cliente_telefono = request.GET.get('telefono', '').strip()
+    cliente_email = request.GET.get('email', '').strip()
+    cliente_ciudad = request.GET.get('ciudad', '').strip()
+    cliente_direccion = request.GET.get('direccion', '').strip()
+    cliente_nit = request.GET.get('nit', '').strip()
+
+    mensaje = f"🛍️ Hola, quiero comprar:\n🧾 Orden: {numero}\n\n"
+    subtotal_general = Decimal('0')
+
+    # Sumamos los subtotales calculados en el paso 1
+    for data in resumen_items:
+        subtotal_general += data['subtotal']
+
+    descuento = subtotal_general * (porcentaje_descuento / Decimal('100'))
     subtotal_con_descuento = subtotal_general - descuento
 
-    # =====================================
-    # 🧾 IMPUESTOS
-    # =====================================
-    iva = Decimal('0')
-    if aplica_iva:
-        iva = subtotal_con_descuento * Decimal('0.19')
+    iva = subtotal_con_descuento * Decimal('0.19') if aplica_iva else Decimal('0')
+    retefuente = subtotal_con_descuento * Decimal('0.025') if es_retenedor else Decimal('0')
+    
+    costo_envio = calcular_envio(cliente_ciudad, subtotal_con_descuento)
+    total_final = subtotal_con_descuento + iva - retefuente + costo_envio
 
-    retefuente = Decimal('0')
-    if es_retenedor:
-        retefuente = subtotal_con_descuento * Decimal('0.025')
-
-    # =====================================
-    # 🚚 ENVÍO
-    # =====================================
-    costo_envio = calcular_envio(
-        cliente_ciudad,
-        subtotal_con_descuento
-    )
-
-    total_final = (
-        subtotal_con_descuento
-        + iva
-        - retefuente
-        + costo_envio
-    )
-
-    # =====================================
-    # 📦 CREAR PEDIDO
-    # =====================================
+    # Crear la cabecera del Pedido asociado al Joyero
     pedido = Pedido.objects.create(
-        usuario=usuario,  # Queda asociado al dueño de la tienda para su Dashboard
+        usuario=usuario,
         numero_orden=numero,
         total=total_final,
-
         aplica_iva=aplica_iva,
         porcentaje_descuento=porcentaje_descuento,
         es_retenedor=es_retenedor,
-
         cliente_nombre=cliente_nombre,
         cliente_telefono=cliente_telefono,
         cliente_email=cliente_email,
         cliente_ciudad=cliente_ciudad,
         cliente_direccion=cliente_direccion,
         cliente_nit=cliente_nit,
-
         costo_envio=costo_envio,
     )
 
-    # =====================================
-    # 📦 GUARDAR ITEMS + DESCONTAR STOCK
-    # =====================================
+    # Guardar los renglones (items) de la orden y actualizar inventarios
     for data in resumen_items:
-        item = data['item']
-        variante = data['variante']
         subtotal = data['subtotal']
-
-        iva_item = Decimal('0')
-        if aplica_iva:
-            iva_item = subtotal * Decimal('0.19')
-
-        retefuente_item = Decimal('0')
-        if es_retenedor:
-            retefuente_item = subtotal * Decimal('0.025')
-
+        iva_item = subtotal * Decimal('0.19') if aplica_iva else Decimal('0')
+        retefuente_item = subtotal * Decimal('0.025') if es_retenedor else Decimal('0')
         total_item = subtotal + iva_item - retefuente_item
 
         PedidoItem.objects.create(
             pedido=pedido,
             producto=data['producto'],
-            variante=variante,
+            variante=data['variante'],
             cantidad=data['cantidad'],
             precio=data['precio'],
             subtotal=subtotal,
@@ -1566,240 +1552,112 @@ def comprar_whatsapp(request):
             total_final=total_item
         )
 
-        # 🔥 descontar stock de la variante unificada después de crear pedido
-        if variante:
-            variante.stock -= data['cantidad']
-            variante.save()
+        # 🔥 DESCUENTO DE STOCK CORREGIDO: Soporta variantes y productos simples
+        if data['variante']:
+            data['variante'].stock -= data['cantidad']
+            data['variante'].save()
+        elif data['producto'].tipo_venta != "gramo":
+            data['producto'].stock -= data['cantidad']
+            data['producto'].save()
 
-        # 💬 línea WhatsApp
-        mensaje += (
-            f"{data['linea']} - "
-            f"${subtotal:,.0f}\n"
-        ).replace(",", ".")
+        mensaje += f"{data['linea']} - ${subtotal:,.0f}\n".replace(",", ".")
 
-    # =====================================
-    # 🧾 RESUMEN FINAL
-    # =====================================
+    # Agregar bloques finales de texto al mensaje de WhatsApp
     mensaje += f"\nSubtotal: ${subtotal_general:,.0f}".replace(",", ".")
+    if descuento > 0: mensaje += f"\nDescuento: -${descuento:,.0f}".replace(",", ".")
+    if iva > 0: mensaje += f"\nIVA: ${iva:,.0f}".replace(",", ".")
+    if retefuente > 0: mensaje += f"\nReteFuente: -${retefuente:,.0f}".replace(",", ".")
+    mensaje += f"\n🚚 Envío: ${costo_envio:,.0f}" if costo_envio > 0 else "\n🎁 Envío gratis"
+    mensaje += f"\n\n💰 Total: ${total_final:,.0f}\n🙏 Gracias por tu compra.".replace(",", ".")
 
-    if descuento > 0:
-        mensaje += f"\nDescuento: -${descuento:,.0f}".replace(",", ".")
-
-    if iva > 0:
-        mensaje += f"\nIVA: ${iva:,.0f}".replace(",", ".")
-
-    if retefuente > 0:
-        mensaje += f"\nReteFuente: -${retefuente:,.0f}".replace(",", ".")
-
-    if costo_envio > 0:
-        mensaje += f"\n🚚 Envío: ${costo_envio:,.0f}".replace(",", ".")
-    else:
-        mensaje += "\n🎁 Envío gratis"
-
-    mensaje += f"\n\n💰 Total: ${total_final:,.0f}".replace(",", ".")
-    mensaje += "\n🙏 Gracias por tu compra."
-
-    # =====================================
-    # 📲 WHATSAPP DEL COMERCIO
-    # =====================================
-    perfil, created = Perfil.objects.get_or_create(user=usuario)
-
+    # Redirección final al WhatsApp del Perfil
+    perfil, _ = Perfil.objects.get_or_create(user=usuario)
     if not perfil.whatsapp:
         messages.warning(request, "El comercio no tiene configurado WhatsApp.")
-        return redirect('ver_carrito')
+        return redirect('ver_carrito') if not es_compra_directa else redirect('detalle_producto', id=producto.id, slug=producto.slug)
 
-    numero_ws = perfil.whatsapp
-    url = f"https://wa.me/{numero_ws}?text={quote(mensaje)}"
+    url = f"https://wa.me/{perfil.whatsapp}?text={quote(mensaje)}"
 
-    # =====================================
-    # 🧹 LIMPIAR CARRITO DEL VISITANTE
-    # =====================================
-    items.delete()
-
-    return redirect(url)
-
-
-def comprar_directo_whatsapp(request, producto_id):
-    # Extraemos el producto de forma pública
-    producto = get_object_or_404(Producto, id=producto_id)
-    # El usuario objetivo para el mensaje de WhatsApp es el dueño del producto
-    usuario = producto.usuario
-
-    # ===============================
-    # 🔢 DATOS SEGUROS
-    # ===============================
-    try:
-        cantidad = int(request.GET.get('cantidad', 1))
-    except:
-        cantidad = 1
-
-    if cantidad < 1:
-        cantidad = 1
-
-    color = request.GET.get('color', '').strip()
-    talla = request.GET.get('talla', '').strip()
-
-    # ===============================
-    # 💰 PRECIO INTELIGENTE
-    # ===============================
-    precio, gramos = calcular_precio_producto(
-        producto,
-        cantidad
-    )
-
-    precio = Decimal(precio)
-
-    if gramos:
-        subtotal = Decimal(gramos) * precio
-    else:
-        subtotal = Decimal(cantidad) * precio
-
-    # ===============================
-    # 📦 VALIDAR STOCK GLOBAL / VARIANTE
-    # ===============================
-    if producto.tipo_venta != "gramo":
-        if producto.stock < cantidad:
-            messages.warning(
-                request,
-                "No hay suficiente stock disponible."
-            )
-            return redirect(
-                'detalle_producto',
-                id=producto.id,
-                slug=producto.slug
-            )
-
-    # ===============================
-    # 💬 MENSAJE PROFESIONAL
-    # ===============================
-    mensaje = "🛍️ Hola, quiero comprar este producto:\n\n"
-    mensaje += f"📌 Producto: {producto.nombre}\n"
-    mensaje += f"🔖 Ref: {producto.referencia}\n"
-
-    if gramos:
-        mensaje += f"⚖️ Peso total: {gramos} g\n"
-        mensaje += f"💰 Precio x gramo: ${precio:,.0f}\n".replace(",", ".")
-    else:
-        mensaje += f"🔢 Cantidad: {cantidad}\n"
-        mensaje += f"💰 Precio unidad: ${precio:,.0f}\n".replace(",", ".")
-
-    if color:
-        mensaje += f"🎨 Color: {color}\n"
-
-    if talla:
-        mensaje += f"📏 Talla: {talla}\n"
-
-    mensaje += f"\n💵 Total: ${subtotal:,.0f}".replace(",", ".")
-    mensaje += "\n🙏 Quedo atento."
-
-    # ===============================
-    # 📲 WHATSAPP DEL ENLACE DE TIENDA
-    # ===============================
-    perfil, created = Perfil.objects.get_or_create(user=usuario)
-
-    if not perfil.whatsapp:
-        messages.warning(request, "Este comercio no tiene configurado WhatsApp.")
-        return redirect('detalle_producto', id=producto.id, slug=producto.slug)
-
-    numero_ws = perfil.whatsapp
-    url = f"https://wa.me/{numero_ws}?text={quote(mensaje)}"
+    # =========================================================
+    # 🧹 PASO 3: LIMPIEZA INTELIGENTE
+    # =========================================================
+    # Solo borramos el carrito de la base de datos si la compra vino desde el carrito
+    if not es_compra_directa and items_carrito:
+        items_carrito.delete()
 
     return redirect(url)
 
+@transaction.atomic
 def pagar_pedido(request):
     session_key = request.session.session_key
-    items = CarritoItem.objects.filter(session_key=session_key)
+    items = CarritoItem.objects.select_related('producto', 'variante').filter(session_key=session_key)
 
-    if not items:
+    if not items.exists():
         return redirect('ver_carrito')
 
-    numero = generar_numero_orden()
+    # 🏪 Detectamos el usuario dueño de la joyería
+    usuario = items.first().producto.usuario
+    numero = generar_numero_orden(usuario)
 
-    total = 0
-
-    for item in items:
-        precio = item.producto.precio_por_cantidad(item.cantidad)
-        subtotal = item.cantidad * precio
-        total += subtotal
-
+    # Crear el pedido base
     pedido = Pedido.objects.create(
+        usuario=usuario,
         numero_orden=numero,
-        total=total,
+        total=0,
         estado="pendiente_pago",
         aplica_iva=True,        
         es_retenedor=False     
-) 
-    # 🔥 Guardar productos del pedido
+    ) 
+
     total_pedido = Decimal('0')
 
+    # 🔥 Ciclo corregido: Guarda todos los productos dentro del pedido
     for item in items:
-
         cantidad = Decimal(str(item.cantidad))
         precio = Decimal(str(item.producto.precio_por_cantidad(item.cantidad)))
-
-        # 🔥 BASE
         subtotal = cantidad * precio
+        descuento = Decimal('0')  
 
-        # 🔥 DESCUENTO POR ITEM (editable después)
-        descuento = Decimal('0')  # luego lo cambias desde admin
-
-        # 🔥 IVA
-        iva = Decimal('0')
-        if pedido.aplica_iva:
-            iva = subtotal * Decimal('0.19')
-
-        # 🔥 RETEFUENTE
-        retefuente = Decimal('0')
-        if pedido.es_retenedor:
-            retefuente = subtotal * Decimal('0.025')
-
-        # 🔥 TOTAL FINAL ITEM
+        iva = subtotal * Decimal('0.19') if pedido.aplica_iva else Decimal('0')
+        retefuente = subtotal * Decimal('0.025') if pedido.es_retenedor else Decimal('0')
         total_item = subtotal + iva - retefuente - descuento
-
-        # 🔥 ACUMULAR TOTAL REAL
         total_pedido += total_item
 
-    PedidoItem.objects.create(
+        # Creación de ítems DENTRO del bucle for
+        PedidoItem.objects.create(
             pedido=pedido,
-    producto=item.producto,
-    variante=item.variante,
-    cantidad=int(cantidad),
-                precio=precio,
-                subtotal=subtotal,
-                iva=iva,
-    retefuente=retefuente,
-    total_final=total_item
-    )
+            producto=item.producto,
+            variante=item.variante,
+            cantidad=int(cantidad),
+            precio=precio,
+            subtotal=subtotal,
+            iva=iva,
+            retefuente=retefuente,
+            total_final=total_item
+        )
 
     pedido.total = total_pedido
     pedido.save()
 
+    return render(request, 'pago.html', {'pedido': pedido}) 
 
-    return render(request, 'pago.html', {
-        'pedido': pedido
-    }) 
 
+def confirmar_pago_publico(request, token):
+    """ El cliente avisa de forma anónima que ya transfirió """
+    pedido = get_object_or_404(Pedido, token_publico=token)
+    pedido.estado = "confirmacion_pago"
+    pedido.save()
+    return redirect('factura_publica', token=token)
+
+
+@login_required
 def confirmar_pago(request, pedido_id):
-    pedido = get_object_or_404(
-        Pedido,
-        id=pedido_id,
-        usuario=request.user
-    )
-
+    """ El administrador aprueba el pago desde su panel privado """
+    pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
     pedido.estado = "pagado"
     pedido.save()
 
-    return render(request, 'pago_confirmado.html', {
-        'pedido': pedido
-    })
-
-def confirmar_pago_publico(request, token):
-    pedido = get_object_or_404(Pedido, token_publico=token)
-
-    pedido.estado = "confirmacion_pago"
-    pedido.save()
-
-    return redirect('factura_publica', token=token)
+    return render(request, 'pago_confirmado.html', {'pedido': pedido})
 
 def pagar_wompi(request, pedido_id):
     pedido = Pedido.objects.get(id=pedido_id)
