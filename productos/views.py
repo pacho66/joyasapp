@@ -1,51 +1,42 @@
 import json
-from decimal import Decimal, InvalidOperation
-from django.core.serializers.json import DjangoJSONEncoder
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib import messages
-from django.db import transaction
-from urllib.parse import quote
-import uuid
-from productos.models import Producto, Categoria, ProductoImagen, CarritoItem
-from .models import ProductoVariante, Pedido, PedidoItem
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from django.http import HttpResponse
-from django.db.models import Sum
-from django.utils import timezone
-from datetime import timedelta
-from django.core.mail import EmailMessage
-from productos.services.precios import calcular_precio_producto
-from productos.services.envios import calcular_envio
-from productos.models import Cliente
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from django.contrib.auth import login
-from .models import Perfil
-from .forms import RegistroForm
-from django.contrib.auth import authenticate, login, logout
-from .forms import ConfiguracionNegocioForm
-from .models import Abono
-from .models import PedidoItem
-from django.db.models.functions import TruncDate
-from .models import Gasto
-from .forms import GastoForm
-from django.template.loader import get_template
-from xhtml2pdf import pisa
 import os
-from django.conf import settings
+import uuid
 import urllib.parse
-from django.urls import reverse
-from django.db.models import Q
-from django.http import Http404
+from datetime import timedelta
+from decimal import Decimal, InvalidOperation
+from urllib.parse import quote
+
 import stripe
 import mercadopago
 import requests
-from .utils import generar_link_whatsapp
-from django.http import HttpResponse
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.core.mail import EmailMessage
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db import transaction
+from django.db.models import Sum, Q
 from django.db.models.functions import TruncDate
-from .models import Producto, Categoria, ProductoVariante
-from .utils import generar_numero_orden, calcular_precio_producto, calcular_envio
+from django.http import HttpResponse, Http404
+from django.shortcuts import render, get_object_or_404, redirect
+from django.template.loader import get_template
+from django.urls import reverse
+from django.utils import timezone
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from xhtml2pdf import pisa
+
+# 🏪 IMPORTACIONES DE LA APP PRODUCTOS
+from productos.models import Producto, Categoria, ProductoImagen, CarritoItem, Cliente
+from productos.services.precios import calcular_precio_producto
+from productos.services.envios import calcular_envio
+
+# 📂 IMPORTACIONES DE LA APP ACTUAL (Pedidos/Ventas)
+from .models import ProductoVariante, Pedido, PedidoItem, Perfil, Abono, Gasto
+from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm
+from .utils import generar_link_whatsapp, generar_numero_orden 
 
 def safe_int(valor, default=1):
     try:
