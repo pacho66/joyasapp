@@ -35,7 +35,7 @@ from productos.services.envios import calcular_envio
 
 # 📂 IMPORTACIONES DE LA APP ACTUAL (Pedidos/Ventas)
 from .models import ProductoVariante, Pedido, PedidoItem, Perfil, Abono, Gasto
-from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm
+from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm, ProductoForm
 from .utils import generar_link_whatsapp, generar_numero_orden 
 
 def safe_int(valor, default=1):
@@ -392,28 +392,33 @@ def crear_producto(request):
         # ✨ Capturamos la imagen principal aquí para usarla de escudo abajo
         imagen_principal = request.FILES.get('imagen_principal')
 
-        # 🚀 2. CREACIÓN SEGURA: Si la referencia está libre, el código continúa
-        producto = Producto.objects.create(
+        # 🚀 2. CREACIÓN SEGURA E INTELIGENTE (Cambiamos .create por instanciación manual)
+        producto = Producto(
             usuario=request.user,
             nombre=request.POST.get('nombre'),
             referencia=referencia,
             descripcion=request.POST.get('descripcion'),
             categoria_id=request.POST.get('categoria'),
             tipo_venta=request.POST.get('tipo_venta') or 'unidad',
-            precio_detal=request.POST.get('precio_detal') or 0,
-            precio_semimayor=request.POST.get('precio_semimayor') or 0,
-            precio_mayor=request.POST.get('precio_mayor') or 0,
-            peso_producto=request.POST.get('peso_producto') or 0,
-            precio_por_gramo_detal=request.POST.get('precio_por_gramo_detal') or 0,
-            precio_por_gramo_semimayor=request.POST.get('precio_por_gramo_semimayor') or 0,
-            precio_por_gramo_mayor=request.POST.get('precio_por_gramo_mayor') or 0,
+            # Evitamos guardar un string vacío '' si el campo no se llena en el HTML:
+            precio_detal=request.POST.get('precio_detal') or None,
+            precio_semimayor=request.POST.get('precio_semimayor') or None,
+            precio_mayor=request.POST.get('precio_mayor') or None,
+            peso_producto=request.POST.get('peso_producto') or None,
+            precio_por_gramo_detal=request.POST.get('precio_por_gramo_detal') or None,
+            precio_por_gramo_semimayor=request.POST.get('precio_por_gramo_semimayor') or None,
+            precio_por_gramo_mayor=request.POST.get('precio_por_gramo_mayor') or None,
             destacado=(request.POST.get('destacado') == 'on'),
             precio_costo=request.POST.get('precio_costo') or 0,
             stock=request.POST.get('stock') or 0,
-            imagen_principal=imagen_principal,  # 👈 Usamos la variable capturada
+            imagen_principal=imagen_principal,  
             certificado=request.FILES.get('certificado'),
             video=request.FILES.get('video'),
         )
+        
+        # 🔥 OBLIGAMOS A DJANGO A EJECUTAR EL MÉTODO SAVE() PERSONALIZADO
+        # Esto calcula automáticamente los precios finales si el producto es por gramos
+        producto.save() 
 
         # 🎨 3. PROCESAMIENTO DE IMÁGENES DE GALERÍA
         imagenes = request.FILES.getlist('galeria')
@@ -427,6 +432,7 @@ def crear_producto(request):
                 producto=producto,
                 imagen=imagen
             )
+            
         # ⚙️ PROCESAMIENTO DE VARIANTES
         variantes = request.POST.get('variantes', '')
 

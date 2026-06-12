@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from .models import Gasto
+from .models import Producto
 
 
 class RegistroForm(forms.Form):
@@ -174,3 +175,44 @@ class GastoForm(forms.ModelForm):
                 'placeholder': 'Valor del gasto'
             }),
         }
+
+class ProductoForm(forms.ModelForm):
+    class Meta:
+        model = Producto
+        fields = [
+            'nombre', 
+            'referencia', 
+            'descripcion', 
+            'categoria', 
+            'stock',
+            'tipo_venta', 
+            'peso_producto', 
+            'precio_costo',
+            'precio_detal', 
+            'precio_semimayor', 
+            'precio_mayor',
+            'precio_por_gramo_detal', 
+            'precio_por_gramo_semimayor', 
+            'precio_por_gramo_colores_disponibles', # si los necesitas, si no déjalos por fuera
+            'precio_por_gramo_mayor',
+            'imagen_principal', 
+            'destacado'
+        ]
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de la joya'}),
+            'referencia': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'SKU / Referencia'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Descripción del producto'}),
+            'categoria': forms.Select(attrs={'class': 'form-control'}),
+            'stock': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'tipo_venta': forms.Select(attrs={'class': 'form-control', 'id': 'id_tipo_venta'}),
+            'peso_producto': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Ej: 4.50'}),
+            'precio_costo': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Costo total o por gramo'}),
+            'precio_detal': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Precio final detal'}),
+            'precio_semimayor': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Precio final semimayor'}),
+            'precio_mayor': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Precio final mayor'}),
+            'precio_por_gramo_detal': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Valor gramo detal'}),
+            'precio_por_gramo_semimayor': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Valor gramo semimayor'}),
+            'precio_por_gramo_mayor': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Valor gramo mayor'}),
+            'imagen_principal': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'destacado': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }       
