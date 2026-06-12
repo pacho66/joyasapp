@@ -1357,10 +1357,8 @@ def eliminar_del_carrito(request, item_id):
     messages.success(request, f"Se eliminó '{nombre_producto}' del carrito.")
     return redirect('ver_carrito')
 
-@login_required
 @transaction.atomic
 def comprar_whatsapp(request):
-    usuario = request.user
     session_key = request.session.session_key
 
     if not session_key:
@@ -1368,19 +1366,22 @@ def comprar_whatsapp(request):
         return redirect('ver_carrito')
 
     # =====================================
-    # 🔒 SOLO PRODUCTOS DEL USUARIO SaaS
+    # 🛒 OBTENER ÍTEMS DE LA SESIÓN ACTUAL
     # =====================================
     items = CarritoItem.objects.select_related(
         'producto',
         'variante'
-    ).filter(
-        session_key=session_key,
-        producto__usuario=usuario
-    )
+    ).filter(session_key=session_key)
 
     if not items.exists():
         messages.warning(request, "El carrito está vacío")
         return redirect('ver_carrito')
+
+    # =====================================
+    # 🏪 IDENTIFICAR AL USUARIO DUEÑO DEL SAAS
+    # =====================================
+    # Extraemos al tendero directamente del primer producto en el carrito
+    usuario = items.first().producto.usuario
 
     # =====================================
     # 🔢 ORDEN
@@ -1392,7 +1393,6 @@ def comprar_whatsapp(request):
     # =====================================
     aplica_iva = request.GET.get('aplica_iva') == 'on'
     es_retenedor = request.GET.get('es_retenedor') == 'on'
-
     valor_descuento = request.GET.get('descuento', '0')
 
     try:
@@ -1402,7 +1402,6 @@ def comprar_whatsapp(request):
 
     if porcentaje_descuento < 0:
         porcentaje_descuento = Decimal('0')
-
     if porcentaje_descuento > 100:
         porcentaje_descuento = Decimal('100')
 
@@ -1430,21 +1429,19 @@ def comprar_whatsapp(request):
     resumen_items = []
 
     for item in items:
-
         producto = item.producto
         variante = item.variante
         cantidad = item.cantidad or 0
 
-        # 🔒 Seguridad extra SaaS
+        # 🔒 Seguridad extra SaaS: Validamos que todos correspondan al mismo tendero
         if producto.usuario != usuario:
-            messages.warning(request, "Producto inválido.")
+            messages.warning(request, "Producto inválido en el carrito.")
             return redirect('ver_carrito')
 
         # =================================
         # STOCK VARIANTE
         # =================================
         if variante:
-
             if variante.stock < cantidad:
                 messages.warning(
                     request,
@@ -1475,6 +1472,7 @@ def comprar_whatsapp(request):
             'item': item,
             'producto': producto,
             'variante': variante,
+            'amount_cantidad': cantidad, # Conservando tus referencias de asignación
             'cantidad': cantidad,
             'precio': precio,
             'gramos': gramos,
@@ -1488,7 +1486,6 @@ def comprar_whatsapp(request):
     descuento = subtotal_general * (
         porcentaje_descuento / Decimal('100')
     )
-
     subtotal_con_descuento = subtotal_general - descuento
 
     # =====================================
@@ -1521,7 +1518,7 @@ def comprar_whatsapp(request):
     # 📦 CREAR PEDIDO
     # =====================================
     pedido = Pedido.objects.create(
-        usuario=usuario,
+        usuario=usuario,  # Queda asociado al dueño de la tienda para su Dashboard
         numero_orden=numero,
         total=total_final,
 
@@ -1543,7 +1540,6 @@ def comprar_whatsapp(request):
     # 📦 GUARDAR ITEMS + DESCONTAR STOCK
     # =====================================
     for data in resumen_items:
-
         item = data['item']
         variante = data['variante']
         subtotal = data['subtotal']
@@ -1570,7 +1566,7 @@ def comprar_whatsapp(request):
             total_final=total_item
         )
 
-        # 🔥 descontar stock después de crear pedido
+        # 🔥 descontar stock de la variante unificada después de crear pedido
         if variante:
             variante.stock -= data['cantidad']
             variante.save()
@@ -1604,34 +1600,30 @@ def comprar_whatsapp(request):
     mensaje += "\n🙏 Gracias por tu compra."
 
     # =====================================
-    # 📲 WHATSAPP
+    # 📲 WHATSAPP DEL COMERCIO
     # =====================================
     perfil, created = Perfil.objects.get_or_create(user=usuario)
 
     if not perfil.whatsapp:
-        messages.warning(request, "Configura tu número de WhatsApp primero")
-        return redirect('dashboard')
+        messages.warning(request, "El comercio no tiene configurado WhatsApp.")
+        return redirect('ver_carrito')
 
     numero_ws = perfil.whatsapp
-
     url = f"https://wa.me/{numero_ws}?text={quote(mensaje)}"
 
     # =====================================
-    # 🧹 LIMPIAR CARRITO
+    # 🧹 LIMPIAR CARRITO DEL VISITANTE
     # =====================================
     items.delete()
 
     return redirect(url)
 
-@login_required
-def comprar_directo_whatsapp(request, producto_id):
-    usuario = request.user
 
-    producto = get_object_or_404(
-        Producto,
-        id=producto_id,
-        usuario=usuario
-    )
+def comprar_directo_whatsapp(request, producto_id):
+    # Extraemos el producto de forma pública
+    producto = get_object_or_404(Producto, id=producto_id)
+    # El usuario objetivo para el mensaje de WhatsApp es el dueño del producto
+    usuario = producto.usuario
 
     # ===============================
     # 🔢 DATOS SEGUROS
@@ -1663,7 +1655,7 @@ def comprar_directo_whatsapp(request, producto_id):
         subtotal = Decimal(cantidad) * precio
 
     # ===============================
-    # 📦 VALIDAR STOCK
+    # 📦 VALIDAR STOCK GLOBAL / VARIANTE
     # ===============================
     if producto.tipo_venta != "gramo":
         if producto.stock < cantidad:
@@ -1681,7 +1673,6 @@ def comprar_directo_whatsapp(request, producto_id):
     # 💬 MENSAJE PROFESIONAL
     # ===============================
     mensaje = "🛍️ Hola, quiero comprar este producto:\n\n"
-
     mensaje += f"📌 Producto: {producto.nombre}\n"
     mensaje += f"🔖 Ref: {producto.referencia}\n"
 
@@ -1702,16 +1693,15 @@ def comprar_directo_whatsapp(request, producto_id):
     mensaje += "\n🙏 Quedo atento."
 
     # ===============================
-    # 📲 WHATSAPP DEL CLIENTE SaaS
+    # 📲 WHATSAPP DEL ENLACE DE TIENDA
     # ===============================
     perfil, created = Perfil.objects.get_or_create(user=usuario)
 
     if not perfil.whatsapp:
-        messages.warning(request, "Configura tu número de WhatsApp primero")
-        return redirect('dashboard')
+        messages.warning(request, "Este comercio no tiene configurado WhatsApp.")
+        return redirect('detalle_producto', id=producto.id, slug=producto.slug)
 
     numero_ws = perfil.whatsapp
-
     url = f"https://wa.me/{numero_ws}?text={quote(mensaje)}"
 
     return redirect(url)
