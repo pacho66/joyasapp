@@ -144,97 +144,101 @@ $ {{ producto.precio_mayor|default:0|moneda }}
 
 {% endif %}
 
-<div style="margin-bottom: 15px;">
-    <label><strong>Color / Variante:</strong></label>
-    <select id="color" onchange="actualizarStockDisponible(); actualizarTallas();" style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
-      <option value="">Seleccione color</option>
-      {% for variante in producto.variantes.all|dictsort:"color" %}
-        {% ifchanged variante.color %}
-          <option value="{{ variante.color }}">{{ variante.color }}</option>
-        {% endifchanged %}
-      {% endfor %}
-    </select>
-</div>
+<form method="POST" action="{% url 'agregar_al_carrito' producto.id %}">
+    {% csrf_token %}
 
-<div id="contenedor-talla" style="margin-bottom: 15px;">
-    <label id="label-talla"><strong>Talla:</strong></label>
-    <select id="talla" onchange="actualizarStockDisponible();" style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
-      <option value="">Seleccione un color primero</option>
-    </select>
-</div>
+    <div style="margin-bottom: 15px;">
+        <label><strong>Cantidad:</strong></label>
+        <div style="display:flex; align-items:center; gap:10px; margin-top: 5px;">
+            <button type="button" onclick="cambiarCantidad(-1)" style="padding:10px 18px; font-size:18px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer; user-select: none;">➖</button>
+            
+            <input 
+                type="number"
+                id="cantidad"
+                name="cantidad"
+                value="1"
+                min="1"
+                step="1"
+                oninput="validarCantidad(); actualizarPrecio();"
+                style="width:70px; text-align:center; padding:10px; font-size:16px; font-weight:bold; border: 1px solid #ccc; border-radius: 6px;"
+            >
 
-<div style="margin-bottom: 15px;">
-    <label><strong>Cantidad:</strong></label>
-    <div style="display:flex; align-items:center; gap:10px; margin-top: 5px;">
-        <button type="button" onclick="cambiarCantidad(-1)" style="padding:10px 18px; font-size:18px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer; user-select: none;">➖</button>
-        
-        <input 
-            type="number"
-            id="cantidad"
-            value="1"
-            min="1"
-            step="1"
-            oninput="validarCantidad(); actualizarPrecio();"
-            style="width:70px; text-align:center; padding:10px; font-size:16px; font-weight:bold; border: 1px solid #ccc; border-radius: 6px;"
-        >
-
-        <button type="button" onclick="cambiarCantidad(1)" style="padding:10px 18px; font-size:18px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer; user-select: none;">➕</button>
+            <button type="button" onclick="cambiarCantidad(1)" style="padding:10px 18px; font-size:18px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer; user-select: none;">➕</button>
+        </div>
     </div>
-</div>
 
-<p id="stock-info" style="font-weight:bold; margin-top:5px; font-size:14px; min-height:20px;"></p>
+    <div style="margin-bottom: 15px;">
+        <label><strong>Color / Variante:</strong></label>
+        <select id="color" name="color" required onchange="actualizarStockDisponible(); actualizarTallas();" style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
+          <option value="">Seleccione color</option>
+          {% for variante in producto.variantes.all|dictsort:"color" %}
+            {% ifchanged variante.color %}
+              <option value="{{ variante.color }}">{{ variante.color }}</option>
+            {% endifchanged %}
+          {% endfor %}
+        </select>
+    </div>
 
-{% if producto.tipo_venta == "gramo" %}
-<p>
-<strong>Peso por unidad:</strong> {{ producto.peso_producto|default:0 }} g
-</p>
+    <div id="contenedor-talla" style="margin-bottom: 15px;">
+        <label id="label-talla"><strong>Talla:</strong></label>
+        <select id="talla" name="talla" onchange="actualizarStockDisponible();" style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
+          <option value="">Seleccione un color primero</option>
+        </select>
+    </div>
 
-<p>
-<strong>Total gramos:</strong>
-<span id="total-gramos">{{ producto.peso_producto|default:0 }}</span> g
-</p>
-{% endif %}
+    <p id="stock-info" style="font-weight:bold; margin-top:5px; font-size:14px; min-height:20px;"></p>
 
-<p>
-<strong>Subtotal:</strong> $
-<span id="subtotal">0</span>
-</p>
+    {% if producto.tipo_venta == "gramo" %}
+    <p>
+    <strong>Peso por unidad:</strong> {{ producto.peso_producto|default:0 }} g
+    </p>
 
-<p id="detalle-calculo" style="font-size:14px;color:#555;"></p>
-<p id="mensaje-mayorista" style="color:green;font-weight:bold;"></p>
-
-<input type="hidden" id="url-carrito" value="{% url 'agregar_al_carrito' producto.id %}">
-
-{% if stock_disponible is not None %}
-    
-    {% if stock_disponible > 0 %}
-        <button id="btn-carrito" onclick="agregarCarrito()"
-        style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;">
-            🛒 Agregar al carrito
-        </button>
-    {% else %}
-        <p style="color:red;font-weight:bold;">Producto agotado</p>
+    <p>
+    <strong>Total gramos:</strong>
+    <span id="total-gramos">{{ producto.peso_producto|default:0 }}</span> g
+    </p>
     {% endif %}
 
-    {% elif tiene_stock %}
+    <p>
+    <strong>Subtotal:</strong> $
+    <span id="subtotal">0</span>
+    </p>
 
-    <input type="hidden"
-    id="whatsapp-numero"
-    value="{{ perfil_tienda.whatsapp }}">
+    <p id="detalle-calculo" style="font-size:14px;color:#555;"></p>
+    <p id="mensaje-mayorista" style="color:green;font-weight:bold;"></p>
 
-    <button id="btn-carrito" onclick="agregarCarrito()"
-    style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;">
-        🛒 Agregar al carrito
-    </button>
+    <input type="hidden" id="url-carrito" value="{% url 'agregar_al_carrito' producto.id %}">
 
-    {% else %}
+    {% if stock_disponible is not None %}
+        
+        {% if stock_disponible > 0 %}
+            <button type="submit" id="btn-carrito"
+            style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;">
+                🛒 Agregar al carrito
+            </button>
+        {% else %}
+            <p style="color:red;font-weight:bold;">Producto agotado</p>
+        {% endif %}
 
-    <p style="color:red;font-weight:bold;">Producto agotado</p>
+        {% elif tiene_stock %}
 
-{% endif %}
+        <input type="hidden"
+        id="whatsapp-numero"
+        value="{{ perfil_tienda.whatsapp }}">
 
+        <button type="submit" id="btn-carrito"
+            style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;">
+            🛒 Agregar al carrito
+        </button>
+
+        {% else %}
+
+        <p style="color:red;font-weight:bold;">Producto agotado</p>
+
+    {% endif %}
+
+</form>
 <br><br>
-
 <button onclick="comprarWhatsApp()"
 style="
 background:#25D366;

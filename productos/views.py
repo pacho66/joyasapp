@@ -1100,13 +1100,13 @@ def renovar_plan(perfil):
     perfil.save()    
 
 def agregar_al_carrito(request, producto_id):
-    cantidad = safe_int(request.GET.get('cantidad', 1), 1)
+    cantidad = safe_int(request.POST.get('cantidad', 1), 1)
     producto = get_object_or_404(
         Producto,
         id=producto_id
     )
-    color = request.GET.get('color') or None
-    talla = request.GET.get('talla') or None
+    color = request.POST.get('color') or None
+    talla = request.POST.get('talla') or None
 
     session_key = request.session.session_key
     if not session_key:
