@@ -2,12 +2,10 @@ from django import forms
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
-from .models import Gasto
-from .models import Producto
+from .models import Gasto, Producto
 
 
 class RegistroForm(forms.Form):
-
     username = forms.CharField(
         label='Usuario',
         max_length=150,
@@ -67,45 +65,26 @@ class RegistroForm(forms.Form):
         })
     )
 
-    # ==================================
-    # VALIDAR USUARIO
-    # ==================================
     def clean_username(self):
         username = self.cleaned_data['username'].strip()
-
         if User.objects.filter(username=username).exists():
             raise ValidationError("Ese usuario ya existe")
-
         return username
 
-    # ==================================
-    # VALIDAR EMAIL
-    # ==================================
     def clean_email(self):
         email = self.cleaned_data['email'].lower().strip()
-
         if User.objects.filter(email=email).exists():
             raise ValidationError("Ese correo ya está registrado")
-
         return email
 
-    # ==================================
-    # VALIDAR WHATSAPP
-    # ==================================
     def clean_whatsapp(self):
         whatsapp = self.cleaned_data['whatsapp'].strip()
-
         if len(whatsapp) < 10:
             raise ValidationError("Número inválido")
-
         return whatsapp
 
-    # ==================================
-    # VALIDAR PASSWORDS
-    # ==================================
     def clean(self):
         cleaned_data = super().clean()
-
         password = cleaned_data.get('password')
         confirmar = cleaned_data.get('confirmar_password')
 
@@ -114,8 +93,8 @@ class RegistroForm(forms.Form):
 
         return cleaned_data
 
-class ConfiguracionNegocioForm(forms.Form):
 
+class ConfiguracionNegocioForm(forms.Form):
     nombre_tienda = forms.CharField(
         max_length=120,
         label='Nombre tienda',
@@ -161,6 +140,7 @@ class ConfiguracionNegocioForm(forms.Form):
         })
     )
 
+
 class GastoForm(forms.ModelForm):
     class Meta:
         model = Gasto
@@ -175,6 +155,7 @@ class GastoForm(forms.ModelForm):
                 'placeholder': 'Valor del gasto'
             }),
         }
+
 
 class ProductoForm(forms.ModelForm):
     class Meta:
@@ -193,8 +174,7 @@ class ProductoForm(forms.ModelForm):
             'precio_mayor',
             'precio_por_gramo_detal', 
             'precio_por_gramo_semimayor', 
-            'precio_por_gramo_colores_disponibles', # si los necesitas, si no déjalos por fuera
-            'precio_por_gramo_mayor',
+            'precio_por_gramo_mayor',  # Corregido aquí
             'imagen_principal', 
             'destacado'
         ]
@@ -215,4 +195,4 @@ class ProductoForm(forms.ModelForm):
             'precio_por_gramo_mayor': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Valor gramo mayor'}),
             'imagen_principal': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'destacado': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }       
+        }
