@@ -1288,49 +1288,74 @@ def ver_carrito(request):
         'carrito_json': carrito_json
     })
 
-@login_required
 def aumentar_cantidad(request, item_id):
+    # 1. Capturar la sesión del visitante (anonimo o registrado)
+    session_key = request.session.session_key
+    if not session_key:
+        return redirect('ver_carrito')
+
+    # 2. Buscar el ítem asegurando que pertenezca a este visitante
     item = get_object_or_404(
         CarritoItem,
         id=item_id,
-        session_key=request.session.session_key
+        session_key=session_key
     )
 
-    # verificar stock disponible
-    if item.cantidad >= item.producto.stock:
-        messages.warning(request, "No hay más unidades disponibles en inventario.")
+    # 3. 🔥 CONTROL DE STOCK DESDE LA VARIANTE UNIFICADA
+    # Si el ítem tiene una variante asignada, usamos ese stock; si no, el del producto global
+    stock_disponible = item.variante.stock if item.variante else item.producto.stock
+
+    if item.cantidad >= stock_disponible:
+        messages.warning(request, f"No puedes agregar más unidades. El inventario máximo para esta opción es de {stock_disponible} unidades.")
     else:
         item.cantidad += 1
         item.save()
 
     return redirect('ver_carrito')
 
-@login_required
+
 def disminuir_cantidad(request, item_id):
+    # 1. Capturar la sesión del visitante
+    session_key = request.session.session_key
+    if not session_key:
+        return redirect('ver_carrito')
+
+    # 2. Buscar el ítem asignado a esta sesión
     item = get_object_or_404(
         CarritoItem,
         id=item_id,
-        session_key=request.session.session_key
+        session_key=session_key
     )
 
+    # 3. Restar o eliminar si llega a cero
     if item.cantidad > 1:
         item.cantidad -= 1
         item.save()
     else:
         item.delete()
+        messages.info(request, "Producto removido del carrito.")
 
     return redirect('ver_carrito')
 
-@login_required
+
 def eliminar_del_carrito(request, item_id):
+    # 1. Capturar la sesión del visitante
+    session_key = request.session.session_key
+    if not session_key:
+        return redirect('ver_carrito')
+
+    # 2. Buscar y destruir de forma segura
     item = get_object_or_404(
         CarritoItem,
         id=item_id,
-        session_key=request.session.session_key
+        session_key=session_key
     )
+    
+    nombre_producto = item.producto.nombre
     item.delete()
+    
+    messages.success(request, f"Se eliminó '{nombre_producto}' del carrito.")
     return redirect('ver_carrito')
-
 
 @login_required
 @transaction.atomic
