@@ -1364,22 +1364,20 @@ def comprar_whatsapp(request, producto_id=None):
     # 🛒 PASO 1: DETECTAR EL MODO DE ENTRADA (DIRECTO O CARRITO)
     # =========================================================
     if es_compra_directa:
-        # Modo A: Viene de la ficha de un solo producto
         producto = get_object_or_404(Producto, id=producto_id)
-        usuario = producto.usuario  # El joyero dueño de este producto
+        usuario = producto.usuario  
 
         try:
             cantidad = int(request.GET.get('cantidad', 1))
         except ValueError:
             cantidad = 1
 
-        # Capturar variante opcional enviada por la URL
         variante = None
         variante_id = request.GET.get('variante_id')
         if variante_id:
-            variante = get_object_or_404(Variante, id=variante_id, producto=producto)
+            # 🔥 Corregido: Usa ProductoVariante en lugar de Variante
+            variante = get_object_or_404(ProductoVariante, id=variante_id, producto=producto)
 
-        # 🔒 VALIDACIÓN DE STOCK PARA COMPRA DIRECTA
         if variante:
             if variante.stock < cantidad:
                 messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
@@ -1389,7 +1387,6 @@ def comprar_whatsapp(request, producto_id=None):
                 messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
                 return redirect('detalle_producto', id=producto.id, slug=producto.slug)
 
-        # Ejecutar tu motor de precios
         precio, gramos = calcular_precio_producto(producto, cantidad)
         precio = Decimal(precio)
 
@@ -1400,12 +1397,12 @@ def comprar_whatsapp(request, producto_id=None):
             subtotal = Decimal(cantidad) * precio
             linea = f"{producto.nombre} x{cantidad}"
 
-        # Lo empaquetamos en tu estructura exacta
         resumen_items.append({
-            'item': None, # No viene de la tabla CarritoItem
+            'item': None, 
             'producto': producto,
             'variante': variante,
             'amount_cantidad': cantidad,
+            'amount_gramos': gramos if gramos else 0,
             'cantidad': cantidad,
             'precio': precio,
             'gramos': gramos,
@@ -1414,7 +1411,6 @@ def comprar_whatsapp(request, producto_id=None):
         })
 
     else:
-        # Modo B: Tu lógica original de procesar todo el Carrito
         session_key = request.session.session_key
         if not session_key:
             messages.warning(request, "El carrito está vacío")
@@ -1436,7 +1432,6 @@ def comprar_whatsapp(request, producto_id=None):
                 messages.warning(request, "Producto inválido en el carrito.")
                 return redirect('ver_carrito')
 
-            # 🔒 VALIDACIÓN DE STOCK DESDE EL CARRITO
             if variante:
                 if variante.stock < cantidad:
                     messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
@@ -1461,6 +1456,7 @@ def comprar_whatsapp(request, producto_id=None):
                 'producto': producto,
                 'variante': variante,
                 'amount_cantidad': cantidad,
+                'amount_gramos': gramos if gramos else 0,
                 'cantidad': cantidad,
                 'precio': precio,
                 'gramos': gramos,
@@ -1469,7 +1465,7 @@ def comprar_whatsapp(request, producto_id=None):
             })
 
     # =========================================================
-    # 📊 PASO 2: LOGICA CENTRAL DE CÁLCULO (Exactamente tu código)
+    # 📊 PASO 2: LOGICA CENTRAL DE CÁLCULO
     # =========================================================
     numero = generar_numero_orden(usuario)
 
@@ -1494,7 +1490,6 @@ def comprar_whatsapp(request, producto_id=None):
     mensaje = f"🛍️ Hola, quiero comprar:\n🧾 Orden: {numero}\n\n"
     subtotal_general = Decimal('0')
 
-    # Sumamos los subtotales calculados en el paso 1
     for data in resumen_items:
         subtotal_general += data['subtotal']
 
@@ -1507,7 +1502,6 @@ def comprar_whatsapp(request, producto_id=None):
     costo_envio = calcular_envio(cliente_ciudad, subtotal_con_descuento)
     total_final = subtotal_con_descuento + iva - retefuente + costo_envio
 
-    # Crear la cabecera del Pedido asociado al Joyero
     pedido = Pedido.objects.create(
         usuario=usuario,
         numero_orden=numero,
@@ -1524,7 +1518,6 @@ def comprar_whatsapp(request, producto_id=None):
         costo_envio=costo_envio,
     )
 
-    # Guardar los renglones (items) de la orden y actualizar inventarios
     for data in resumen_items:
         subtotal = data['subtotal']
         iva_item = subtotal * Decimal('0.19') if aplica_iva else Decimal('0')
@@ -1543,7 +1536,6 @@ def comprar_whatsapp(request, producto_id=None):
             total_final=total_item
         )
 
-        # 🔥 DESCUENTO DE STOCK CORREGIDO: Soporta variantes y productos simples
         if data['variante']:
             data['variante'].stock -= data['cantidad']
             data['variante'].save()
@@ -1553,7 +1545,6 @@ def comprar_whatsapp(request, producto_id=None):
 
         mensaje += f"{data['linea']} - ${subtotal:,.0f}\n".replace(",", ".")
 
-    # Agregar bloques finales de texto al mensaje de WhatsApp
     mensaje += f"\nSubtotal: ${subtotal_general:,.0f}".replace(",", ".")
     if descuento > 0: mensaje += f"\nDescuento: -${descuento:,.0f}".replace(",", ".")
     if iva > 0: mensaje += f"\nIVA: ${iva:,.0f}".replace(",", ".")
@@ -1561,7 +1552,6 @@ def comprar_whatsapp(request, producto_id=None):
     mensaje += f"\n🚚 Envío: ${costo_envio:,.0f}" if costo_envio > 0 else "\n🎁 Envío gratis"
     mensaje += f"\n\n💰 Total: ${total_final:,.0f}\n🙏 Gracias por tu compra.".replace(",", ".")
 
-    # Redirección final al WhatsApp del Perfil
     perfil, _ = Perfil.objects.get_or_create(user=usuario)
     if not perfil.whatsapp:
         messages.warning(request, "El comercio no tiene configurado WhatsApp.")
@@ -1569,10 +1559,6 @@ def comprar_whatsapp(request, producto_id=None):
 
     url = f"https://wa.me/{perfil.whatsapp}?text={quote(mensaje)}"
 
-    # =========================================================
-    # 🧹 PASO 3: LIMPIEZA INTELIGENTE
-    # =========================================================
-    # Solo borramos el carrito de la base de datos si la compra vino desde el carrito
     if not es_compra_directa and items_carrito:
         items_carrito.delete()
 
