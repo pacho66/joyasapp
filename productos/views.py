@@ -1099,13 +1099,11 @@ def renovar_plan(perfil):
     perfil.activa = True
     perfil.save()    
 
-@login_required
 def agregar_al_carrito(request, producto_id):
     cantidad = safe_int(request.GET.get('cantidad', 1), 1)
     producto = get_object_or_404(
         Producto,
-        id=producto_id,
-        usuario=request.user
+        id=producto_id
     )
     color = request.GET.get('color') or None
     talla = request.GET.get('talla') or None
@@ -1156,7 +1154,6 @@ def agregar_al_carrito(request, producto_id):
     return redirect('ver_carrito')
     # si sí hay stock, no necesitas save (ya quedó creado correctamente)
 
-@login_required
 def ver_carrito(request):
     session_key = request.session.session_key
     if not session_key:
