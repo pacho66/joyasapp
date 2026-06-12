@@ -42,7 +42,7 @@ urlpatterns = [
     # 💳 COMPRAS / PAGOS
     # ===============================
     path('comprar-whatsapp/', views.comprar_whatsapp, name='comprar_whatsapp'),
-    path('comprar-directo/<int:producto_id>/', views.comprar_directo_whatsapp, name='comprar_directo'),
+    path('comprar-directo/<int:producto_id>/', views.comprar_whatsapp, name='comprar_directo'),
     path('pagar/', views.pagar_pedido, name='pagar_pedido'),
     path('pagar/mercadopago/<uuid:token>/', views.pagar_con_mercadopago),
     path('pagar/<int:pedido_id>/', views.pagar_wompi, name='pagar_wompi'),
