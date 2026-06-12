@@ -1107,17 +1107,10 @@ def agregar_al_carrito(request, producto_id):
     )
     color = request.POST.get('color') or None
     talla = request.POST.get('talla') or None
-    # 🔥 PRINTS DE DIAGNÓSTICO CRUCIALES
-    print("====== DATOS RECIBIDOS DEL FORMULARIO ======")
-    print(f"📦 Producto ID: {producto_id}")
-    print(f"🎨 Color recibido: '{color}'")
-    print(f"📏 Talla recibida: '{talla}'")
-    print(f"🔢 Cantidad: {cantidad}")
 
     # 1. Asegurar la sesión del visitante
     if not request.session.session_key:
         request.session.create()
-    print(f"👉 AGREGANDO - Llave de sesión: {request.session.session_key}")
     session_key = request.session.session_key
 
     # 🔥 EL FIX CRUCIAL: Forzar a Django a enviar la cookie 'sessionid' al navegador.
@@ -1167,7 +1160,6 @@ def agregar_al_carrito(request, producto_id):
     return redirect('ver_carrito')
 
 def ver_carrito(request):
-    print(f"🔍 MIRANDO CARRITO - Llave de sesión: {request.session.session_key}")
     session_key = request.session.session_key
     if not session_key:
         items = []
