@@ -1107,6 +1107,12 @@ def agregar_al_carrito(request, producto_id):
     )
     color = request.POST.get('color') or None
     talla = request.POST.get('talla') or None
+    # 🔥 PRINTS DE DIAGNÓSTICO CRUCIALES
+    print("====== DATOS RECIBIDOS DEL FORMULARIO ======")
+    print(f"📦 Producto ID: {producto_id}")
+    print(f"🎨 Color recibido: '{color}'")
+    print(f"📏 Talla recibida: '{talla}'")
+    print(f"🔢 Cantidad: {cantidad}")
 
     # 1. Asegurar la sesión del visitante
     if not request.session.session_key:
