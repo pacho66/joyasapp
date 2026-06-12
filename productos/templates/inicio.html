@@ -343,7 +343,7 @@ h2 {
             <p class="precio">${{ producto.precio_detal }}</p>
 
             <div class="acciones-producto">
-                <a href="{% url 'agregar_al_carrito' producto.id %}" class="btn-carrito">🛒 Agregar</a>
+                <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-carrito">🛒 Elegir Opciones</a>
                 <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-ver">👁️ Ver detalle</a>
             </div>
         </div>
@@ -371,8 +371,9 @@ h2 {
                 <p class="stock-status stock-agotado">❌ Agotado</p>
             {% endif %}
 
+            
             <div class="acciones-producto">
-                <a href="{% url 'agregar_al_carrito' producto.id %}" class="btn-carrito">🛒 Agregar</a>
+                <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-carrito">🛒 Elegir Opciones</a>
                 <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-ver">👁️ Ver detalle</a>
             </div>
         </div>
