@@ -409,65 +409,38 @@ function comprarWhatsApp(){
     window.open(url, "_blank");
 }
 
-function agregarCarrito(){
+function actualizarPrecio(){
+    // 🔥 CAMBIO CLAVE: Usar parseFloat para capturar los gramos con decimales (Ej: 7.77)
+    let cantidad = parseFloat(document.getElementById("cantidad").value) || 1;
 
-    let inputCantidad = document.getElementById("cantidad");
-    let cantidad = parseInt(inputCantidad.value || 1);
+    let subtotal = 0;
 
-    let color = document.getElementById("color")?.value || "";
-    let talla = document.getElementById("talla")?.value || "";
+    if(tipoVenta === "gramo"){
+        // Si el usuario ingresa directamente la cantidad (que en tu flujo son los gramos reales del producto):
+        let totalGramos = cantidad; 
 
-    let baseUrl = document.getElementById("url-carrito").value;
+        document.getElementById("total-gramos").innerHTML = totalGramos.toFixed(2);
 
-    let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
+        subtotal = totalGramos * (precioGramoDetal || 0);
 
-    // ===============================
-    // 🔥 VALIDACIONES
-    // ===============================
-    if (!color) {
-        alert("Selecciona un color");
-        return;
+        // Muestra el desglose nítido: "7.77g x $18.000"
+        document.getElementById("detalle-calculo").innerHTML =
+            totalGramos.toFixed(2) + "g x $" + (precioGramoDetal || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+
+    } else {
+        // Si vende por unidad fija
+        subtotal = cantidad * (precioDetal || 0);
+
+        document.getElementById("detalle-calculo").innerHTML =
+            parseInt(cantidad) + " unidades x $" + (precioDetal || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
     }
 
-    if (hayTallas && !talla) {
-        alert("Selecciona una talla");
-        return;
-    }
+    document.getElementById("mensaje-mayorista").innerHTML =
+        "💡 Descuentos por cantidad se aplican en el carrito";
 
-    if (cantidad < 1) {
-        alert("Cantidad inválida");
-        inputCantidad.value = 1;
-        return;
-    }
-
-    // 🔥 VALIDAR STOCK
-    let variante = variantes.find(v =>
-        v.color === color && v.talla === talla
-    );
-
-    if (variante && cantidad > variante.stock) {
-        alert("No hay suficiente stock disponible");
-        inputCantidad.value = variante.stock;
-        return;
-    }
-
-    // ===============================
-    // 🔗 ARMAR URL SEGURO
-    // ===============================
-    let params = new URLSearchParams({
-        cantidad: cantidad,
-        color: color,
-        talla: talla
-    });
-
-    let url = baseUrl + "?" + params.toString();
-
-    console.log("Agregando al carrito:", {cantidad, color, talla});
-
-    // ===============================
-    // 🚀 REDIRECCIÓN
-    // ===============================
-    window.location.href = url;
+    // Pinta el subtotal totalizado formateado como moneda colombiana
+    document.getElementById("subtotal").innerHTML =
+        subtotal ? subtotal.toLocaleString('es-CO', { maximumFractionDigits: 0 }) : "0";
 }
 
 // ===============================
@@ -481,35 +454,37 @@ let precioGramoDetal = parseFloat("{{ producto.precio_por_gramo_detal|default_if
 
 function actualizarPrecio(){
 
-    let cantidad = parseInt(document.getElementById("cantidad").value) || 1;
+    let cantidad = parseFloat(document.getElementById("cantidad").value) || 1;
 
     let subtotal = 0;
 
     if(tipoVenta === "gramo"){
 
-        let totalGramos = cantidad * (pesoProducto || 0);
+        let totalGramos = cantidad; 
 
-        document.getElementById("total-gramos").innerHTML = totalGramos;
+        document.getElementById("total-gramos").innerHTML = totalGramos.toFixed(2);
 
         subtotal = totalGramos * (precioGramoDetal || 0);
 
         document.getElementById("detalle-calculo").innerHTML =
-            totalGramos + "g x $" + (precioGramoDetal || 0).toLocaleString();
+            totalGramos.toFixed(2) + "g x $" + (precioGramoDetal || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
 
     } else {
 
         subtotal = cantidad * (precioDetal || 0);
 
         document.getElementById("detalle-calculo").innerHTML =
-            cantidad + " unidades x $" + (precioDetal || 0).toLocaleString();
+            parseInt(cantidad) + " unidades x $" + (precioDetal || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+    
     }
 
     document.getElementById("mensaje-mayorista").innerHTML =
         "💡 Descuentos por cantidad se aplican en el carrito";
 
-    document.getElementById("subtotal").innerHTML =
-        subtotal ? subtotal.toLocaleString() : "0";
+     document.getElementById("subtotal").innerHTML =
+        subtotal ? subtotal.toLocaleString('es-CO', { maximumFractionDigits: 0 }) : "0";
 }
+
 
 // ===============================
 // 🔢 CONTROL CANTIDAD
