@@ -334,17 +334,31 @@ h2 {
 <div class="destacados-scroll">
     {% for producto in destacados %}
     <div class="producto-card">
-        {% if producto.imagen_principal %}
-        <img src="{{ producto.imagen_principal.url }}" class="producto-img" alt="{{ producto.nombre }}">
-        {% endif %}
+        <div class="producto-img-wrapper" style="position: relative; overflow: hidden; background: #fbfbfb;">
+            {% if producto.imagen_principal %}
+                <img src="{{ producto.imagen_principal.url }}" class="producto-img" alt="{{ producto.nombre }}">
+            {% elif producto.imagenes.all %}
+                <img src="{{ producto.imagenes.all.0.imagen.url }}" class="producto-img" alt="{{ producto.nombre }}">
+            {% else %}
+                <img src="/static/images/no-image.png" class="producto-img" alt="Sin foto">
+            {% endif %}
+        </div>
 
         <div class="producto-info">
             <h4>{{ producto.nombre }}</h4>
-            <p class="precio">${{ producto.precio_detal }}</p>
+            
+            <p class="precio">
+                {% if producto.tipo_venta == 'gramo' and producto.precio_detal %}
+                    ${{ producto.precio_detal|floatformat:"0" }} <span class="badge-gramos" style="font-size: 11px; opacity: 0.7;">({{ producto.peso_producto }}g)</span>
+                {% elif producto.precio_detal %}
+                    ${{ producto.precio_detal|floatformat:"0" }}
+                {% else %}
+                    <span style="color: #999; font-size: 14px;">Consultar precio</span>
+                {% endif %}
+            </p>
 
             <div class="acciones-producto">
-                <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-carrito">🛒 Elegir Opciones</a>
-                <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-ver">👁️ Ver detalle</a>
+                <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-carrito">🛒 Ver Opciones</a>
             </div>
         </div>
     </div>
@@ -355,26 +369,41 @@ h2 {
 <div class="producto-grid">
     {% for producto in productos %}
     <div class="producto-card">
-        {% if producto.imagen_principal %}
-        <img src="{{ producto.imagen_principal.url }}" class="producto-img" alt="{{ producto.nombre }}">
-        {% endif %}
+        <div class="producto-img-wrapper" style="position: relative; overflow: hidden; background: #fbfbfb;">
+            {% if producto.imagen_principal %}
+                <img src="{{ producto.imagen_principal.url }}" class="producto-img" alt="{{ producto.nombre }}">
+            {% elif producto.imagenes.all %}
+                <img src="{{ producto.imagenes.all.0.imagen.url }}" class="producto-img" alt="{{ producto.nombre }}">
+            {% else %}
+                <img src="/static/images/no-image.png" class="producto-img" alt="Sin foto">
+            {% endif %}
+        </div>
 
         <div class="producto-info">
             <h4>{{ producto.nombre }}</h4>
-            <p class="precio">${{ producto.precio_detal }}</p>
+            
+            <p class="precio">
+                {% if producto.tipo_venta == 'gramo' and producto.precio_detal %}
+                    ${{ producto.precio_detal|floatformat:"0" }} <span class="badge-gramos" style="font-size: 11px; opacity: 0.7;">({{ producto.peso_producto }}g)</span>
+                {% elif producto.precio_detal %}
+                    ${{ producto.precio_detal|floatformat:"0" }}
+                {% else %}
+                    <span style="color: #999; font-size: 14px;">Consultar precio</span>
+                {% endif %}
+            </p>
 
-            {% if producto.stock_total > 10 %}
+            {% if producto.stock > 10 %}
                 <p class="stock-status stock-ok">✅ Disponible</p>
-            {% elif producto.stock_total > 0 %}
-                <p class="stock-status stock-poco">🔥 Últimas unidades</p>
+            {% elif producto.stock > 0 %}
+                <p class="stock-status stock-poco">🔥 Últimas unidades ({{ producto.stock }})</p>
             {% else %}
                 <p class="stock-status stock-agotado">❌ Agotado</p>
             {% endif %}
 
-            
             <div class="acciones-producto">
-                <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-carrito">🛒 Elegir Opciones</a>
-                <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-ver">👁️ Ver detalle</a>
+                <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-carrito" style="width: 100%; text-align: center; font-weight: 600;">
+                    💎 Elegir y Comprar
+                </a>
             </div>
         </div>
     </div>
