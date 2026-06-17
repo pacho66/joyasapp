@@ -1198,11 +1198,11 @@ def ver_carrito(request):
     total_articulos = 0
     total = Decimal('0.00')
 
-    # 🔥 CONTAR TOTAL GLOBAL
+    # 🔥 TU CONTAR TOTAL GLOBAL ORIGINAL
     for item in items:
         total_articulos += item.cantidad or 0
 
-    # 🔥 DEFINIR NIVEL GLOBAL
+    # 🔥 TU DEFINIR NIVEL GLOBAL ORIGINAL
     if total_articulos >= 12:
         tipo_global = "Mayorista"
     elif total_articulos >= 6:
@@ -1210,7 +1210,7 @@ def ver_carrito(request):
     else:
         tipo_global = "Detal"
 
-    # 🔥 CALCULAR CADA ITEM
+    # 🔥 TU CALCULAR CADA ITEM ORIGINAL
     for item in items:
         cantidad = item.cantidad or 0
         producto = item.producto
@@ -1267,21 +1267,21 @@ def ver_carrito(request):
         total += item.subtotal_calculado
 
     # =========================
-    # PROGRESO
+    # PROGRESO ORIGINAL
     # =========================
     faltan_semi = max(0, 6 - total_articulos)
     faltan_mayor = max(0, 12 - total_articulos)
 
-    # =========================
-    # JSON WHATSAPP
-    # =========================
+    # =======================================================================
+    # 🔥 ÚNICO CAMBIO: Forzar float() solo dentro del JSON para que Render no tire Error 500
+    # =======================================================================
     carrito_json = json.dumps([
         {
             "producto": {"nombre": item.producto.nombre},
             "color": item.color,
             "talla": item.talla,
-            "cantidad": item.cantidad,
-            "subtotal": float(item.subtotal_calculado),
+            "cantidad": float(item.cantidad) if item.cantidad else 0,
+            "subtotal": float(item.subtotal_calculado) if item.subtotal_calculado else 0,
             "total_gramos": float(item.total_gramos) if item.total_gramos else None
         } for item in items
     ], cls=DjangoJSONEncoder)

@@ -443,9 +443,9 @@ function actualizarPrecio(){
         subtotal ? subtotal.toLocaleString('es-CO', { maximumFractionDigits: 0 }) : "0";
 }
 
-// ===============================
-// PRECIOS DINÁMICOS
-// ===============================
+// =================================================================
+// 💎 CONFIGURACIÓN DE PRECIOS DINÁMICOS (LÓGICA REAL DE JOYERÍA)
+// =================================================================
 let tipoVenta = "{{ producto.tipo_venta }}";
 let pesoProducto = parseFloat("{{ producto.peso_producto|default_if_none:0 }}") || 0;
 
@@ -453,45 +453,47 @@ let precioDetal = Number("{{ producto.precio_detal|default:0 }}");
 let precioGramoDetal = parseFloat("{{ producto.precio_por_gramo_detal|default_if_none:0 }}") || 0;
 
 function actualizarPrecio(){
-
+    // La cantidad siempre representa las piezas físicas (1, 2, 3...)
     let cantidad = parseFloat(document.getElementById("cantidad").value) || 1;
-
     let subtotal = 0;
 
     if(tipoVenta === "gramo"){
+        // 🛍️ TU MATEMÁTICA REAL: Cantidad de piezas x Peso base de la joya (Ej: 1 x 7.77 = 7.77g)
+        let totalGramos = cantidad * pesoProducto; 
 
-        let totalGramos = cantidad; 
-
+        // Imprime en el HTML los gramos totales calculados con sus decimales
         document.getElementById("total-gramos").innerHTML = totalGramos.toFixed(2);
 
-        subtotal = totalGramos * (precioGramoDetal || 0);
+        // Subtotal inicial al detal en pantalla (los descuentos mayoristas se aplican en el carrito)
+        subtotal = totalGramos * precioGramoDetal;
 
+        // Muestra el desglose nítido para el cliente (Ej: "7.77g x $18.000")
         document.getElementById("detalle-calculo").innerHTML =
-            totalGramos.toFixed(2) + "g x $" + (precioGramoDetal || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+            totalGramos.toFixed(2) + "g x $" + precioGramoDetal.toLocaleString('es-CO', { maximumFractionDigits: 0 });
 
     } else {
-
-        subtotal = cantidad * (precioDetal || 0);
+        // 📦 PRODUCTOS POR UNIDADES FIJAS
+        subtotal = cantidad * precioDetal;
 
         document.getElementById("detalle-calculo").innerHTML =
-            parseInt(cantidad) + " unidades x $" + (precioDetal || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
-    
+            parseInt(cantidad) + " unidades x $" + precioDetal.toLocaleString('es-CO', { maximumFractionDigits: 0 });
     }
 
     document.getElementById("mensaje-mayorista").innerHTML =
-        "💡 Descuentos por cantidad se aplican en el carrito";
+        "💡 Descuentos por cantidad (Semi-Mayorista y Mayorista) se calculan automáticamente en el carrito";
 
-     document.getElementById("subtotal").innerHTML =
+    // Pinta el subtotal estético formateado para Colombia
+    document.getElementById("subtotal").innerHTML =
         subtotal ? subtotal.toLocaleString('es-CO', { maximumFractionDigits: 0 }) : "0";
 }
 
-
-// ===============================
-// 🔢 CONTROL CANTIDAD
-// ===============================
+// =================================================================
+// 🔢 CONTROL DE CANTIDAD (PIEZAS FÍSICAS)
+// =================================================================
 function cambiarCantidad(valor){
     let input = document.getElementById("cantidad");
-
+    
+    // Tratamos la cantidad como pieza entera para los botones de + y -
     let nueva = parseInt(input.value || 1) + valor;
 
     if(nueva < 1) nueva = 1;
@@ -501,24 +503,24 @@ function cambiarCantidad(valor){
     }
 
     input.value = nueva;
-
     actualizarPrecio();
 }
 
 function validarCantidad(){
     let input = document.getElementById("cantidad");
 
-    if(input.value < 1){
+    if(parseInt(input.value) < 1 || !input.value){
         input.value = 1;
     }
 
     if(input.max && parseInt(input.value) > parseInt(input.max)){
         input.value = input.max;
     }
+    actualizarPrecio();
 }
 
 // =================================================================
-// VARIANTES DINÁMICAS (CON ORDENACIÓN ALFANUMÉRICA NATURAL DE ANILLOS)
+// 💍 VARIANTES DINÁMICAS (ORDENACIÓN ALFANUMÉRICA DE ANILLOS)
 // =================================================================
 function actualizarTallas(){
     if (!variantes.some(v => v.talla && v.talla.trim() !== "")) {
@@ -542,7 +544,7 @@ function actualizarTallas(){
 
     tallasDisponibles = [...new Set(tallasDisponibles)];
 
-    // 🔥 LÍNEA CLAVE: Ordenación natural inteligente para tallas (#5, #5.5, #6, #10)
+    // 🔥 Ordenación natural inteligente para tallas (#5, #5.5, #6, #10)
     tallasDisponibles.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
     tallaSelect.innerHTML = '<option value="">Seleccione talla</option>';
@@ -563,42 +565,39 @@ function actualizarTallas(){
     });
 }
 
-// ===============================
-// INICIO
-// ===============================
+// =================================================================
+// 🚀 CARGA DE EVENTOS INICIALES
+// =================================================================
 document.addEventListener("DOMContentLoaded", function() {
 
     actualizarPrecio();
     actualizarTallas();  
-    actualizarStockDisponible();
-    actualizarStockGeneral();
+    if (typeof actualizarStockDisponible === "function") actualizarStockDisponible();
+    if (typeof actualizarStockGeneral === "function") actualizarStockGeneral();
 
     let btn = document.getElementById("btn-carrito");
-
     if (btn) {
         btn.disabled = false;
         btn.style.opacity = "1";
     }
 
-    // 🔥 EVENTOS
+    // Escuchadores de cambio en los selectores
     document.getElementById("color")?.addEventListener("change", function() {
         actualizarTallas();
-        actualizarStockDisponible();
+        if (typeof actualizarStockDisponible === "function") actualizarStockDisponible();
     });
 
     document.getElementById("talla")?.addEventListener("change", function() {
-        actualizarStockDisponible();
+        if (typeof actualizarStockDisponible === "function") actualizarStockDisponible();
     });
-
 });
 
-    // 🔥 OCULTAR CONTENEDOR DE TALLA COMPLETO SI EL PRODUCTO NO TIENE TALLAS (HILOS/PIEDRAS ÚNICAS)
-    let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
-
-    if (!hayTallas) {
-        let contenedorTalla = document.getElementById("contenedor-talla");
-        if (contenedorTalla) contenedorTalla.style.display = "none";
-    }
+// Ocultar contenedor de tallas si el producto no las requiere (cadenas, hilos, etc.)
+let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
+if (!hayTallas) {
+    let contenedorTalla = document.getElementById("contenedor-talla");
+    if (contenedorTalla) contenedorTalla.style.display = "none";
+}
 
 </script>
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
