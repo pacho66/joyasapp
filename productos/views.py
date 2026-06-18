@@ -1191,7 +1191,7 @@ def ver_carrito(request):
     if not session_key:
         items = []
     else:
-        items = CarritoItem.objects.filter(session_key=session_key)
+        items = CarritoItem.objects.filter(session_key=session_key).select_related('producto', 'variante')
 
     total_articulos = 0
     total = Decimal('0.00')
