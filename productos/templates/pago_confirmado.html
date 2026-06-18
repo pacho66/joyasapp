@@ -1,26 +1,29 @@
-{% load moneda %}
+{% load static %}
 
 <h2>✅ Pago confirmado</h2>
 
 <p>Tu pedido <b>{{ pedido.numero_orden }}</b> ha sido registrado como pagado.</p>
 
-<p><b>Total:</b> ${{ pedido.total|moneda }}</p>
+<p><b>Total:</b> ${{ pedido.total }} COP</p>
 
 <br>
 
-<p style="color:green;">
-✔️ Gracias por tu compra 💎  
-Pronto estaremos procesando tu pedido.
+<p style="color:green; font-weight: bold;">
+    ✔️ Gracias por tu compra 💎  
+    Pronto estaremos procesando tu envío.
 </p>
 
-<br>
+<br><br>
 
 <a href="/" style="
-background:#25D366;
-color:white;
-padding:10px 15px;
-border-radius:6px;
-text-decoration:none;
+    background: #121212;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    display: inline-block;
+    font-weight: bold;
 ">
-🏠 Volver a la tienda
+    🏠 Volver a la tienda
 </a>
+    

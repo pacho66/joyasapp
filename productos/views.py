@@ -1601,37 +1601,69 @@ def comprar_whatsapp(request, producto_id=None):
 
 @transaction.atomic
 def pagar_pedido(request):
+    # 🔥 BLINDAJE LOGS: Si acceden directamente por GET (como en el log de Render), 
+    # redirige al carrito en vez de procesar y tirar un Error 500.
+    if request.method != 'POST':
+        return redirect('ver_carrito')
+
     session_key = request.session.session_key
     items = CarritoItem.objects.select_related('producto', 'variante').filter(session_key=session_key)
 
     if not items.exists():
+        messages.error(request, "Tu carrito está vacío.")
         return redirect('ver_carrito')
 
     # 🏪 Detectamos el usuario dueño de la joyería
     usuario = items.first().producto.usuario
     numero = generar_numero_orden(usuario)
 
-    # Crear el pedido base
+    # 📝 CAPTURA DE DATOS DEL FORMULARIO DE DESPACHO (Evita pérdidas de datos de envío)
+    nombre = request.POST.get('nombre', '').strip()
+    telefono = request.POST.get('telefono', '').strip()
+    ciudad = request.POST.get('ciudad', '').strip()
+    direccion = request.POST.get('direccion', '').strip()
+
+    # Crear el pedido base integrando los datos capturados
     pedido = Pedido.objects.create(
         usuario=usuario,
         numero_orden=numero,
-        total=0,
+        nombre_cliente=nombre,        # Asegura los datos en el modelo
+        telefono_cliente=telefono,
+        ciudad_destino=ciudad,
+        direccion_entrega=direccion,
+        total=Decimal('0.00'),
         estado="pendiente_pago",
-        aplica_iva=True,        
+        aplica_iva=False,             # Ajusta según checkbox si usas request.POST.get('aplica_iva') == 'on'      
         es_retenedor=False     
     ) 
 
     total_pedido = Decimal('0')
 
-    # 🔥 Ciclo corregido: Guarda todos los productos dentro del pedido
+    # 🔥 Ciclo corregido y blindado para gramos y unidades
     for item in items:
-        cantidad = Decimal(str(item.cantidad))
-        precio = Decimal(str(item.producto.precio_por_cantidad(item.cantidad)))
-        subtotal = cantidad * precio
-        descuento = Decimal('0')  
+        cantidad_física = Decimal(str(item.cantidad or 1))
+        
+        # Validación híbrida para evitar que precio_por_cantidad falle con productos por gramos
+        if item.producto.tipo_venta == 'gramo':
+            precio_base = Decimal(str(item.producto.precio_por_gramo_detal or 0))
+            peso_base = Decimal(str(item.producto.peso_producto or 0))
+            gramos_totales = cantidad_física * peso_base
+            subtotal = gramos_totales * precio_base
+            precio_aplicado = precio_base
+        else:
+            # Productos por unidad fija (Usa tu método original de escalas)
+            try:
+                precio_base = Decimal(str(item.producto.precio_por_cantidad(item.cantidad)))
+            except Exception:
+                precio_base = Decimal(str(item.producto.precio_detal or 0))
+            gramos_totales = Decimal('0.00')
+            subtotal = cantidad_física * precio_base
+            precio_aplicado = precio_base
 
+        descuento = Decimal('0')  
         iva = subtotal * Decimal('0.19') if pedido.aplica_iva else Decimal('0')
         retefuente = subtotal * Decimal('0.025') if pedido.es_retenedor else Decimal('0')
+        
         total_item = subtotal + iva - retefuente - descuento
         total_pedido += total_item
 
@@ -1640,8 +1672,9 @@ def pagar_pedido(request):
             pedido=pedido,
             producto=item.producto,
             variante=item.variante,
-            cantidad=int(cantidad),
-            precio=precio,
+            cantidad=int(item.cantidad),
+            precio=precio_aplicado,
+            total_gramos=gramos_totales,  # Guardado preventivo para que la factura no de None
             subtotal=subtotal,
             iva=iva,
             retefuente=retefuente,
@@ -1650,6 +1683,9 @@ def pagar_pedido(request):
 
     pedido.total = total_pedido
     pedido.save()
+
+    # Vaciar el carrito tras el éxito del guardado del pedido
+    items.delete()
 
     return render(request, 'pago.html', {'pedido': pedido}) 
 
@@ -1668,8 +1704,8 @@ def confirmar_pago(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
     pedido.estado = "pagado"
     pedido.save()
-
     return render(request, 'pago_confirmado.html', {'pedido': pedido})
+
 
 def pagar_wompi(request, pedido_id):
     pedido = Pedido.objects.get(id=pedido_id)
@@ -1677,8 +1713,8 @@ def pagar_wompi(request, pedido_id):
 
 
 def crear_checkout_wompi(request, pedido):
-
-    redirect_url = request.build_absolute_uri(f'/pago-exitoso/{pedido.id}/')
+    # 🔥 FIX CONEXIÓN: Cambiamos pedido.id por pedido.token_publico para mantener coherencia con pago_exitoso
+    redirect_url = request.build_absolute_uri(f'/pago-exitoso/{pedido.token_publico}/')
     redirect_url_encoded = quote(redirect_url, safe='')
 
     checkout_url = (
@@ -1689,14 +1725,12 @@ def crear_checkout_wompi(request, pedido):
         f"&reference={pedido.numero_orden}"
         f"&redirect-url={redirect_url_encoded}"
     )
-
-    print("URL FINAL:", checkout_url)
-
+    print("URL FINAL WOMPI:", checkout_url)
     return redirect(checkout_url)
+
 
 def pagar_con_mercadopago(request, token):
     pedido = get_object_or_404(Pedido, token_publico=token)
-
     sdk = mercadopago.SDK("APP_USR_xxx")
 
     preference_data = {
@@ -1715,41 +1749,40 @@ def pagar_con_mercadopago(request, token):
     }
 
     preference = sdk.preference().create(preference_data)
-
     return redirect(preference["response"]["init_point"])
 
+
 def pago_exitoso(request, token):
+    # Ya no se romperá porque tanto Wompi como MercadoPago retornarán el token_publico (UUID)
     pedido = get_object_or_404(Pedido, token_publico=token)
 
     pedido.estado = "pagado"
-    pedido.saldo_pendiente = 0
+    pedido.saldo_pendiente = Decimal('0.00')
     pedido.save()
 
     return redirect('factura_publica', token=token)
 
+
 @login_required
 def lista_pedidos(request):
-    pedidos = Pedido.objects.filter(
-        usuario=request.user
-    ).order_by('-fecha')
-
+    pedidos = Pedido.objects.filter(usuario=request.user).order_by('-fecha')
     hoy = timezone.now().date()
 
     for p in pedidos:
-        # 🔥 estado visual pro
-        if p.tipo_pago == 'credito' and p.fecha_limite:
-            if p.saldo_pendiente > 0 and p.fecha_limite < hoy:
+        if getattr(p, 'tipo_pago', 'contado') == 'credito' and p.fecha_limite:
+            # Evitamos errores usando safe fallbacks de saldo_pendiente
+            saldo = getattr(p, 'saldo_pendiente', Decimal('0.00')) or Decimal('0.00')
+            if saldo > 0 and p.fecha_limite < hoy:
                 p.estado_visual = 'vencido'
-            elif p.saldo_pendiente > 0:
+            elif saldo > 0:
                 p.estado_visual = 'pendiente'
             else:
                 p.estado_visual = 'pagado'
         else:
             p.estado_visual = 'pagado'
 
-    return render(request, 'lista_pedidos.html', {
-        'pedidos': pedidos
-    })
+    return render(request, 'lista_pedidos.html', {'pedidos': pedidos})
+
 
 @login_required
 def detalle_pedido(request, pedido_id):
