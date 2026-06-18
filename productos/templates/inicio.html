@@ -347,13 +347,17 @@ h2 {
         <div class="producto-info">
             <h4>{{ producto.nombre }}</h4>
             
+            
             <p class="precio">
-                {% if producto.tipo_venta == 'gramo' and producto.precio_detal %}
-                    ${{ producto.precio_detal|floatformat:"0" }} <span class="badge-gramos" style="font-size: 11px; opacity: 0.7;">({{ producto.peso_producto }}g)</span>
+                {% if producto.tipo_venta == 'gramo' and producto.precio_por_gramo_detal %}
+                    ${{ producto.precio_por_gramo_detal|floatformat:"0" }} <span style="font-size: 11px; opacity: 0.7;">/g (Detal)</span>
+                <span class="badge-gramos" style="font-size: 11px; opacity: 0.7; display: block; color: #666;">
+                     Peso aprox: {{ producto.peso_producto }}g
+                </span>
                 {% elif producto.precio_detal %}
-                    ${{ producto.precio_detal|floatformat:"0" }}
+                    ${{ producto.precio_detal|floatformat:"0" }} <span style="font-size: 11px; opacity: 0.7;">(Detal)</span>
                 {% else %}
-                    <span style="color: #999; font-size: 14px;">Consultar precio</span>
+                <span style="color: #999; font-size: 14px;">Consultar precio</span>
                 {% endif %}
             </p>
 
@@ -383,15 +387,18 @@ h2 {
             <h4>{{ producto.nombre }}</h4>
             
             <p class="precio">
-                {% if producto.tipo_venta == 'gramo' and producto.precio_detal %}
-                    ${{ producto.precio_detal|floatformat:"0" }} <span class="badge-gramos" style="font-size: 11px; opacity: 0.7;">({{ producto.peso_producto }}g)</span>
+                {% if producto.tipo_venta == 'gramo' and producto.precio_por_gramo_detal %}
+                    ${{ producto.precio_por_gramo_detal|floatformat:"0" }} <span style="font-size: 11px; opacity: 0.7;">/g (Detal)</span>
+                <span class="badge-gramos" style="font-size: 11px; opacity: 0.7; display: block; color: #666;">
+                    Peso aprox: {{ producto.peso_producto }}g
+                </span>
                 {% elif producto.precio_detal %}
-                    ${{ producto.precio_detal|floatformat:"0" }}
+                    ${{ producto.precio_detal|floatformat:"0" }} <span style="font-size: 11px; opacity: 0.7;">(Detal)</span>
                 {% else %}
-                    <span style="color: #999; font-size: 14px;">Consultar precio</span>
+                <span style="color: #999; font-size: 14px;">Consultar precio</span>
                 {% endif %}
             </p>
-
+            
             {% if producto.stock > 10 %}
                 <p class="stock-status stock-ok">✅ Disponible</p>
             {% elif producto.stock > 0 %}
