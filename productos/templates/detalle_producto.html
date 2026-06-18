@@ -444,49 +444,53 @@ function actualizarPrecio(){
 }
 
 // =================================================================
-// 💎 CONFIGURACIÓN DE PRECIOS DINÁMICOS (LÓGICA REAL DE JOYERÍA)
+// 💎 CONFIGURACIÓN DE PRECIOS DINÁMICOS (CON FIX DE DECIMALES)
 // =================================================================
 let tipoVenta = "{{ producto.tipo_venta }}";
-let pesoProducto = parseFloat("{{ producto.peso_producto|default_if_none:0 }}") || 0;
+
+// 🔥 FIX CLAVE: Forzamos el reemplazo de comas por puntos y aseguramos el formato float limpio
+let pesoRaw = "{{ producto.peso_producto|default_if_none:'0' }}".replace(',', '.');
+let pesoProducto = parseFloat(pesoRaw) || 0;
 
 let precioDetal = Number("{{ producto.precio_detal|default:0 }}");
-let precioGramoDetal = parseFloat("{{ producto.precio_por_gramo_detal|default_if_none:0 }}") || 0;
+
+let precioGramoRaw = "{{ producto.precio_por_gramo_detal|default_if_none:'0' }}".replace(',', '.');
+let precioGramoDetal = parseFloat(precioGramoRaw) || 0;
 
 function actualizarPrecio(){
-    // La cantidad siempre representa las piezas físicas (1, 2, 3...)
-    let cantidad = parseFloat(document.getElementById("cantidad").value) || 1;
+    // Captura las unidades de piezas seleccionadas (1, 2, 3...)
+    let cantidadPiezas = parseFloat(document.getElementById("cantidad").value) || 1;
     let subtotal = 0;
 
     if(tipoVenta === "gramo"){
-        // 🛍️ TU MATEMÁTICA REAL: Cantidad de piezas x Peso base de la joya (Ej: 1 x 7.77 = 7.77g)
-        let totalGramos = cantidad * pesoProducto; 
+        // 🛍️ MATEMÁTICA EXACTA: Piezas x Peso Real (Ej: 1 x 7.77 = 7.77)
+        let totalGramos = cantidadPiezas * pesoProducto; 
 
-        // Imprime en el HTML los gramos totales calculados con sus decimales
+        // Ahora sí pintará "7.77" con sus decimales reales en el HTML
         document.getElementById("total-gramos").innerHTML = totalGramos.toFixed(2);
 
-        // Subtotal inicial al detal en pantalla (los descuentos mayoristas se aplican en el carrito)
+        // Subtotal exacto en base a los gramos decimales reales
         subtotal = totalGramos * precioGramoDetal;
 
-        // Muestra el desglose nítido para el cliente (Ej: "7.77g x $18.000")
+        // Desglose nítido en pantalla
         document.getElementById("detalle-calculo").innerHTML =
             totalGramos.toFixed(2) + "g x $" + precioGramoDetal.toLocaleString('es-CO', { maximumFractionDigits: 0 });
 
     } else {
-        // 📦 PRODUCTOS POR UNIDADES FIJAS
-        subtotal = cantidad * precioDetal;
+        // PRODUCTOS POR UNIDADES FIJAS
+        subtotal = cantidadPiezas * precioDetal;
 
         document.getElementById("detalle-calculo").innerHTML =
-            parseInt(cantidad) + " unidades x $" + precioDetal.toLocaleString('es-CO', { maximumFractionDigits: 0 });
+            parseInt(cantidadPiezas) + " unidades x $" + precioDetal.toLocaleString('es-CO', { maximumFractionDigits: 0 });
     }
 
     document.getElementById("mensaje-mayorista").innerHTML =
-        "💡 Descuentos por cantidad (Semi-Mayorista y Mayorista) se calculan automáticamente en el carrito";
+        "💡 Descuentos por cantidad se aplican en el carrito";
 
-    // Pinta el subtotal estético formateado para Colombia
+    // Pinta el subtotal totalizado y formateado correctamente como moneda de Colombia
     document.getElementById("subtotal").innerHTML =
         subtotal ? subtotal.toLocaleString('es-CO', { maximumFractionDigits: 0 }) : "0";
 }
-
 // =================================================================
 // 🔢 CONTROL DE CANTIDAD (PIEZAS FÍSICAS)
 // =================================================================
