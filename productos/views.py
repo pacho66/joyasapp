@@ -1457,7 +1457,9 @@ def comprar_whatsapp(request, producto_id=None):
                     return redirect('ver_carrito')
 
             precio, gramos = calcular_precio_producto(producto, cantidad)
-            precio = Decimal(str(precio))
+            # 🔥 Parche de seguridad: Si el precio es None, lo vuelve 0 antes de convertirlo
+            precio_seguro = precio if precio is not None else 0
+            precio = Decimal(str(precio_seguro))
 
             if gramos:
                 subtotal = Decimal(str(gramos)) * precio
@@ -1635,20 +1637,26 @@ def pagar_pedido(request):
         cantidad_fisica = Decimal(str(item.cantidad or 1))
         
         if item.producto.tipo_venta == 'gramo':
-            precio_base = Decimal(str(item.producto.precio_por_gramo_detal or 0))
+            val_precio = Decimal(str(item.producto.precio_por_gramo_detal or 0))
             peso_base = Decimal(str(item.producto.peso_producto or 0))
             gramos_totales = cantidad_fisica * peso_base
-            subtotal_item = gramos_totales * precio_base
-            precio_aplicado = precio_base
+            subtotal_item = gramos_totales * val_precio
+            precio_aplicado = val_precio
         else:
+            # Productos por unidad fija
             try:
-                precio_base = Decimal(str(item.producto.precio_por_cantidad(item.cantidad)))
+                precio_por_escala = item.producto.precio_por_cantidad(item.cantidad)
+                # 🔥 Si el método devuelve None, usamos el precio detal o 0
+                if precio_por_escala is None:
+                    precio_por_escala = item.producto.precio_detal or 0
+                val_precio = Decimal(str(precio_por_escala))
             except Exception:
-                precio_base = Decimal(str(item.producto.precio_detal or 0))
+                val_precio = Decimal(str(item.producto.precio_detal or 0))
+            
             gramos_totales = Decimal('0.00')
-            subtotal_item = cantidad_fisica * precio_base
-            precio_aplicado = precio_base
-
+            subtotal_item = cantidad_fisica * val_precio
+            precio_aplicado = val_precio
+        
         subtotal_general += subtotal_item
         
         # Guardamos los datos calculados temporalmente en una lista
