@@ -4,6 +4,7 @@ import uuid
 import urllib.parse
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
+from io import BytesIO
 from urllib.parse import quote
 
 import stripe
@@ -1362,14 +1363,13 @@ def eliminar_del_carrito(request, item_id):
     messages.success(request, f"Se eliminó '{nombre_producto}' del carrito.")
     return redirect('ver_carrito')
 
+@login_required
 @transaction.atomic
 def comprar_whatsapp(request, producto_id=None):
     """
     Vista única para procesar compras de WhatsApp mediante POST seguro.
-    Si recibe 'producto_id', es una compra directa ("Comprar ya").
-    Si NO lo recibe, procesa todo el carrito de compras.
+    Sincronizada con el modelo real de Pedido y PedidoItem.
     """
-    # 🔥 SEGURIDAD CRÍTICA: Bloqueamos peticiones GET para evitar fugas de información
     if request.method != "POST":
         messages.error(request, "Acceso no autorizado.")
         return redirect('ver_carrito')
@@ -1379,14 +1379,13 @@ def comprar_whatsapp(request, producto_id=None):
     es_compra_directa = producto_id is not None
 
     # =========================================================
-    # 🛒 PASO 1: DETECTAR EL MODO DE ENTRADA (DIRECTO O CARRITO)
+    # 🛒 PASO 1: MODO DE ENTRADA (DIRECTO O CARRITO)
     # =========================================================
     if es_compra_directa:
         producto = get_object_or_404(Producto, id=producto_id)
         usuario = producto.usuario  
 
         try:
-            # En compra directa (ej. un modal POST), los datos vienen en request.POST
             cantidad = int(request.POST.get('cantidad', 1))
         except ValueError:
             cantidad = 1
@@ -1407,13 +1406,13 @@ def comprar_whatsapp(request, producto_id=None):
                 return redirect('detalle_producto', id=producto.id, slug=producto.slug)
 
         precio, gramos = calcular_precio_producto(producto, cantidad)
-        precio = Decimal(precio)
+        precio = Decimal(str(precio))
 
         if gramos:
-            subtotal = Decimal(gramos) * precio
+            subtotal = Decimal(str(gramos)) * precio
             linea = f"{producto.nombre} ({gramos}g)"
         else:
-            subtotal = Decimal(cantidad) * precio
+            subtotal = Decimal(str(cantidad)) * precio
             linea = f"{producto.nombre} x{cantidad}"
 
         resumen_items.append({
@@ -1449,7 +1448,6 @@ def comprar_whatsapp(request, producto_id=None):
                 messages.warning(request, "Producto inválido en el carrito.")
                 return redirect('ver_carrito')
 
-            # Validar Stock
             if variante:
                 if variante.stock < cantidad:
                     messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
@@ -1460,13 +1458,13 @@ def comprar_whatsapp(request, producto_id=None):
                     return redirect('ver_carrito')
 
             precio, gramos = calcular_precio_producto(producto, cantidad)
-            precio = Decimal(precio)
+            precio = Decimal(str(precio))
 
             if gramos:
-                subtotal = Decimal(gramos) * precio
+                subtotal = Decimal(str(gramos)) * precio
                 linea = f"{producto.nombre} ({gramos}g)"
             else:
-                subtotal = Decimal(cantidad) * precio
+                subtotal = Decimal(str(cantidad)) * precio
                 linea = f"{producto.nombre} x{cantidad}"
 
             resumen_items.append({
@@ -1481,29 +1479,28 @@ def comprar_whatsapp(request, producto_id=None):
             })
 
     # =========================================================
-    # 📊 PASO 2: CAPTURA SEGURA DE DATOS DESDE POST
+    # 📊 PASO 2: CAPTURA SEGURA Y MODELADO REAL
     # =========================================================
     numero = generar_numero_orden(usuario)
 
-    # Captura limpia de los checkboxes y campos del formulario
     aplica_iva = request.POST.get('aplica_iva') == 'on'
     es_retenedor = request.POST.get('es_retenedor') == 'on'
-    valor_descuento = request.POST.get('descuento', '0')
+    valor_descuento = request.POST.get('descuento', '0') # Respaldo si no viene en el HTML
 
     try:
-        porcentaje_descuento = Decimal(valor_descuento)
+        porcentaje_descuento = Decimal(str(valor_descuento))
     except:
         porcentaje_descuento = Decimal('0')
 
     porcentaje_descuento = max(Decimal('0'), min(Decimal('100'), porcentaje_descuento))
 
-    # Datos del cliente protegidos que ya no viajan expuestos en la URL
-    cliente_nombre = request.POST.get('nombre', '').strip()
-    cliente_telefono = request.POST.get('telefono', '').strip()
-    cliente_email = request.POST.get('email', '').strip()
-    cliente_ciudad = request.POST.get('ciudad', '').strip()
-    cliente_direccion = request.POST.get('direccion', '').strip()
-    cliente_nit = request.POST.get('nit', '').strip()
+    # Captura limpia mapeada con los inputs reales de tu formulario
+    nombre_cliente = request.POST.get('nombre', '').strip()
+    telefono_cliente = request.POST.get('telefono', '').strip()
+    cliente_email = request.POST.get('email', '').strip() or request.user.email # Fallback seguro al email del usuario
+    ciudad_destino = request.POST.get('ciudad', '').strip()
+    direccion_entrega = request.POST.get('direccion', '').strip()
+    nit = request.POST.get('nit', '').strip()
 
     # Cálculo de Totales
     subtotal_general = Decimal('0')
@@ -1516,10 +1513,10 @@ def comprar_whatsapp(request, producto_id=None):
     iva = subtotal_con_descuento * Decimal('0.19') if aplica_iva else Decimal('0')
     retefuente = subtotal_con_descuento * Decimal('0.025') if es_retenedor else Decimal('0')
     
-    costo_envio = calcular_envio(cliente_ciudad, subtotal_con_descuento)
+    costo_envio = calcular_envio(ciudad_destino, subtotal_con_descuento)
     total_final = subtotal_con_descuento + iva - retefuente + costo_envio
 
-    # Guardado en base de datos local (Información protegida)
+    # 🔥 FIX 1: Cambiados los atributos a los nombres reales de tu base de datos
     pedido = Pedido.objects.create(
         usuario=usuario,
         numero_orden=numero,
@@ -1527,13 +1524,14 @@ def comprar_whatsapp(request, producto_id=None):
         aplica_iva=aplica_iva,
         porcentaje_descuento=porcentaje_descuento,
         es_retenedor=es_retenedor,
-        cliente_nombre=cliente_nombre,
-        cliente_telefono=cliente_telefono,
+        nombre_cliente=nombre_cliente,
+        telefono_cliente=telefono_cliente,
         cliente_email=cliente_email,
-        cliente_ciudad=cliente_ciudad,
-        cliente_direccion=cliente_direccion,
-        cliente_nit=cliente_nit,
+        ciudad_destino=ciudad_destino,
+        direccion_entrega=direccion_entrega,
+        nit=nit,
         costo_envio=costo_envio,
+        estado="pendiente_pago"
     )
 
     # Registrar los productos asociados al pedido (PedidoItem)
@@ -1547,8 +1545,8 @@ def comprar_whatsapp(request, producto_id=None):
             pedido=pedido,
             producto=data['producto'],
             variante=data['variante'],
-            cantidad=data['cantidad'],
-            total_gramos=data['total_gramos'], # Sincronizado para control de gramos
+            cantidad=int(data['cantidad']),
+            total_gramos=Decimal(str(data['total_gramos'])), 
             precio=data['precio'],
             subtotal=subtotal,
             iva=iva_item,
@@ -1564,21 +1562,17 @@ def comprar_whatsapp(request, producto_id=None):
             data['producto'].stock -= data['cantidad']
             data['producto'].save()
 
-    
     # =========================================================
     # 🔗 PASO 3: ENLACE SEGURO Y MENSAJE DE WHATSAPP
     # =========================================================
-    # Generamos la URL absoluta usando el token_publico único del pedido
     domain = get_current_site(request).domain
-    
-    # Sincronizado con tu ruta: path('factura/<uuid:token>/', views.factura_publica, name='factura_publica')
     url_factura = f"https://{domain}{reverse('factura_publica', kwargs={'token': pedido.token_publico})}"
 
-    # Construimos el mensaje elegante, corto y profesional
+    # Mensaje formateado elegantemente en pesos COP sin decimales molestos
     mensaje = (
         f"🛍️ ¡Hola! Acabo de confirmar mi pedido.\n\n"
         f"📦 Orden N°: {pedido.numero_orden}\n"
-        f"👤 Cliente: {cliente_nombre}\n"
+        f"👤 Cliente: {nombre_cliente}\n"
         f"💰 Total Neto: ${total_final:,.0f}\n\n"
         f"📄 Ver detalles y datos de facturación aquí:\n{url_factura}\n\n"
         f"Quedo atento a tus indicaciones para realizar el pago. ¡Muchas gracias!"
@@ -1589,14 +1583,11 @@ def comprar_whatsapp(request, producto_id=None):
         messages.warning(request, "El comercio no tiene configurado WhatsApp.")
         return redirect('ver_carrito') if not es_compra_directa else redirect('detalle_producto', id=producto.id, slug=producto.slug)
 
-    # Codificamos el mensaje de forma segura para la URL de WhatsApp
     url_whatsapp_final = f"https://wa.me/{perfil.whatsapp}?text={urllib.parse.quote(mensaje)}"
 
-    # Limpiar el carrito si es una compra regular exitosa
     if not es_compra_directa and items_carrito:
         items_carrito.delete()
 
-    # Redirección final directa al chat de WhatsApp
     return redirect(url_whatsapp_final)
 
 @transaction.atomic
@@ -2251,7 +2242,6 @@ def factura_publica(request, token):
 
     return render(request, 'factura_publica.html', context)
 
-
 @login_required
 def generar_factura(request, pedido_id):
     pedido = get_object_or_404(
@@ -2262,7 +2252,6 @@ def generar_factura(request, pedido_id):
 
     items = pedido.items.select_related('producto', 'variante').all()
 
-    from io import BytesIO
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=letter)
 
@@ -2278,33 +2267,22 @@ def generar_factura(request, pedido_id):
     # HEADER
     # ==================================
     correo_empresa = (
-    getattr(request.user.perfil, 'email_empresa', None)
-    or request.user.email
-    or 'correo@empresa.com'
-)
+        getattr(request.user.perfil, 'email_empresa', None)
+        or request.user.email
+        or 'correo@empresa.com'
+    )
 
     def draw_header():
         y = 760
 
-        # ==================================
-        # 🔥 CORREO DINÁMICO SaaS
-        # ==================================
-        email_empresa = (
-        getattr(request.user.perfil, 'email_empresa', None)
-            or request.user.email
-            or 'correo@empresa.com'
-        )
-        # ==================================
-        # EMPRESA
-        # ==================================
-
+        # EMPRESA (Dueño del SaaS)
         p.setFont("Helvetica-Bold", 16)
         p.drawString(50, y, request.user.perfil.nombre_tienda or "Mi Empresa")
 
         p.setFont("Helvetica", 9)
         p.drawString(50, y - 15, f"NIT: {request.user.perfil.nit or ''}")
         p.drawString(50, y - 28, f"Tel: {request.user.perfil.whatsapp or ''}")
-        p.drawString(50, y - 41, f"Email: {email_empresa}")
+        p.drawString(50, y - 41, f"Email: {correo_empresa}")
         p.drawString(50, y - 54, f"{request.user.perfil.ciudad or ''}")
 
         # FACTURA DERECHA
@@ -2317,21 +2295,21 @@ def generar_factura(request, pedido_id):
         fecha = pedido.fecha.strftime('%Y-%m-%d') if pedido.fecha else ''
         p.drawString(390, y - 33, f"Fecha: {fecha}")
 
-        if getattr(pedido, "es_credito", False):
+        # 🔥 FIX 3: Mapeo correcto del tipo de pago basado en tu modelo original
+        if getattr(pedido, 'tipo_pago', 'contado') == 'credito':
             p.drawString(390, y - 48, "Pago: Crédito")
         else:
             p.drawString(390, y - 48, "Pago: Contado")
 
         p.line(50, y - 65, 550, y - 65)
 
-        # CLIENTE
+        # CLIENTE (🔥 FIX 1: Nombres de atributos reales de tu modelo de Despacho)
         yc = y - 85
-
-        p.drawString(50, yc, f"Cliente: {pedido.cliente_nombre or ''}")
-        p.drawString(50, yc - 14, f"NIT: {pedido.cliente_nit or ''}")
-        p.drawString(50, yc - 28, f"Dirección: {pedido.cliente_direccion or ''}")
-        p.drawString(50, yc - 42, f"Ciudad: {pedido.cliente_ciudad or ''}")
-        p.drawString(50, yc - 56, f"Teléfono: {pedido.cliente_telefono or ''}")
+        p.drawString(50, yc, f"Cliente: {getattr(pedido, 'nombre_cliente', '') or ''}")
+        p.drawString(50, yc - 14, f"NIT: {getattr(pedido, 'nit', '') or ''}")
+        p.drawString(50, yc - 28, f"Dirección: {getattr(pedido, 'direccion_entrega', '') or ''}")
+        p.drawString(50, yc - 42, f"Ciudad: {getattr(pedido, 'ciudad_destino', '') or ''}")
+        p.drawString(50, yc - 56, f"Teléfono: {getattr(pedido, 'telefono_cliente', '') or ''}")
 
     # ==================================
     # FOOTER
@@ -2354,16 +2332,13 @@ def generar_factura(request, pedido_id):
         p.line(50, y - 5, 550, y - 5)
         return y - 20
 
-    # ==================================
-    # NUEVA PAGINA
-    # ==================================
     def nueva_pagina():
         p.showPage()
         draw_header()
         return draw_table_header(560)
 
     # ==================================
-    # INICIO
+    # INICIO RENDERIZADO PDF
     # ==================================
     draw_header()
     y = draw_table_header(560)
@@ -2374,49 +2349,47 @@ def generar_factura(request, pedido_id):
     retefuente_total = Decimal('0')
 
     # ==================================
-    # ITEMS
+    # ITEMS BUCLE
     # ==================================
     for item in items:
-
         if y < 100:
             draw_footer()
             y = nueva_pagina()
 
         nombre = item.producto.nombre[:28]
 
-        if getattr(item, 'gramos', None):
-            cantidad = f"{item.gramos}g"
+        # 🔥 FIX 2: Sincronización con 'total_gramos' para el inventario de joyas
+        gramos = getattr(item, 'total_gramos', None)
+        if gramos and gramos > 0:
+            cantidad = f"{gramos}g"
         else:
-            cantidad = str(item.cantidad)
+            cantidad = str(item.cantidad or 1)
 
-        precio = Decimal(item.precio or 0)
-        total_item = Decimal(item.total_final or item.subtotal or 0)
+        precio = Decimal(str(item.precio or 0))
+        total_item = Decimal(str(item.total_final or item.subtotal or 0))
 
         p.setFont("Helvetica", 9)
-
         p.drawString(50, y, nombre)
         p.drawString(250, y, cantidad)
         p.drawRightString(390, y, f"${precio:,.0f}".replace(",", "."))
         p.drawRightString(540, y, f"${total_item:,.0f}".replace(",", "."))
 
-        subtotal_general += Decimal(item.subtotal or 0)
-        iva_total += Decimal(item.iva or 0)
-        descuento_total += Decimal(item.descuento or 0)
-        retefuente_total += Decimal(item.retefuente or 0)
+        subtotal_general += Decimal(str(item.subtotal or 0))
+        iva_total += Decimal(str(item.iva or 0))
+        descuento_total += Decimal(str(item.descuento or 0))
+        retefuente_total += Decimal(str(item.retefuente or 0))
 
         y -= LINE_HEIGHT
 
     # ==================================
-    # TOTALES
+    # TOTALES SECCIÓN
     # ==================================
     y -= 20
-
     if y < 160:
         draw_footer()
         y = nueva_pagina()
 
     p.setFont("Helvetica", 10)
-
     p.drawString(340, y, "Subtotal:")
     p.drawRightString(540, y, f"${subtotal_general:,.0f}".replace(",", "."))
 
@@ -2438,65 +2411,50 @@ def generar_factura(request, pedido_id):
     y -= 15
     p.drawString(340, y, "Envío:")
 
-    if Decimal(getattr(pedido, 'costo_envio', 0)) == 0:
+    # 🔥 FIX 4: Forzar conversión limpia a Decimal para el costo de envío
+    costo_envio_num = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
+    if costo_envio_num == 0:
         p.drawRightString(540, y, "GRATIS")
     else:
-        p.drawRightString(
-            540,
-            y,
-            f"${pedido.costo_envio:,.0f}".replace(",", ".")
-        )
+        p.drawRightString(540, y, f"${costo_envio_num:,.0f}".replace(",", "."))
 
     y -= 22
     p.setFont("Helvetica-Bold", 12)
     p.drawString(340, y, "TOTAL:")
-    p.drawRightString(
-        540,
-        y,
-        f"${Decimal(pedido.total):,.0f}".replace(",", ".")
-    )
+    
+    total_calculado_pdf = (subtotal_general - descuento_total) + iva_total - retefuente_total + costo_envio_num
+
+    p.drawRightString(540, y, f"${total_calculado_pdf:,.0f}".replace(",", "."))
 
     draw_footer()
 
     # ==================================
-    # FINALIZAR PDF
+    # FINALIZAR Y ENVIAR
     # ==================================
     p.save()
     pdf = buffer.getvalue()
     buffer.close()
 
-    # ==================================
-    # ENVIAR EMAIL
-    # ==================================
-    if pedido.cliente_email:
+    # Envío de correo electrónico automático (Mantiene tu lógica limpia)
+    # 🔥 Captura segura usando el email del cliente del formulario
+    email_cliente = getattr(pedido, 'cliente_email', None) or getattr(pedido, 'email', None)
+    if email_cliente:
         try:
             email = EmailMessage(
                 subject=f"Factura {pedido.numero_orden}",
                 body="Gracias por tu compra 💎 Adjuntamos tu factura.",
                 from_email=correo_empresa,
-                to=[pedido.cliente_email]
-        )
-
-            email.attach(
-                f"factura_{pedido.numero_orden}.pdf",
-                pdf,
-                'application/pdf'
-        )
-
+                to=[email_cliente]
+            )
+            email.attach(f"factura_{pedido.numero_orden}.pdf", pdf, 'application/pdf')
             email.send()
-
         except Exception as e:
             print("Error enviando correo:", e)
 
-    # ==================================
-    # RESPUESTA
-    # ==================================
     response = HttpResponse(pdf, content_type='application/pdf')
-    response['Content-Disposition'] = (
-        f'inline; filename="factura_{pedido.numero_orden}.pdf"'
-    )
-
+    response['Content-Disposition'] = f'inline; filename="factura_{pedido.numero_orden}.pdf"'
     return response
+
 
 @login_required
 def whatsapp_segmento(request):

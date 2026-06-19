@@ -277,169 +277,176 @@
 {% if items %}
 
 <form method="POST" action="{% url 'comprar_whatsapp' %}" id="form-compra-carrito">  
-        {% csrf_token %}
-        
-        <table class="tabla-carrito">
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Precio</th>
-                    <th style="text-align: center;">Cantidad</th>
-                    <th>Subtotal</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in items %}
-                <tr>
-                    <td>
-                        <div class="prod-info">
-                            {% if item.variante and item.variante.imagen and item.variante.imagen.url %}
-                                <img src="{{ item.variante.imagen.url }}" class="prod-img" alt="{{ item.producto.nombre }}">
-                                {% elif item.producto and item.producto.imagen_principal and item.producto.imagen_principal.url %}
-                                <img src="{{ item.producto.imagen_principal.url }}" class="prod-img" alt="{{ item.producto.nombre }}">
-                            {% else %}
-                            <div class="prod-img" style="background: #f1f3f5; display: flex; align-items: center; justify-content: center; font-size: 22px; border-radius: 6px; border: 1px solid #eee; width: 70px; height: 70px;">
-                                💎
-                            </div>
-                            {% endif %}
-
-                            <div class="prod-detalles">
-                                <strong>{{ item.producto.nombre }}</strong>
-                                <div class="prod-meta">
-                                    {% if item.variante %}
-                                        {% if item.variante.color %}<span>Color: {{ item.variante.color }}</span>{% endif %}
-                                        {% if item.variante.talla %}<span> | Talla: {{ item.variante.talla }}</span>{% endif %}
-                                    {% else %}
-                                        {% if item.color %}<span>Color: {{ item.color }}</span>{% endif %}
-                                        {% if item.talla %}<span> | Talla: {{ item.talla }}</span>{% endif %}
-                                    {% endif %}
-                                    <span style="display: block; color: #888;">Ref: {{ item.producto.referencia }}</span>
-                                </div>
-        
-                                {% if item.producto.stock > 10 %}
-                                    <span class="tag-stock" style="background: #e6f4ea; color: #137333;">✅ Disponible</span>
-                                {% elif item.producto.stock > 0 %}
-                                    <span class="tag-stock" style="background: #fef7e0; color: #b06000;">⚠️ Últimas {{ item.producto.stock }} unds</span>
-                                {% else %}
-                                    <span class="tag-stock" style="background: #fce8e6; color: #c5221f;">❌ Agotado</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                    <td>
-                        <div class="precio-antiguo">
-                            {% if item.producto.tipo_venta == "gramo" %}
-                                $ {{ item.producto.precio_por_gramo_detal|default:0|moneda }}
-                            {% else %}
-                                $ {{ item.producto.precio_detal|default:0|moneda }}
-                            {% endif %}
-                        </div>
-                        <div class="precio-actual">
-                            $ {{ item.precio_applied|default:item.precio_aplicado|moneda }}{% if item.producto.tipo_venta == "gramo" %}/g{% endif %}
-                        </div>
-                        <small style="color: #666; font-size: 11px; display: block; margin-top: 2px;">
-                            {{ item.tipo_precio }}
-                        </small>
-                    </td>
-
-                    <td>
-                        <div class="controles-cantidad">
-                            <a href="{% url 'disminuir_cantidad' item.id %}" class="btn-cant">-</a>
-                            <span class="num-cant">{{ item.cantidad }}</span>
-                            <a href="{% url 'aumentar_cantidad' item.id %}" class="btn-cant">+</a>
-                        </div>
-                    </td>
-
-                    <td>
-                        <span style="font-weight: 600; font-size: 15px; color: #111;">
-                            ${{ item.subtotal_calculado|moneda }}
-                        </span>
-                        {% if item.producto.tipo_venta == "gramo" %}
-                            <br><small style="color: #666; font-size: 11px;">{{ item.total_gramos|floatformat:2 }} g</small>
+    {% csrf_token %}
+    
+    <table class="tabla-carrito">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Precio</th>
+                <th style="text-align: center;">Cantidad</th>
+                <th>Subtotal</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>
+                    <div class="prod-info">
+                        {% if item.variante and item.variante.imagen and item.variante.imagen.url %}
+                            <img src="{{ item.variante.imagen.url }}" class="prod-img" alt="{{ item.producto.nombre }}">
+                        {% elif item.producto and item.producto.imagen_principal and item.producto.imagen_principal.url %}
+                            <img src="{{ item.producto.imagen_principal.url }}" class="prod-img" alt="{{ item.producto.nombre }}">
+                        {% else %}
+                            <div class="prod-img" style="background: #f1f3f5; display: flex; align-items: center; justify-content: center; font-size: 22px; border-radius: 6px; border: 1px solid #eee; width: 70px; height: 70px;">💎</div>
                         {% endif %}
-                    </td>
 
-                    <td style="text-align: center;">
-                        <a href="{% url 'eliminar_del_carrito' item.id %}" class="btn-eliminar">Eliminar</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        <div class="prod-detalles">
+                            <strong>{{ item.producto.nombre }}</strong>
+                            <div class="prod-meta">
+                                {% if item.variante %}
+                                    {% if item.variante.color %}<span>Color: {{ item.variante.color }}</span>{% endif %}
+                                    {% if item.variante.talla %}<span> | Talla: {{ item.variante.talla }}</span>{% endif %}
+                                {% else %}
+                                    {% if item.color %}<span>Color: {{ item.color }}</span>{% endif %}
+                                    {% if item.talla %}<span> | Talla: {{ item.talla }}</span>{% endif %}
+                                {% endif %}
+                                <span style="display: block; color: #888;">Ref: {{ item.producto.referencia }}</span>
+                            </div>
+    
+                            {% if item.producto.stock > 10 %}
+                                <span class="tag-stock" style="background: #e6f4ea; color: #137333;">✅ Disponible</span>
+                            {% elif item.producto.stock > 0 %}
+                                <span class="tag-stock" style="background: #fef7e0; color: #b06000;">⚠️ Últimas {{ item.producto.stock }} unds</span>
+                            {% else %}
+                                <span class="tag-stock" style="background: #fce8e6; color: #c5221f;">❌ Agotado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </td> <td>
+                    <div class="precio-antiguo">
+                        {% if item.producto.tipo_venta == "gramo" %}
+                            $ {{ item.producto.precio_por_gramo_detal|default:0|moneda }}
+                        {% else %}
+                            $ {{ item.producto.precio_detal|default:0|moneda }}
+                        {% endif %}
+                    </div>
+                    <div class="precio-actual">
+                        $ {{ item.precio_applied|default:item.precio_aplicado|moneda }}{% if item.producto.tipo_venta == "gramo" %}/g{% endif %}
+                    </div>
+                    <small style="color: #666; font-size: 11px; display: block; margin-top: 2px;">
+                        {{ item.tipo_precio }}
+                    </small>
+                </td>
 
-        <div class="resumen-total">
-            <h3>Total del Pedido:</h3>
-            <span style="font-size: 22px; font-weight: 600;">${{ total|moneda }}</span>
+                <td>
+                    <div class="controles-cantidad">
+                        <a href="{% url 'disminuir_cantidad' item.id %}" class="btn-cant">-</a>
+                        <span class="num-cant">{{ item.cantidad }}</span>
+                        <a href="{% url 'aumentar_cantidad' item.id %}" class="btn-cant">+</a>
+                    </div>
+                </td>
+
+                <td>
+                    <span style="font-weight: 600; font-size: 15px; color: #111;">
+                        ${{ item.subtotal_calculado|moneda }}
+                    </span>
+                    {% if item.producto.tipo_venta == "gramo" %}
+                        <br><small style="color: #666; font-size: 11px;">{{ item.total_gramos|floatformat:2 }} g</small>
+                    {% endif %}
+                </td>
+
+                <td style="text-align: center;">
+                    <a href="{% url 'eliminar_del_carrito' item.id %}" class="btn-eliminar">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="resumen-total">
+        <h3>Total del Pedido:</h3>
+        <span style="font-size: 22px; font-weight: 600;">${{ total|moneda }}</span>
+    </div>
+
+    <div class="panel-facturacion">
+        <h4 class="facturacion-titulo">📋 Datos de Despacho y Facturación</h4>
+
+        <div class="grid-formulario">
+            <label class="campo-completo">
+                Nombre Completo: <span style="color:red;">*</span>
+                <input type="text" name="nombre" required placeholder="Ej: Juan Pérez" class="input-SaaS">
+            </label>
+            <label class="campo-completo">
+                Teléfono de Contacto: <span style="color:red;">*</span>
+                <input type="text" name="telefono" required placeholder="Ej: 3123456789" class="input-SaaS">
+            </label>
         </div>
 
-        <div class="panel-facturacion">
-            <h4 class="facturacion-titulo">📋 Datos de Despacho y Facturación</h4>
-
-            <div class="grid-formulario">
-                <label class="campo-completo">
-                    Nombre Completo: <span style="color:red;">*</span>
-                    <input type="text" name="nombre" required placeholder="Ej: Juan Pérez" class="input-SaaS">
-                </label>
-                <label class="campo-completo">
-                    Teléfono de Contacto: <span style="color:red;">*</span>
-                    <input type="text" name="telefono" required placeholder="Ej: 3123456789" class="input-SaaS">
-                </label>
-            </div>
-
-            <div class="grid-formulario">
-                <label class="campo-completo">
-                    Ciudad de Destino: <span style="color:red;">*</span>
-                    <input type="text" name="ciudad" required placeholder="Ej: Bogotá" class="input-SaaS">
-                </label>
-                <label class="campo-completo">
-                    Dirección de Entrega: <span style="color:red;">*</span>
-                    <input type="text" name="direccion" required placeholder="Calle 10 # 4-50" class="input-SaaS">
-                </label>
-            </div>
-
-            <div class="opciones-fiscales">
-                <h5 style="margin: 0 0 12px 0; color: #6c757d; font-size: 12px; font-weight: 600; text-transform: uppercase;">Impuestos y Régimen Fiscal (Opcional Mayoristas)</h5>
-                
-                <div class="fiscales-flex">
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="aplica_iva"> Aplicar IVA (19%)
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="es_retenedor"> Cliente Retenedor (Aplica retefuente)
-                    </label>
-                    <label style="font-size: 13px; color: #495057;">
-                        NIT / CC: 
-                        <input type="text" name="nit" placeholder="Opcional" class="input-SaaS" style="width: 140px; display: inline-block; margin-top: 0; padding: 6px 10px;">
-                    </label>
-                </div>
-            </div>
+        <div class="grid-formulario">
+            <label class="campo-completo">
+                Ciudad de Destino: <span style="color:red;">*</span>
+                <input type="text" name="ciudad" required placeholder="Ej: Bogotá" class="input-SaaS">
+            </label>
+            <label class="campo-completo">
+                Dirección de Entrega: <span style="color:red;">*</span>
+                <input type="text" name="direccion" required placeholder="Calle 10 # 4-50" class="input-SaaS">
+            </label>
         </div>
 
-        <button type="submit" class="btn-principal">
-            📱 Confirmar Pedido por WhatsApp
-        </button>
-    </form>
+        <div class="opciones-fiscales">
+            <h5 style="margin: 0 0 12px 0; color: #6c757d; font-size: 12px; font-weight: 600; text-transform: uppercase;">Impuestos y Régimen Fiscal (Opcional Mayoristas)</h5>
+            
+            <div class="fiscales-flex">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="aplica_iva"> Aplicar IVA (19%)
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" name="es_retenedor"> Cliente Retenedor (Aplica retefuente)
+                </label>
+                <label style="font-size: 13px; color: #495057;">
+                    NIT / CC: 
+                    <input type="text" name="nit" placeholder="Opcional" class="input-SaaS" style="width: 140px; display: inline-block; margin-top: 0; padding: 6px 10px;">
+                </label>
+                <label style="font-size: 13px; color: #495057; margin-left: 10px;">
+                    % Descuento: 
+                    <input type="number" name="descuento" min="0" max="100" placeholder="0" class="input-SaaS" style="width: 70px; display: inline-block; margin-top: 0; padding: 6px 10px;">
+                </label>
+            </div>
+        </div>
+    
+        <div style="margin-top: 25px; display: flex; flex-direction: column; gap: 12px;">
+            <button type="submit" class="btn-principal">
+                📱 Confirmar Pedido por WhatsApp
+            </button>
 
-<div style="margin-top: 15px; display: flex; gap: 10px;">
-    <form method="GET" action="{% url 'pagar_pedido' %}" style="margin: 0;">
-        <button type="submit" style="background:#007bff; color:white; padding:11px 20px; border-radius:6px; border:none; font-weight:bold; cursor:pointer;">
-            💳 Pagar ahora
-        </button>
-    </form>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button type="button" onclick="enviarAPagar()" style="background:#007bff; color:white; padding:11px 20px; border-radius:6px; border:none; font-weight:bold; cursor:pointer; flex: 1;">
+                    💳 Pagar ahora
+                </button>
 
-    <a href="/" style="background:#444; color:white; padding:11px 18px; border-radius:6px; text-decoration:none; font-weight: bold; font-size: 13px; display: inline-block;">
-        Seguir comprando
-    </a>
-</div>
-
-<a href="#" id="whatsapp-flotante" style="position: fixed; bottom: 20px; right: 20px; background: #25D366; color: white; padding: 12px 20px; border-radius: 30px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 999; display: flex; align-items: center; gap: 5px; font-size: 14px;">
+                <a href="/" style="background:#444; color:white; padding:11px 18px; border-radius:6px; text-decoration:none; font-weight: bold; font-size: 13px; display: inline-block; text-align: center;">
+                    Seguir comprando
+                </a>
+            </div>
+        </div>
+    </div> </form> <a href="#" id="whatsapp-flotante" style="position: fixed; bottom: 20px; right: 20px; background: #25D366; color: white; padding: 12px 20px; border-radius: 30px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 999; display: flex; align-items: center; gap: 5px; font-size: 14px;">
     📱 WhatsApp - <span id="whatsapp-info">0 piezas - $0</span>
 </a>
 
 <script type="application/json" id="carrito-data">{{ carrito_json|safe }}</script>
 
 <script>
+// La lógica JS se mantiene idéntica para controlar los desvíos POST
+function enviarAPagar() {
+    const formulario = document.getElementById("form-compra-carrito");
+    if (formulario.reportValidity()) {
+        formulario.action = "{% url 'pagar_pedido' %}";
+        formulario.submit();
+    }
+}
+
 document.addEventListener("DOMContentLoaded", function() {
     const jsonText = document.getElementById("carrito-data").textContent;
     if(!jsonText.trim()) return;
@@ -457,21 +464,19 @@ document.addEventListener("DOMContentLoaded", function() {
         subtotalDinamico += parseFloat(item.subtotal || 0);
     });
 
-    // Sincronización perfecta usando formato nativo en pesos de Colombia (es-CO)
     info.textContent = totalArticulosFisicos + " piezas - $" + subtotalDinamico.toLocaleString('es-CO', { maximumFractionDigits: 0 });
 
-    // Si dan clic al botón flotante móvil, gatilla la validación HTML5 required del formulario
     boton.addEventListener("click", function(e) {
         e.preventDefault(); 
         if (totalArticulosFisicos > 0) {
-            formulario.reportValidity(); // Verifica que los campos requeridos estén completos antes de mandar
+            formulario.action = "{% url 'comprar_whatsapp' %}";
+            formulario.reportValidity();
             if (formulario.checkValidity()) {
                 formulario.submit(); 
             }
         }
     });
 
-    // Control visual del estado del botón flotante
     if (totalArticulosFisicos === 0) {
         boton.style.opacity = "0.5";
         boton.style.pointerEvents = "none";
