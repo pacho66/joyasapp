@@ -5,6 +5,7 @@ from django.utils.text import slugify
 import uuid
 from cloudinary.models import CloudinaryField
 import random
+from decimal import Decimal
 
 class Perfil(models.Model):
     PLANES = [
@@ -237,26 +238,54 @@ class CarritoItem(models.Model):
     color = models.CharField(max_length=50, null=True, blank=True)
     talla = models.CharField(max_length=50, null=True, blank=True)
 
+    def precio_aplicado(self):
+        """
+        Retorna el precio unitario correcto (por gramo o por escala de unidad).
+        """
+        if self.producto.tipo_venta == 'gramo':
+            # Usa el precio por gramo original configurado en el producto
+            return Decimal(str(self.producto.precio_por_gramo_detal or 0))
+        
+        # Productos por unidad: usa tus escalas y rescata con precio_detal si falla o da None
+        try:
+            precio = self.producto.precio_por_cantidad(self.cantidad)
+            if precio is None:
+                precio = self.producto.precio_detal or 0
+            return Decimal(str(precio))
+        except Exception:
+            return Decimal(str(self.producto.precio_detal or 0))
+
     def subtotal(self):
-        precio = self.producto.precio_por_cantidad(self.cantidad)
+        """
+        Calcula el subtotal real multiplicando por gramos o por unidades fijas.
+        """
+        precio = self.precio_aplicado()
+        cantidad_val = Decimal(str(self.cantidad or 1))
 
         if self.producto.tipo_venta == 'gramo':
-            total_gramos = self.cantidad * (self.producto.peso_producto or 1)
+            peso_val = Decimal(str(self.producto.peso_producto or 0))
+            total_gramos = cantidad_val * peso_val
             return total_gramos * precio
 
-        return self.cantidad * precio
-
-    def precio_aplicado(self):
-        return self.producto.precio_por_cantidad(self.cantidad)
+        return cantidad_val * precio
 
     def ahorro(self):
+        """
+        Calcula cuánto se está ahorrando el cliente según el tipo de venta.
+        """
+        precio_act = self.precio_aplicado()
+        cantidad_val = Decimal(str(self.cantidad or 1))
+
         if self.producto.tipo_venta == 'gramo':
-            total_gramos = self.cantidad * (self.producto.peso_producto or 1)
-            return (self.producto.precio_por_gramo_detal - self.precio_aplicado()) * total_gramos
+            peso_val = Decimal(str(self.producto.peso_producto or 0))
+            total_gramos = cantidad_val * peso_val
+            precio_or = Decimal(str(self.producto.precio_por_gramo_detal or 0))
+            return (precio_or - precio_act) * total_gramos
 
-        return (self.producto.precio_detal - self.precio_aplicado()) * self.cantidad
+        precio_or = Decimal(str(self.producto.precio_detal or 0))
+        return (precio_or - precio_act) * cantidad_val
 
-    def __str__(self):
+    def _str_(self):
         return f"{self.cantidad} x {self.producto.nombre}"
 
 class Cliente(models.Model):
