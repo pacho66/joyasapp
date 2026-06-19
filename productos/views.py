@@ -1363,7 +1363,6 @@ def eliminar_del_carrito(request, item_id):
     messages.success(request, f"Se eliminó '{nombre_producto}' del carrito.")
     return redirect('ver_carrito')
 
-@login_required
 @transaction.atomic
 def comprar_whatsapp(request, producto_id=None):
     """
@@ -1612,6 +1611,7 @@ def pagar_pedido(request):
     telefono = request.POST.get('telefono', '').strip()
     ciudad = request.POST.get('ciudad', '').strip()
     direccion = request.POST.get('direccion', '').strip()
+    cliente_email = request.POST.get('email', '').strip()
     nit = request.POST.get('nit', '').strip()
 
     # 📊 CAPTURA DINÁMICA DE IMPUESTOS Y EL NUEVO CAMPO DESCUENTO
@@ -1678,7 +1678,7 @@ def pagar_pedido(request):
         numero_orden=numero,
         nombre_cliente=nombre,        
         telefono_cliente=telefono,
-        cliente_email=request.user.email,  # Evita que quede nulo para tus reportes
+        cliente_email=request.user.email, 
         ciudad_destino=ciudad,
         direccion_entrega=direccion,
         nit=nit,
