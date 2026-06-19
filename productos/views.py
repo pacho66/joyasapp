@@ -1681,22 +1681,32 @@ def pagar_pedido(request):
     total_final = subtotal_con_descuento + iva_total - retefuente_total + costo_envio
 
     # 📦 PASO 3: Crear el Pedido Maestro con los totales de verdad
+    
     pedido = Pedido.objects.create(
         usuario=usuario,
         numero_orden=numero,
-        nombre_cliente=nombre,        
-        telefono_cliente=telefono,
-        cliente_email=request.user.email, 
-        ciudad_destino=ciudad,
-        direccion_entrega=direccion,
-        nit=nit,
-        total=total_final,                 # Guardamos el total real calculado
+        
+        # Datos del cliente (Sincronizados con tus CharField del modelo)
+        cliente_nombre=nombre,        
+        cliente_telefono=telefono,
+        cliente_email=cliente_email,  
+        cliente_ciudad=ciudad,
+        cliente_direccion=direccion,
+        cliente_nit=nit,
+        
+        # Totales y Descuentos
+        total=total_final,                 
         porcentaje_descuento=porcentaje_descuento,
+        descuento_total=descuento_pesos, # 👈 ¡Tu modelo tiene este campo útil!
         costo_envio=costo_envio,
+        
+        # Ajustes Fiscales
         aplica_iva=aplica_iva,             
         es_retenedor=es_retenedor,     
-        estado="pendiente_pago"
-    ) 
+        
+        # Estado (Corregido al choice válido de tu modelo)
+        estado="pendiente" 
+    )
 
     # 🔄 PASO 4: Registrar cada PedidoItem y actualizar inventarios
     for linea in lineas_items:
