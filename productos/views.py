@@ -1617,53 +1617,37 @@ def comprar_whatsapp(request, producto_id=None):
 
     return redirect(url_whatsapp_final)
 
-@transaction.atomic
+# 1. COMENTA temporalmente el decorador (Ponle un # al inicio)
+# @transaction.atomic
 def pagar_pedido(request):
-    # 🔥 BLINDAJE LOGS: Si acceden directamente por GET, redirige al carrito seguro
-    if request.method != 'POST':
-        return redirect('ver_carrito')
-
-    session_key = request.session.session_key
-    items = CarritoItem.objects.select_related('producto', 'variante').filter(session_key=session_key)
-
-    if not items.exists():
-        messages.error(request, "Tu carrito está vacío.")
-        return redirect('ver_carrito')
-    
-     # =========================================================
-    # 🕵️ INICIO DEL BLOQUE DE PRUEBA Y CAZA DE ERRORES
-    # =========================================================
+    # 2. EL PRIMER RENGLÓN ABSOLUTO DEBE SER EL TRY
     try:
-        # 1. Aquí capturas tus variables del formulario...
-        nombre = request.POST.get('nombre', '').strip()
-        telefono = request.POST.get('telefono', '').strip()
-        ciudad = request.POST.get('ciudad', '').strip()
-        # (Todos los demás campos que recibes por POST...)
+        if request.method != 'POST':
+            return redirect('ver_carrito')
 
-        # 2. Tu lógica de negocio actual (totales, bucles de ítems, etc.)
-        # subtotal = ...
-        # costo_envio = ...
+        session_key = request.session.session_key
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
+
+        items = CarritoItem.objects.select_related('producto', 'variante').filter(session_key=session_key)
+
+        if not items.exists():
+            messages.error(request, "Tu carrito está vacío.")
+            return redirect('ver_carrito')
+
+        # ... Aquí va el resto de tu código de guardado original ...
         
-        # 3. La creación del Pedido Maestro y los PedidoItem
-        # pedido = Pedido.objects.create(...)
-        # for item in items:
-        #     PedidoItem.objects.create(...)
-
-        # 4. Tu redirección final exitosa (si todo sale bien)
-        # return redirect('tu_vista_exito')
-        pass # Borra este 'pass' cuando pegues tu código real aquí adentro
-
     except Exception as e:
-        # 🔥 SI ALGO DE LO ANTERIOR ESTALLA, ESTO LO CAPTURA E IMPRIME EN RENDER:
-        print("\n" + "="*60)
-        print(f"🚨 ERROR CRÍTICO DETECTADO EN /PAGAR/: {str(e)}")
-        print("="*60)
-        traceback.print_exc()  # Imprime el árbol completo de fallas con el número de línea exacto
-        print("="*60 + "\n")
+        # Esto forzará la impresión pase lo que pase
+        import traceback
+        print("\n" + "🚨" * 20)
+        print(f"ERROR EXPUESTO: {str(e)}")
+        traceback.print_exc()
+        print("🚨" * 20 + "\n")
+        return HttpResponse(f"Fallo capturado: {str(e)}", status=500)
 
-        # Esto rompe el 500 genérico y te muestra el mensaje real en la pantalla del navegador
-        messages.error(request, f"Error en el procesamiento de la factura: {str(e)}")
-        return redirect('ver_carrito')
+
 
     # 🏪 Detectamos el usuario dueño de la joyería
     usuario = items.first().producto.usuario
