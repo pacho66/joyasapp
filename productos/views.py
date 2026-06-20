@@ -2274,9 +2274,10 @@ def cartera_clientes(request):
 })
 
 def factura_publica(request, token):
-    # 🔥 RESTAURADO: Tu búsqueda original por token_publico UUID
+    """
+    Vista que renderiza el recibo público para el cliente mediante el token UUID.
+    """
     pedido = get_object_or_404(Pedido, token_publico=token)
-
     items = pedido.items.select_related('producto', 'variante').all()
     perfil = pedido.usuario.perfil
 
@@ -2285,33 +2286,31 @@ def factura_publica(request, token):
     iva_total = sum(item.iva or 0 for item in items)
     descuento_total = subtotal * (pedido.porcentaje_descuento / Decimal('100')) if pedido.porcentaje_descuento else Decimal('0')
     retefuente_total = sum(item.retefuente or 0 for item in items)
-
     envio = pedido.costo_envio or 0
-    total_final = pedido.total
 
     # =========================================================
-    # 🔥 TU LÓGICA DE ESTADOS ORIGINAL (INTACTA)
+    # 🟢 CORRECCIÓN DEL MOTOR DE ESTADOS
     # =========================================================
-    hoy = timezone.now().date()
-
-    if pedido.saldo_pendiente <= 0:
+    # Primero validamos el estado directo de la base de datos. 
+    # Si explícitamente dice 'pendiente', se queda como pendiente.
+    if pedido.estado == "pendiente":
+        estado = "pendiente"
+    elif pedido.saldo_pendiente is not None and pedido.saldo_pendiente <= 0:
         estado = "pagado"
-    elif pedido.fecha_limite and pedido.fecha_limite < hoy:
+    elif pedido.fecha_limite and pedido.fecha_limite < timezone.now().date():
         estado = "vencido"
     else:
-        estado = "pendiente"
+        estado = pedido.estado  # Fallback al estado que tenga el modelo ('pendiente', 'pagado', etc.)
 
     # =========================================================
-    # 💬 INTEGRACIÓN DE WHATSAPP Y QR DE TU SISTEMA
+    # 💬 INTEGRACIÓN DE WHATSAPP Y QR
     # =========================================================
-    mensaje = f"Hola, quiero pagar el pedido #{pedido.numero_orden} por valor de ${total_final}"
+    mensaje = f"Hola! Adjunto el comprobante de pago del pedido #{pedido.numero_orden} por valor de ${pedido.total:,.0f}".replace(",", ".")
     whatsapp_url = f"https://wa.me/{perfil.whatsapp}?text={urllib.parse.quote(mensaje)}"
-
-    # Mantenemos tu API de QR server intacta
     qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(whatsapp_url)}"
 
     # =========================================================
-    # 🗂️ CONTEXTO DOBLEMENTE SEGURO (Mapea tus variables + las nuevas de diseño)
+    # 🗂️ CONTEXTO RECONCILIADO CON TU HTML
     # =========================================================
     context = {
         'pedido': pedido,
@@ -2322,67 +2321,44 @@ def factura_publica(request, token):
         'empresa_nit': perfil.nit,
         'empresa_telefono': perfil.whatsapp,
 
-        # Identidad de marca blanca (Colores personalizados)
+        # Identidad de marca blanca
         'color_primario': perfil.color_primario,
         'color_secundario': perfil.color_secundario,
 
-        # Variables originales de tu vista (Para evitar vacíos en cálculos antiguos)
+        # 🎯 FIX MATEMÁTICO: Inyectamos la variable exacta que pide tu HTML
+        'subtotal_general': subtotal, 
+        
+        # Variables de respaldo originales
         'subtotal': subtotal,
         'iva_total': iva_total,
         'descuento_total': descuento_total,
         'retefuente_total': retefuente_total,
         'envio': envio,
-        'total_final': total_final,
+        'total_final': pedido.total,
         
-        # Variables duplicadas compatibles con la estructura limpia del HTML
-        'valor_subtotal': subtotal,
-        'valor_iva': iva_total,
-        'valor_retefuente': retefuente_total,
-
-        # Rutas de comunicación y checkout
         'whatsapp_url': whatsapp_url,
         'qr_url': qr_url,
         'perfil_comercio': perfil,
-
-        # El motor de estados de tu negocio
-        'estado': estado,
+        'estado': estado,  # Envía 'pendiente' correctamente
     }
 
     return render(request, 'factura_publica.html', context)
 
 @login_required
 def generar_factura(request, pedido_id):
-    pedido = get_object_or_404(
-        Pedido,
-        id=pedido_id,
-        usuario=request.user
-    )
-
+    pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
     items = pedido.items.select_related('producto', 'variante').all()
 
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=letter)
 
-    # ==================================
-    # CONFIG GENERAL
-    # ==================================
     PAGE_WIDTH, PAGE_HEIGHT = letter
-    MARGIN_LEFT = 50
-    MARGIN_RIGHT = 550
     LINE_HEIGHT = 18
 
-    # ==================================
-    # HEADER
-    # ==================================
-    correo_empresa = (
-        getattr(request.user.perfil, 'email_empresa', None)
-        or request.user.email
-        or 'correo@empresa.com'
-    )
+    correo_empresa = getattr(request.user.perfil, 'email_empresa', None) or request.user.email or 'correo@empresa.com'
 
     def draw_header():
         y = 760
-
         # EMPRESA (Dueño del SaaS)
         p.setFont("Helvetica-Bold", 16)
         p.drawString(50, y, request.user.perfil.nombre_tienda or "Mi Empresa")
@@ -2400,10 +2376,9 @@ def generar_factura(request, pedido_id):
         p.setFont("Helvetica", 9)
         p.drawString(390, y - 18, f"N° {pedido.numero_orden}")
 
-        fecha = pedido.fecha.strftime('%Y-%m-%d') if pedido.fecha else ''
+        fecha = pedido.fecha_creacion.strftime('%Y-%m-%d') if pedido.fecha_creacion else ''
         p.drawString(390, y - 33, f"Fecha: {fecha}")
 
-        # 🔥 FIX 3: Mapeo correcto del tipo de pago basado en tu modelo original
         if getattr(pedido, 'tipo_pago', 'contado') == 'credito':
             p.drawString(390, y - 48, "Pago: Crédito")
         else:
@@ -2411,26 +2386,20 @@ def generar_factura(request, pedido_id):
 
         p.line(50, y - 65, 550, y - 65)
 
-        # CLIENTE (🔥 FIX 1: Nombres de atributos reales de tu modelo de Despacho)
+        # 🎯 FIX DE CAMPOS: Sincronización con las columnas reales de tu base de datos
         yc = y - 85
-        p.drawString(50, yc, f"Cliente: {getattr(pedido, 'nombre_cliente', '') or ''}")
-        p.drawString(50, yc - 14, f"NIT: {getattr(pedido, 'nit', '') or ''}")
-        p.drawString(50, yc - 28, f"Dirección: {getattr(pedido, 'direccion_entrega', '') or ''}")
-        p.drawString(50, yc - 42, f"Ciudad: {getattr(pedido, 'ciudad_destino', '') or ''}")
-        p.drawString(50, yc - 56, f"Teléfono: {getattr(pedido, 'telefono_cliente', '') or ''}")
+        p.drawString(50, yc, f"Cliente: {getattr(pedido, 'cliente_nombre', '') or ''}")
+        p.drawString(50, yc - 14, f"NIT/CC: {getattr(pedido, 'cliente_nit', '') or ''}")
+        p.drawString(50, yc - 28, f"Dirección: {getattr(pedido, 'cliente_direccion', '') or ''}")
+        p.drawString(50, yc - 42, f"Ciudad: {getattr(pedido, 'cliente_ciudad', '') or ''}")
+        p.drawString(50, yc - 56, f"Teléfono: {getattr(pedido, 'cliente_telefono', '') or ''}")
 
-    # ==================================
-    # FOOTER
-    # ==================================
     def draw_footer():
         p.line(50, 60, 550, 60)
         p.setFont("Helvetica", 8)
         p.drawString(50, 45, "Gracias por su compra 💎")
         p.drawRightString(550, 45, f"Factura {pedido.numero_orden}")
 
-    # ==================================
-    # TABLA
-    # ==================================
     def draw_table_header(y):
         p.setFont("Helvetica-Bold", 10)
         p.drawString(50, y, "Producto")
@@ -2445,9 +2414,7 @@ def generar_factura(request, pedido_id):
         draw_header()
         return draw_table_header(560)
 
-    # ==================================
-    # INICIO RENDERIZADO PDF
-    # ==================================
+    # EJECUCIÓN DEL PDF
     draw_header()
     y = draw_table_header(560)
 
@@ -2456,9 +2423,6 @@ def generar_factura(request, pedido_id):
     descuento_total = Decimal('0')
     retefuente_total = Decimal('0')
 
-    # ==================================
-    # ITEMS BUCLE
-    # ==================================
     for item in items:
         if y < 100:
             draw_footer()
@@ -2466,12 +2430,11 @@ def generar_factura(request, pedido_id):
 
         nombre = item.producto.nombre[:28]
 
-        # 🔥 FIX 2: Sincronización con 'total_gramos' para el inventario de joyas
         gramos = getattr(item, 'total_gramos', None)
         if gramos and gramos > 0:
             cantidad = f"{gramos}g"
         else:
-            cantidad = str(item.cantidad or 1)
+            cantidad = f"{int(item.cantidad)} u"
 
         precio = Decimal(str(item.precio or 0))
         total_item = Decimal(str(item.total_final or item.subtotal or 0))
@@ -2484,14 +2447,12 @@ def generar_factura(request, pedido_id):
 
         subtotal_general += Decimal(str(item.subtotal or 0))
         iva_total += Decimal(str(item.iva or 0))
-        descuento_total += Decimal(str(item.descuento or 0))
+        descuento_total += Decimal(str(item.descuento_total or 0))  # Sincronizado con el modelo
         retefuente_total += Decimal(str(item.retefuente or 0))
 
         y -= LINE_HEIGHT
 
-    # ==================================
-    # TOTALES SECCIÓN
-    # ==================================
+    # TOTALES
     y -= 20
     if y < 160:
         draw_footer()
@@ -2503,7 +2464,7 @@ def generar_factura(request, pedido_id):
 
     if iva_total > 0:
         y -= 15
-        p.drawString(340, y, "IVA:")
+        p.drawString(340, y, "IVA (19%):")
         p.drawRightString(540, y, f"${iva_total:,.0f}".replace(",", "."))
 
     if retefuente_total > 0:
@@ -2511,15 +2472,13 @@ def generar_factura(request, pedido_id):
         p.drawString(340, y, "ReteFuente:")
         p.drawRightString(540, y, f"-${retefuente_total:,.0f}".replace(",", "."))
 
-    if descuento_total > 0:
+    if pedido.porcentaje_descuento > 0:
         y -= 15
-        p.drawString(340, y, "Descuento:")
-        p.drawRightString(540, y, f"-${descuento_total:,.0f}".replace(",", "."))
+        p.drawString(340, y, f"Descuento ({pedido.porcentaje_descuento}%):")
+        p.drawRightString(540, y, f"-${pedido.descuento_total:,.0f}".replace(",", "."))
 
     y -= 15
     p.drawString(340, y, "Envío:")
-
-    # 🔥 FIX 4: Forzar conversión limpia a Decimal para el costo de envío
     costo_envio_num = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
     if costo_envio_num == 0:
         p.drawRightString(540, y, "GRATIS")
@@ -2529,28 +2488,20 @@ def generar_factura(request, pedido_id):
     y -= 22
     p.setFont("Helvetica-Bold", 12)
     p.drawString(340, y, "TOTAL:")
-    
-    total_calculado_pdf = (subtotal_general - descuento_total) + iva_total - retefuente_total + costo_envio_num
-
-    p.drawRightString(540, y, f"${total_calculado_pdf:,.0f}".replace(",", "."))
+    p.drawRightString(540, y, f"${pedido.total:,.0f}".replace(",", "."))
 
     draw_footer()
-
-    # ==================================
-    # FINALIZAR Y ENVIAR
-    # ==================================
     p.save()
     pdf = buffer.getvalue()
     buffer.close()
 
-    # Envío de correo electrónico automático (Mantiene tu lógica limpia)
-    # 🔥 Captura segura usando el email del cliente del formulario
-    email_cliente = getattr(pedido, 'cliente_email', None) or getattr(pedido, 'email', None)
+    # ENVÍO AUTOMÁTICO DE CORREO COPIANDO AL CLIENTE DE LA BASE DE DATOS
+    email_cliente = getattr(pedido, 'cliente_email', None)
     if email_cliente:
         try:
             email = EmailMessage(
-                subject=f"Factura {pedido.numero_orden}",
-                body="Gracias por tu compra 💎 Adjuntamos tu factura.",
+                subject=f"Factura {pedido.numero_orden} - {request.user.perfil.nombre_tienda}",
+                body="¡Gracias por tu confianza! Adjuntamos el detalle formal de tu pedido de joyería. 💎",
                 from_email=correo_empresa,
                 to=[email_cliente]
             )
@@ -2562,7 +2513,6 @@ def generar_factura(request, pedido_id):
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="factura_{pedido.numero_orden}.pdf"'
     return response
-
 
 @login_required
 def whatsapp_segmento(request):

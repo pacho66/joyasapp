@@ -136,125 +136,124 @@ body{
 
 <body>
 
+
 <div class="container">
 
-
     <div class="header">
-    <h2 style="color: {{ color_primario|default:'#333' }}; margin-bottom: 5px;">
-        {{ empresa_nombre|default:"Mi Joyería SaaS" }}
-    </h2>
-    {% if empresa_nit %}
-        <p style="margin: 0; color: #666; font-size: 14px;">NIT: {{ empresa_nit }}</p>
-    {% endif %}
-</div>
-
-{% if estado == 'pagado' %}
-    <div class="estado pagado" style="background:#d4edda; color:#155724;">
-        🟢 Pedido Pagado
-    </div>
-{% elif estado == 'vencido' %}
-    <div class="estado" style="text-align:center; padding:10px; border-radius:8px; margin-bottom:15px; font-weight:bold; background:#f8d7da; color:#721c24;">
-        🔴 Vencido
-    </div>
-{% else %}
-    <div class="estado pendiente" style="background:#fff3cd; color:#856404;">
-        🟡 Pendiente de Pago
-    </div>
-{% endif %}
-
-<div class="titulo">
-    <strong>Pedido #{{ pedido.numero_orden }}</strong>
-</div>
-
-<p style="font-size: 14px; color: #333; margin-bottom: 5px;">
-    <strong>Fecha:</strong> {{ pedido.fecha_creacion|date:"d/m/Y H:i" }}
-</p>
-<p style="font-size: 14px; color: #333; margin-top: 0; line-height: 1.4;">
-    <strong>Cliente:</strong> {{ pedido.cliente_nombre|default:"Consumidor final" }}<br>
-    {% if pedido.cliente_nit %}<strong>NIT/CC:</strong> {{ pedido.cliente_nit }}<br>{% endif %}
-    <strong>Celular:</strong> {{ pedido.cliente_telefono }}<br>
-    <strong>Destino:</strong> {{ pedido.cliente_direccion }} - {{ pedido.cliente_ciudad }}
-</p>
-
-<table class="tabla">
-<tr style="background: {{ color_primario|default:'#444' }}; color:white;">
-    <th style="text-align: left; padding-left: 10px;">Producto</th>
-    <th>Cant</th>
-    <th style="text-align: right; padding-right: 10px;">Total</th>
-</tr>
-
-{% for item in items %}
-<tr>
-    <td style="text-align: left; padding-left: 10px;">
-        {{ item.producto.nombre }}
-        {% if item.producto.tipo_venta == 'gramo' and item.total_gramos %}
-            <br><small style="color: #666; font-size: 11px;">📐 Peso: {{ item.total_gramos|floatformat:2 }}g</small>
+        <h2 style="color: {{ color_primario|default:'#333' }}; margin-bottom: 5px;">
+            {{ empresa_nombre|default:"Mi Joyería SaaS" }}
+        </h2>
+        {% if empresa_nit %}
+            <p style="margin: 0; color: #666; font-size: 14px;">NIT: {{ empresa_nit }}</p>
         {% endif %}
-        {% if item.variante %}
-            <br><small style="color: #777; font-size: 11px;">Color: {{ item.variante.color }} / Talla: {{ item.variante.talla }}</small>
+    </div>
+
+    {% if pedido.estado == 'pagado' %}
+        <div class="estado pagado" style="background:#d4edda; color:#155724; text-align:center; padding:10px; border-radius:8px; margin-bottom:15px; font-weight:bold;">
+            🟢 Pedido Pagado
+        </div>
+    {% elif pedido.estado == 'vencido' %}
+        <div class="estado" style="text-align:center; padding:10px; border-radius:8px; margin-bottom:15px; font-weight:bold; background:#f8d7da; color:#721c24;">
+            🔴 Vencido
+        </div>
+    {% else %}
+        <div class="estado pendiente" style="background:#fff3cd; color:#856404; text-align:center; padding:10px; border-radius:8px; margin-bottom:15px; font-weight:bold;">
+            🟡 Pendiente de Pago
+        </div>
+    {% endif %}
+
+    <div class="titulo">
+        <strong>Pedido #{{ pedido.numero_orden }}</strong>
+    </div>
+
+    <p style="font-size: 14px; color: #333; margin-bottom: 5px;">
+        <strong>Fecha:</strong> {{ pedido.fecha_creacion|date:"d/m/Y H:i" }}
+    </p>
+    <p style="font-size: 14px; color: #333; margin-top: 0; line-height: 1.4;">
+        <strong>Cliente:</strong> {{ pedido.cliente_nombre|default:"Consumidor final" }}<br>
+        {% if pedido.cliente_nit %}<strong>NIT/CC:</strong> {{ pedido.cliente_nit }}<br>{% endif %}
+        <strong>Celular:</strong> {{ pedido.cliente_telefono }}<br>
+        <strong>Destino:</strong> {{ pedido.cliente_direccion }} - {{ pedido.cliente_ciudad }}
+    </p>
+
+    <table class="tabla">
+    <tr style="background: {{ color_primario|default:'#444' }}; color:white;">
+        <th style="text-align: left; padding-left: 10px;">Producto</th>
+        <th>Cant</th>
+        <th style="text-align: right; padding-right: 10px;">Total</th>
+    </tr>
+
+    {% for item in pedido.items.all %}
+    <tr>
+        <td style="text-align: left; padding-left: 10px;">
+            {{ item.producto.nombre }}
+            {% if item.producto.tipo_venta == 'gramo' and item.total_gramos %}
+                <br><small style="color: #666; font-size: 11px;">📐 Peso: {{ item.total_gramos|floatformat:2 }}g</small>
+            {% endif %}
+            {% if item.variante %}
+                <br><small style="color: #777; font-size: 11px;">Color: {{ item.variante.color }} / Talla: {{ item.variante.talla }}</small>
+            {% endif %}
+        </td>
+        <td>{{ item.cantidad }} u</td>
+        <td style="text-align: right; padding-right: 10px;">${{ item.subtotal|floatformat:0 }}</td>
+    </tr>
+    {% endfor %}
+    </table>
+
+    <div class="desglose-contenedor">
+        <div class="desglose-fila">
+            <span>Subtotal General:</span>
+            <span>${{ pedido.total|django_recalcular_subtotal:pedido.costo_envio|floatformat:0|default:pedido.total }}</span>
+        </div>
+        
+        {% if pedido.porcentaje_descuento > 0 %}
+        <div class="desglose-fila impuesto" style="color: red;">
+            <span>Descuento ({{ pedido.porcentaje_descuento }}%):</span>
+            <span>-${{ pedido.descuento_total|floatformat:0 }}</span>
+        </div>
         {% endif %}
-    </td>
-    <td>{{ item.cantidad }} u</td>
-    <td style="text-align: right; padding-right: 10px;">${{ item.subtotal|floatformat:0 }}</td>
-</tr>
-{% endfor %}
-</table>
 
-<div class="desglose-contenedor">
-    <div class="desglose-fila">
-        <span>Subtotal General:</span>
-        <span>${{ pedido.subtotal_general|default:pedido.total|floatformat:0 }}</span>
+        {% if pedido.aplica_iva %}
+        <div class="desglose-fila impuesto">
+            <span>IVA (19%):</span>
+            <span>+ ${{ pedido.iva|floatformat:0 }}</span>
+        </div>
+        {% endif %}
+
+        {% if pedido.es_retenedor %}
+        <div class="desglose-fila retencion">
+            <span>Retefuente / ReteICA (2.5%):</span>
+            <span>- ${{ pedido.retefuente|floatformat:0 }}</span>
+        </div>
+        {% endif %}
+
+        <div class="desglose-fila impuesto">
+            <span>Costo de Envío:</span>
+            <span>{% if pedido.costo_envio > 0 %}+ ${{ pedido.costo_envio|floatformat:0 }}{% else %}🎁 Envío gratis{% endif %}</span>
+        </div>
     </div>
-    
-    {% if pedido.porcentaje_descuento > 0 %}
-    <div class="desglose-fila impuesto" style="color: red;">
-        <span>Descuento ({{ pedido.porcentaje_descuento }}%):</span>
-        <span>-${{ pedido.descuento|default:0|floatformat:0 }}</span>
+
+    <div class="total" style="font-size: 18px; font-weight: bold; color: #000; padding: 10px 0; border-top: 2px solid #333;">
+        TOTAL A PAGAR: ${{ pedido.total|floatformat:0 }} COP
     </div>
+
+    {% if pedido.estado != 'pagado' %}
+        <a href="{% url 'crear_checkout' pedido.id %}" class="btn btn-pagar">
+            💳 Pagar con tarjeta
+        </a>
     {% endif %}
 
-    {% if pedido.aplica_iva %}
-    <div class="desglose-fila impuesto">
-        <span>IVA (19%):</span>
-        <span>+ ${{ pedido.iva|floatformat:0 }}</span>
-    </div>
-    {% endif %}
-
-    {% if pedido.es_retenedor %}
-    <div class="desglose-fila retencion">
-        <span>Retefuente / ReteICA (2.5%):</span>
-        <span>- ${{ pedido.retefuente|floatformat:0 }}</span>
-    </div>
-    {% endif %}
-
-    <div class="desglose-fila impuesto">
-        <span>Costo de Envío:</span>
-        <span>{% if pedido.costo_envio > 0 %}+ ${{ pedido.costo_envio|floatformat:0 }}{% else %}🎁 Envío gratis{% endif %}</span>
-    </div>
-</div>
-
-<div class="total">
-    TOTAL A PAGAR: ${{ pedido.total|floatformat:0 }}
-</div>
-
-{% if estado != 'pagado' %}
-    <a href="{% url 'crear_checkout' pedido.id %}" class="btn btn-pagar">
-        💳 Pagar con tarjeta
+    <a href="https://wa.me/{{ pedido.usuario.perfil.whatsapp|default:empresa_telefono }}?text=Hola! Adjunto el comprobante de pago del pedido %23{{ pedido.numero_orden }}" 
+       class="btn btn-whatsapp" target="_blank">
+        📲 Enviar comprobante por WhatsApp
     </a>
-{% endif %}
 
+    <div class="qr">
+        <p style="margin-bottom: 10px; font-size: 14px; color: #555;">Escanea para pagar</p>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ pedido.total|floatformat:0 }}" alt="QR de Pago">
+    </div>
 
-<a href="https://wa.me/{{ perfil_comercio.whatsapp|default:empresa_telefono }}?text=Hola! Adjunto el comprobante de pago del pedido %23{{ pedido.numero_orden }}" 
-   class="btn btn-whatsapp" target="_blank">
-    敷 Enviar comprobante por WhatsApp
-</a>
-
-<div class="qr">
-    <p style="margin-bottom: 10px; font-size: 14px; color: #555;">Escanea para pagar</p>
-    <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ pedido.total|floatformat:0 }}" alt="QR de Pago">
-</div>
-
-</div>
+</div>    
 
 </body>
 </html>
