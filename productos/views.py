@@ -1378,7 +1378,6 @@ def eliminar_del_carrito(request, item_id):
     
     messages.success(request, f"Se eliminó '{nombre_producto}' del carrito.")
     return redirect('ver_carrito')
-
 @transaction.atomic
 def comprar_whatsapp(request, producto_id=None):
     """
@@ -1473,7 +1472,6 @@ def comprar_whatsapp(request, producto_id=None):
                     return redirect('ver_carrito')
 
             precio, gramos = calcular_precio_producto(producto, cantidad)
-            # 🔥 Parche de seguridad: Si el precio es None, lo vuelve 0 antes de convertirlo
             precio_seguro = precio if precio is not None else 0
             precio = Decimal(str(precio_seguro))
 
@@ -1502,7 +1500,7 @@ def comprar_whatsapp(request, producto_id=None):
 
     aplica_iva = request.POST.get('aplica_iva') == 'on'
     es_retenedor = request.POST.get('es_retenedor') == 'on'
-    valor_descuento = request.POST.get('descuento', '0') # Respaldo si no viene en el HTML
+    valor_descuento = request.POST.get('descuento', '0')
 
     try:
         porcentaje_descuento = Decimal(str(valor_descuento))
@@ -1511,15 +1509,22 @@ def comprar_whatsapp(request, producto_id=None):
 
     porcentaje_descuento = max(Decimal('0'), min(Decimal('100'), porcentaje_descuento))
 
-    # Captura limpia mapeada con los inputs reales de tu formulario
     nombre_cliente = request.POST.get('nombre', '').strip()
     telefono_cliente = request.POST.get('telefono', '').strip()
-    cliente_email = request.POST.get('email', '').strip() or request.user.email # Fallback seguro al email del usuario
     ciudad_destino = request.POST.get('ciudad', '').strip()
     direccion_entrega = request.POST.get('direccion', '').strip()
     nit = request.POST.get('nit', '').strip()
 
-    # Cálculo de Totales
+    # 🛠️ PARCHE QUIRÚRGICO CONTRA EL ERROR 500 (Email Blindado)
+    email_input = request.POST.get('email', '').strip()
+    if email_input:
+        cliente_email = email_input
+    elif request.user.is_authenticated:
+        cliente_email = request.user.email
+    else:
+        cliente_email = "cliente_whatsapp@joyasapp.com"
+
+    # Cálculo de Totales (Tu lógica original intacta)
     subtotal_general = Decimal('0')
     for data in resumen_items:
         subtotal_general += data['subtotal']
@@ -1530,92 +1535,93 @@ def comprar_whatsapp(request, producto_id=None):
     iva = subtotal_con_descuento * Decimal('0.19') if aplica_iva else Decimal('0')
     retefuente = subtotal_con_descuento * Decimal('0.025') if es_retenedor else Decimal('0')
     
+    # Mantiene tu consulta de envío original
     costo_envio = calcular_envio(ciudad_destino, subtotal_con_descuento)
     total_final = subtotal_con_descuento + iva - retefuente + costo_envio
 
-    # 🔥 FIX 1: Cambiados los atributos a los nombres reales de tu base de datos
-    
-    pedido = Pedido.objects.create(
-    usuario=usuario,
-    numero_orden=numero,
-
-    # Datos del cliente
-    cliente_nombre=nombre_cliente,
-    cliente_telefono=telefono_cliente,
-    cliente_email=cliente_email,
-    cliente_ciudad=ciudad_destino,
-    cliente_direccion=direccion_entrega,
-    cliente_nit=nit,
-
-    # Totales
-    total=total_final,
-    porcentaje_descuento=porcentaje_descuento,
-    descuento_total=descuento,
-    costo_envio=costo_envio,
-
-    # Impuestos
-    aplica_iva=aplica_iva,
-    es_retenedor=es_retenedor,
-
-    # Estado del pedido
-    estado="pendiente"
-)
-
-    # Registrar los productos asociados al pedido (PedidoItem)
-    for data in resumen_items:
-        subtotal = data['subtotal']
-        iva_item = subtotal * Decimal('0.19') if aplica_iva else Decimal('0')
-        retefuente_item = subtotal * Decimal('0.025') if es_retenedor else Decimal('0')
-        total_item = subtotal + iva_item - retefuente_item
-
-        PedidoItem.objects.create(
-            pedido=pedido,
-            producto=data['producto'],
-            variante=data['variante'],
-            cantidad=int(data['cantidad']),
-            total_gramos=Decimal(str(data['total_gramos'])), 
-            precio=data['precio'],
-            subtotal=subtotal,
-            iva=iva_item,
-            retefuente=retefuente_item,
-            total_final=total_item
+    # 🕵️ BLOQUE CAPTURADOR PARA EL PROCESO DE GUARDADO
+    try:
+        pedido = Pedido.objects.create(
+            usuario=usuario,
+            numero_orden=numero,
+            cliente_nombre=nombre_cliente,
+            cliente_telefono=telefono_cliente,
+            cliente_email=cliente_email,
+            cliente_ciudad=ciudad_destino,
+            cliente_direccion=direccion_entrega,
+            cliente_nit=nit,
+            total=total_final,
+            porcentaje_descuento=porcentaje_descuento,
+            descuento_total=descuento,
+            costo_envio=costo_envio,
+            aplica_iva=aplica_iva,
+            es_retenedor=es_retenedor,
+            estado="pendiente"
         )
 
-        # Descontar del inventario/stock
-        if data['variante']:
-            data['variante'].stock -= data['cantidad']
-            data['variante'].save()
-        elif data['producto'].tipo_venta != "gramo":
-            data['producto'].stock -= data['cantidad']
-            data['producto'].save()
+        # Registrar los productos asociados al pedido (PedidoItem)
+        for data in resumen_items:
+            subtotal = data['subtotal']
+            iva_item = subtotal * Decimal('0.19') if aplica_iva else Decimal('0')
+            retefuente_item = subtotal * Decimal('0.025') if es_retenedor else Decimal('0')
+            total_item = subtotal + iva_item - retefuente_item
 
-    # =========================================================
-    # 🔗 PASO 3: ENLACE SEGURO Y MENSAJE DE WHATSAPP
-    # =========================================================
-    domain = get_current_site(request).domain
-    url_factura = f"https://{domain}{reverse('factura_publica', kwargs={'token': pedido.token_publico})}"
+            PedidoItem.objects.create(
+                pedido=pedido,
+                producto=data['producto'],
+                variante=data['variante'],
+                cantidad=int(data['cantidad']),
+                total_gramos=Decimal(str(data['total_gramos'])), 
+                precio=data['precio'],
+                subtotal=subtotal,
+                iva=iva_item,
+                retefuente=retefuente_item,
+                total_final=total_item
+            )
 
-    # Mensaje formateado elegantemente en pesos COP sin decimales molestos
-    mensaje = (
-        f"🛍️ ¡Hola! Acabo de confirmar mi pedido.\n\n"
-        f"📦 Orden N°: {pedido.numero_orden}\n"
-        f"👤 Cliente: {nombre_cliente}\n"
-        f"💰 Total Neto: ${total_final:,.0f}\n\n"
-        f"📄 Ver detalles y datos de facturación aquí:\n{url_factura}\n\n"
-        f"Quedo atento a tus indicaciones para realizar el pago. ¡Muchas gracias!"
-    ).replace(",", ".")
+            # Descontar del inventario/stock
+            if data['variante']:
+                data['variante'].stock -= data['cantidad']
+                data['variante'].save()
+            elif data['producto'].tipo_venta != "gramo":
+                data['producto'].stock -= data['cantidad']
+                data['producto'].save()
 
-    perfil, _ = Perfil.objects.get_or_create(user=usuario)
-    if not perfil.whatsapp:
-        messages.warning(request, "El comercio no tiene configurado WhatsApp.")
-        return redirect('ver_carrito') if not es_compra_directa else redirect('detalle_producto', id=producto.id, slug=producto.slug)
+        # =========================================================
+        # 🔗 PASO 3: ENLACE SEGURO Y MENSAJE DE WHATSAPP
+        # =========================================================
+        domain = get_current_site(request).domain
+        url_factura = f"https://{domain}{reverse('factura_publica', kwargs={'token': pedido.token_publico})}"
 
-    url_whatsapp_final = f"https://wa.me/{perfil.whatsapp}?text={urllib.parse.quote(mensaje)}"
+        mensaje = (
+            f"🛍️ ¡Hola! Acabo de confirmar mi pedido.\n\n"
+            f"📦 Orden N°: {pedido.numero_orden}\n"
+            f"👤 Cliente: {nombre_cliente}\n"
+            f"💰 Total Neto: ${total_final:,.0f}\n\n"
+            f"📄 Ver detalles y datos de facturación aquí:\n{url_factura}\n\n"
+            f"Quedo atento a tus indicaciones para realizar el pago. ¡Muchas gracias!"
+        ).replace(",", ".")
 
-    if not es_compra_directa and items_carrito:
-        items_carrito.delete()
+        perfil, _ = Perfil.objects.get_or_create(user=usuario)
+        if not perfil.whatsapp:
+            messages.warning(request, "El comercio no tiene configurado WhatsApp.")
+            return redirect('ver_carrito') if not es_compra_directa else redirect('detalle_producto', id=producto.id, slug=producto.slug)
 
-    return redirect(url_whatsapp_final)
+        url_whatsapp_final = f"https://wa.me/{perfil.whatsapp}?text={urllib.parse.quote(mensaje)}"
+
+        if not es_compra_directa and items_carrito:
+            items_carrito.delete()
+
+        return redirect(url_whatsapp_final)
+
+    except Exception as e:
+        print("\n" + "🚨" * 30)
+        print(f"💥 ERROR EN BASE DE DATOS / GUARDADO: {str(e)}")
+        print("-" * 60)
+        traceback.print_exc()
+        print("🚨" * 30 + "\n")
+        return HttpResponse(f"Fallo capturado en proceso de guardado: {str(e)}", status=500)
+
 
 # 1. COMENTA temporalmente el decorador (Ponle un # al inicio)
 # @transaction.atomic
