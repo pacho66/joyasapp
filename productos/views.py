@@ -100,16 +100,31 @@ def calcular_envio(ciudad, subtotal):
     return Decimal('20000')
 
 def calcular_precio_producto(producto, cantidad):
-    """
-    Motor de precios.
-    """
+    cantidad = Decimal(str(cantidad))
 
-    cantidad = int(cantidad)
+    # Venta por gramos
+    if producto.tipo_venta == "gramo":
+        peso = Decimal(str(producto.peso_producto or 0))
+        total_gramos = cantidad * peso
 
+        if total_gramos >= 12:
+            precio = producto.precio_por_gramo_mayor or 0
+        elif total_gramos >= 6:
+            precio = producto.precio_por_gramo_semimayor or 0
+        else:
+            precio = producto.precio_por_gramo_detal or 0
+
+        return Decimal(str(precio)), total_gramos
+
+    # Venta por unidades
     if cantidad >= 12:
-        return Decimal(producto.precio_mayor), None
+        precio = producto.precio_mayor or producto.precio_detal or 0
+    elif cantidad >= 6:
+        precio = producto.precio_semimayor or producto.precio_detal or 0
+    else:
+        precio = producto.precio_detal or 0
 
-    return Decimal(producto.precio_detal), None
+    return Decimal(str(precio)), None
 
 
 def obtener_variante(producto, color, talla):
