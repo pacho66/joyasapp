@@ -1622,15 +1622,16 @@ def comprar_whatsapp(request, producto_id=None):
         print("🚨" * 30 + "\n")
         return HttpResponse(f"Fallo capturado en proceso de guardado: {str(e)}", status=500)
 
-
-# 1. COMENTA temporalmente el decorador (Ponle un # al inicio)
-# @transaction.atomic
+@transaction.atomic
 def pagar_pedido(request):
-    # 2. EL PRIMER RENGLÓN ABSOLUTO DEBE SER EL TRY
-    try:
-        if request.method != 'POST':
-            return redirect('ver_carrito')
+    """
+    Vista para procesar el pago final del pedido (Ruta: /pagar/)
+    """
+    if request.method != 'POST':
+        return redirect('ver_carrito')
 
+    # 🔥 BLINDAJE TOTAL DESDE EL PRIMER MILISEGUNDO
+    try:
         session_key = request.session.session_key
         if not session_key:
             request.session.create()
@@ -1642,158 +1643,147 @@ def pagar_pedido(request):
             messages.error(request, "Tu carrito está vacío.")
             return redirect('ver_carrito')
 
-        # ... Aquí va el resto de tu código de guardado original ...
-        
-    except Exception as e:
-        # Esto forzará la impresión pase lo que pase
-        import traceback
-        print("\n" + "🚨" * 20)
-        print(f"ERROR EXPUESTO: {str(e)}")
-        traceback.print_exc()
-        print("🚨" * 20 + "\n")
-        return HttpResponse(f"Fallo capturado: {str(e)}", status=500)
+        # 🏪 Detectamos el usuario dueño de la joyería (Dentro del try por seguridad)
+        usuario = items.first().producto.usuario
+        numero = generar_numero_orden(usuario)
 
+        # 📝 CAPTURA DE DATOS DEL FORMULARIO DE DESPACHO
+        nombre = request.POST.get('nombre', '').strip()
+        telefono = request.POST.get('telefono', '').strip()
+        ciudad = request.POST.get('ciudad', '').strip()
+        direccion = request.POST.get('direccion', '').strip()
+        nit = request.POST.get('nit', '').strip()
 
-
-    # 🏪 Detectamos el usuario dueño de la joyería
-    usuario = items.first().producto.usuario
-    numero = generar_numero_orden(usuario)
-
-    # 📝 CAPTURA DE DATOS DEL FORMULARIO DE DESPACHO
-    nombre = request.POST.get('nombre', '').strip()
-    telefono = request.POST.get('telefono', '').strip()
-    ciudad = request.POST.get('ciudad', '').strip()
-    direccion = request.POST.get('direccion', '').strip()
-    cliente_email = request.POST.get('email', '').strip()
-    nit = request.POST.get('nit', '').strip()
-
-    # 📊 CAPTURA DINÁMICA DE IMPUESTOS Y EL NUEVO CAMPO DESCUENTO
-    aplica_iva = request.POST.get('aplica_iva') == 'on'
-    es_retenedor = request.POST.get('es_retenedor') == 'on'
-    valor_descuento = request.POST.get('descuento', '0').strip()
-
-    try:
-        porcentaje_descuento = Decimal(str(valor_descuento or 0))
-    except (ValueError, TypeError):
-        porcentaje_descuento = Decimal('0')
-
-    porcentaje_descuento = max(Decimal('0'), min(Decimal('100'), porcentaje_descuento))
-
-    # Primero calculamos el subtotal acumulado bruto de los productos
-    subtotal_general = Decimal('0')
-    lineas_items = []
-
-    # 🔄 PASO 1: Calcular precios bases y gramos de cada ítem
-    for item in items:
-        cantidad_fisica = Decimal(str(item.cantidad or 1))
-        
-        if item.producto.tipo_venta == 'gramo':
-            val_precio = Decimal(str(item.producto.precio_por_gramo_detal or 0))
-            peso_base = Decimal(str(item.producto.peso_producto or 0))
-            gramos_totales = cantidad_fisica * peso_base
-            subtotal_item = gramos_totales * val_precio
-            precio_aplicado = val_precio
+        # 🛠️ ESCUDO CONTRA CORREOS VACÍOS O ANÓNIMOS
+        email_input = request.POST.get('email', '').strip()
+        if email_input:
+            cliente_email = email_input
+        elif request.user.is_authenticated:
+            cliente_email = request.user.email
         else:
-            # Productos por unidad fija
-            try:
-                precio_por_escala = item.producto.precio_por_cantidad(item.cantidad)
-                # 🔥 Si el método devuelve None, usamos el precio detal o 0
-                if precio_por_escala is None:
-                    precio_por_escala = item.producto.precio_detal or 0
-                val_precio = Decimal(str(precio_por_escala))
-            except Exception:
-                val_precio = Decimal(str(item.producto.precio_detal or 0))
+            cliente_email = "cliente_pasarela@joyasapp.com" # Evita que colapse PostgreSQL por campos vacíos
+
+        # 📊 CAPTURA DINÁMICA DE IMPUESTOS Y DESCUENTO
+        aplica_iva = request.POST.get('aplica_iva') == 'on' or request.POST.get('aplica_iva') == 'true'
+        es_retenedor = request.POST.get('es_retenedor') == 'on' or request.POST.get('es_retenedor') == 'true'
+        valor_descuento = request.POST.get('descuento', '0').strip()
+
+        try:
+            porcentaje_descuento = Decimal(str(valor_descuento or 0))
+        except (ValueError, TypeError):
+            porcentaje_descuento = Decimal('0')
+
+        porcentaje_descuento = max(Decimal('0'), min(Decimal('100'), porcentaje_descuento))
+
+        # Primero calculamos el subtotal acumulado bruto de los productos
+        subtotal_general = Decimal('0')
+        lineas_items = []
+
+        # 🔄 PASO 1: Calcular precios bases y gramos de cada ítem (Tu lógica intacta)
+        for item in items:
+            cantidad_fisica = Decimal(str(item.cantidad or 1))
             
-            gramos_totales = Decimal('0.00')
-            subtotal_item = cantidad_fisica * val_precio
-            precio_aplicado = val_precio
-        
-        subtotal_general += subtotal_item
-        
-        # Guardamos los datos calculados temporalmente en una lista
-        lineas_items.append({
-            'item_carrito': item,
-            'precio_aplicado': precio_aplicado,
-            'gramos_totales': gramos_totales,
-            'subtotal_item': subtotal_item
-        })
+            if item.producto.tipo_venta == 'gramo':
+                val_precio = Decimal(str(item.producto.precio_por_gramo_detal or 0))
+                peso_base = Decimal(str(item.producto.peso_producto or 0))
+                gramos_totales = cantidad_fisica * peso_base
+                subtotal_item = gramos_totales * val_precio
+                precio_aplicado = val_precio
+            else:
+                try:
+                    precio_por_escala = item.producto.precio_por_cantidad(item.cantidad)
+                    if precio_por_escala is None:
+                        precio_por_escala = item.producto.precio_detal or 0
+                    val_precio = Decimal(str(precio_por_escala))
+                except Exception:
+                    val_precio = Decimal(str(item.producto.precio_detal or 0))
+                
+                gramos_totales = Decimal('0.00')
+                subtotal_item = cantidad_fisica * val_precio
+                precio_aplicado = val_precio
+            
+            subtotal_general += subtotal_item
+            
+            lineas_items.append({
+                'item_carrito': item,
+                'precio_aplicado': precio_aplicado,
+                'gramos_totales': gramos_totales,
+                'subtotal_item': subtotal_item
+            })
 
-    # 💰 PASO 2: Calcular la estructura de totales global con el Descuento aplicado
-    descuento_pesos = subtotal_general * (porcentaje_descuento / Decimal('100'))
-    subtotal_con_descuento = subtotal_general - descuento_pesos
+        # 💰 PASO 2: Calcular la estructura de totales global con el Descuento aplicado
+        descuento_pesos = subtotal_general * (porcentaje_descuento / Decimal('100'))
+        subtotal_con_descuento = subtotal_general - descuento_pesos
 
-    iva_total = subtotal_con_descuento * Decimal('0.19') if aplica_iva else Decimal('0')
-    retefuente_total = subtotal_con_descuento * Decimal('0.025') if es_retenedor else Decimal('0')
-    
-    # Calcular costo de envío dinámico
-    costo_envio = calcular_envio(ciudad, subtotal_con_descuento)
-    
-    # Gran Total Neto Real para la pasarela de pagos
-    total_final = subtotal_con_descuento + iva_total - retefuente_total + costo_envio
+        iva_total = subtotal_con_descuento * Decimal('0.19') if aplica_iva else Decimal('0')
+        retefuente_total = subtotal_con_descuento * Decimal('0.025') if es_retenedor else Decimal('0')
+        
+        costo_envio = calcular_envio(ciudad, subtotal_con_descuento)
+        total_final = subtotal_con_descuento + iva_total - retefuente_total + costo_envio
 
-    # 📦 PASO 3: Crear el Pedido Maestro con los totales de verdad
-    
-    pedido = Pedido.objects.create(
-        usuario=usuario,
-        numero_orden=numero,
-        
-        # Datos del cliente (Sincronizados con tus CharField del modelo)
-        cliente_nombre=nombre,        
-        cliente_telefono=telefono,
-        cliente_email=cliente_email,  
-        cliente_ciudad=ciudad,
-        cliente_direccion=direccion,
-        cliente_nit=nit,
-        
-        # Totales y Descuentos
-        total=total_final,                 
-        porcentaje_descuento=porcentaje_descuento,
-        descuento_total=descuento_pesos, # 👈 ¡Tu modelo tiene este campo útil!
-        costo_envio=costo_envio,
-        
-        # Ajustes Fiscales
-        aplica_iva=aplica_iva,             
-        es_retenedor=es_retenedor,     
-        
-        # Estado (Corregido al choice válido de tu modelo)
-        estado="pendiente" 
-    )
-
-    # 🔄 PASO 4: Registrar cada PedidoItem y actualizar inventarios
-    for linea in lineas_items:
-        item = linea['item_carrito']
-        sub_item = linea['subtotal_item']
-        
-        # Desglose proporcional de IVA y ReteFuente por cada ítem para la base de datos
-        iva_item = sub_item * Decimal('0.19') if aplica_iva else Decimal('0')
-        retefuente_item = sub_item * Decimal('0.025') if es_retenedor else Decimal('0')
-        total_item = sub_item + iva_item - retefuente_item
-
-        PedidoItem.objects.create(
-            pedido=pedido,
-            producto=item.producto,
-            variante=item.variante,
-            cantidad=int(item.cantidad),
-            precio=linea['precio_aplicado'],
-            total_gramos=linea['gramos_totales'],  
-            subtotal=sub_item,
-            iva=iva_item,
-            retefuente=retefuente_item,
-            total_final=total_item
+        # 📦 PASO 3: Crear el Pedido Maestro con los totales de verdad
+        pedido = Pedido.objects.create(
+            usuario=usuario,
+            numero_orden=numero,
+            cliente_nombre=nombre,        
+            cliente_telefono=telefono,
+            cliente_email=cliente_email,  
+            cliente_ciudad=ciudad,
+            cliente_direccion=direccion,
+            cliente_nit=nit,
+            total=total_final,                 
+            porcentaje_descuento=porcentaje_descuento,
+            descuento_total=descuento_pesos,
+            costo_envio=costo_envio,
+            aplica_iva=aplica_iva,             
+            es_retenedor=es_retenedor,     
+            estado="pendiente" 
         )
 
-        # Descontar stock físicamente si no es venta por gramos
-        if item.variante:
-            item.variante.stock -= item.cantidad
-            item.variante.save()
-        elif item.producto.tipo_venta != "gramo":
-            item.producto.stock -= item.cantidad
-            item.producto.save()
+        # 🔄 PASO 4: Registrar cada PedidoItem y actualizar inventarios
+        for linea in lineas_items:
+            item = linea['item_carrito']
+            sub_item = linea['subtotal_item']
+            
+            iva_item = sub_item * Decimal('0.19') if aplica_iva else Decimal('0')
+            retefuente_item = sub_item * Decimal('0.025') if es_retenedor else Decimal('0')
+            total_item = sub_item + iva_item - retefuente_item
 
-    # Vaciar el carrito de compras tras el éxito de la transacción
-    items.delete()
+            PedidoItem.objects.create(
+                pedido=pedido,
+                producto=item.producto,
+                variante=item.variante,
+                cantidad=int(item.cantidad),
+                precio=linea['precio_aplicado'],
+                total_gramos=linea['gramos_totales'],  
+                subtotal=sub_item,
+                iva=iva_item,
+                retefuente=retefuente_item,
+                total_final=total_item
+            )
 
-    return render(request, 'pago.html', {'pedido': pedido})
+            if item.variante:
+                item.variante.stock -= item.cantidad
+                item.variante.save()
+            elif item.producto.tipo_venta != "gramo":
+                item.producto.stock -= item.cantidad
+                item.producto.save()
+
+        # Vaciar el carrito de compras tras el éxito de la transacción
+        items.delete()
+
+        return render(request, 'pago.html', {'pedido': pedido})
+
+    except Exception as e:
+        # 🔥 SI ALGO REVIENTA, OBLIGAMOS A RENDER A PINTAR EL TRACEBACK
+        print("\n" + "🚨" * 30)
+        print(f"💥 ERROR CRÍTICO EN /PAGAR/: {str(e)}")
+        print("-" * 60)
+        traceback.print_exc()
+        print("🚨" * 30 + "\n")
+        
+        return HttpResponse(f"Error detectado en el proceso de pago: {str(e)}", status=500)
+
 
 def confirmar_pago_publico(request, token):
     """ El cliente avisa de forma anónima que ya transfirió """
