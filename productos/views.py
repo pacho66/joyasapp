@@ -6,6 +6,7 @@ from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from urllib.parse import quote
+import traceback
 
 import stripe
 import mercadopago
@@ -1627,6 +1628,41 @@ def pagar_pedido(request):
 
     if not items.exists():
         messages.error(request, "Tu carrito está vacío.")
+        return redirect('ver_carrito')
+    
+     # =========================================================
+    # 🕵️ INICIO DEL BLOQUE DE PRUEBA Y CAZA DE ERRORES
+    # =========================================================
+    try:
+        # 1. Aquí capturas tus variables del formulario...
+        nombre = request.POST.get('nombre', '').strip()
+        telefono = request.POST.get('telefono', '').strip()
+        ciudad = request.POST.get('ciudad', '').strip()
+        # (Todos los demás campos que recibes por POST...)
+
+        # 2. Tu lógica de negocio actual (totales, bucles de ítems, etc.)
+        # subtotal = ...
+        # costo_envio = ...
+        
+        # 3. La creación del Pedido Maestro y los PedidoItem
+        # pedido = Pedido.objects.create(...)
+        # for item in items:
+        #     PedidoItem.objects.create(...)
+
+        # 4. Tu redirección final exitosa (si todo sale bien)
+        # return redirect('tu_vista_exito')
+        pass # Borra este 'pass' cuando pegues tu código real aquí adentro
+
+    except Exception as e:
+        # 🔥 SI ALGO DE LO ANTERIOR ESTALLA, ESTO LO CAPTURA E IMPRIME EN RENDER:
+        print("\n" + "="*60)
+        print(f"🚨 ERROR CRÍTICO DETECTADO EN /PAGAR/: {str(e)}")
+        print("="*60)
+        traceback.print_exc()  # Imprime el árbol completo de fallas con el número de línea exacto
+        print("="*60 + "\n")
+
+        # Esto rompe el 500 genérico y te muestra el mensaje real en la pantalla del navegador
+        messages.error(request, f"Error en el procesamiento de la factura: {str(e)}")
         return redirect('ver_carrito')
 
     # 🏪 Detectamos el usuario dueño de la joyería
