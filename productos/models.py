@@ -225,7 +225,7 @@ class ProductoVariante(models.Model):
             'talla'
         )
 
-    def _str_(self):
+    def __str__(self):
         return f"{self.producto.nombre} - {self.color or ''} {self.talla or ''}"
 
 class CarritoItem(models.Model):
@@ -285,7 +285,7 @@ class CarritoItem(models.Model):
         precio_or = Decimal(str(self.producto.precio_detal or 0))
         return (precio_or - precio_act) * cantidad_val
 
-    def _str_(self):
+    def __str__(self):
         return f"{self.cantidad} x {self.producto.nombre}"
 
 class Cliente(models.Model):
@@ -404,7 +404,7 @@ class Abono(models.Model):
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     fecha = models.DateField(auto_now_add=True)
 
-    def _str_(self):
+    def __str__(self):
         return f"Abono {self.monto} - Pedido {self.pedido.numero_orden}"
 
 class PedidoItem(models.Model):
@@ -416,7 +416,7 @@ class PedidoItem(models.Model):
     )
     pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='items')
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
-    variante = models.ForeignKey(ProductoVariante, null=True, blank=True, on_delete=models.CASCADE)
+    variante = models.ForeignKey(ProductoVariante, null=True, blank=True, on_delete=models.SET_NULL)
     cantidad = models.PositiveIntegerField()
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -424,8 +424,7 @@ class PedidoItem(models.Model):
     iva = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     retefuente = models.DecimalField(max_digits=12, decimal_places=2, default=0)  
     total_final = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total_gramos = models.DecimalField(max_digits=10,decimal_places=2,default=0
-)
+    total_gramos = models.DecimalField(max_digits=10,decimal_places=2,default=0)
 
     def calcular_subtotal(self):
         return self.cantidad * self.precio  
@@ -438,5 +437,5 @@ class Gasto(models.Model):
 
     fecha = models.DateTimeField(auto_now_add=True)
 
-    def _str_(self):
+    def __str__(self):
         return f"{self.nombre} - {self.monto}"

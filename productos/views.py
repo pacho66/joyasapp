@@ -1518,22 +1518,32 @@ def comprar_whatsapp(request, producto_id=None):
     total_final = subtotal_con_descuento + iva - retefuente + costo_envio
 
     # 🔥 FIX 1: Cambiados los atributos a los nombres reales de tu base de datos
+    
     pedido = Pedido.objects.create(
-        usuario=usuario,
-        numero_orden=numero,
-        total=total_final,
-        aplica_iva=aplica_iva,
-        porcentaje_descuento=porcentaje_descuento,
-        es_retenedor=es_retenedor,
-        nombre_cliente=nombre_cliente,
-        telefono_cliente=telefono_cliente,
-        cliente_email=cliente_email,
-        ciudad_destino=ciudad_destino,
-        direccion_entrega=direccion_entrega,
-        nit=nit,
-        costo_envio=costo_envio,
-        estado="pendiente_pago"
-    )
+    usuario=usuario,
+    numero_orden=numero,
+
+    # Datos del cliente
+    cliente_nombre=nombre_cliente,
+    cliente_telefono=telefono_cliente,
+    cliente_email=cliente_email,
+    cliente_ciudad=ciudad_destino,
+    cliente_direccion=direccion_entrega,
+    cliente_nit=nit,
+
+    # Totales
+    total=total_final,
+    porcentaje_descuento=porcentaje_descuento,
+    descuento_total=descuento,
+    costo_envio=costo_envio,
+
+    # Impuestos
+    aplica_iva=aplica_iva,
+    es_retenedor=es_retenedor,
+
+    # Estado del pedido
+    estado="pendiente"
+)
 
     # Registrar los productos asociados al pedido (PedidoItem)
     for data in resumen_items:
