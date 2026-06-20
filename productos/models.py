@@ -424,6 +424,8 @@ class PedidoItem(models.Model):
     iva = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     retefuente = models.DecimalField(max_digits=12, decimal_places=2, default=0)  
     total_final = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_gramos = models.DecimalField(max_digits=10,decimal_places=2,default=0
+)
 
     def calcular_subtotal(self):
         return self.cantidad * self.precio  
