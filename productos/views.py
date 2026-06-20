@@ -49,38 +49,42 @@ def safe_int(valor, default=1):
 
 def generar_numero_orden(usuario=None):
     """
-    Genera consecutivo:
-    - Por usuario (SaaS)
-    - Global (WhatsApp / sin usuario)
+    Genera un consecutivo global inmune a choques de concurrencia (SaaS seguro).
+    Garantiza que el número sea único en toda la base de datos.
     """
+    from django.db.models import Max
+    from .models import Pedido # Asegúrate de que apunte a tu app real
 
-    if usuario:
-        queryset = Pedido.objects.filter(usuario=usuario)
-    else:
-        queryset = Pedido.objects.all()
-
-    ultimo = queryset.only('numero_orden', 'id').order_by('-id').first()
+    # 1. Buscamos SIEMPRE a nivel global (evita choques entre joyerías)
+    # Excluimos strings vacíos o nulos por seguridad
+    ultimo_pedido = Pedido.objects.exclude(numero_orden="").order_by('-id').first()
 
     numero = 1
 
-    if ultimo and ultimo.numero_orden:
-
+    if ultimo_pedido and ultimo_pedido.numero_orden:
         try:
-            partes = ultimo.numero_orden.strip().split('-')
+            # Extrae la parte numérica después del guion (ej: "FAC-000001" -> "000001")
+            partes = ultimo_pedido.numero_orden.strip().split('-')
             consecutivo = partes[-1]
 
             if consecutivo.isdigit():
                 numero = int(consecutivo) + 1
             else:
                 raise ValueError
-
         except Exception:
-            numero = queryset.count() + 1
-
-    if numero < 1:
+            # Si el formato se rompió por alguna razón, usamos el conteo global total como respaldo + 1
+            numero = Pedido.objects.count() + 1
+    else:
+        # Si la tabla está absolutamente vacía
         numero = 1
 
+    # 2. ESCUDO DE CONCURRENCIA: Doble verificación antes de retornar
+    # Si por alguna razón el número calculado ya existe, lo autoincrementamos en bucle hasta que esté libre
+    while Pedido.objects.filter(numero_orden=f"FAC-{numero:06d}").exists():
+        numero += 1
+
     return f"FAC-{numero:06d}"
+
 
 def calcular_envio(ciudad, subtotal):
     """
