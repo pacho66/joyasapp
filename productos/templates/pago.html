@@ -27,10 +27,14 @@
 
     <br><br>
 
-    <a href="{% url 'confirmar_pago_publico' pedido.token_publico %}" 
-       style="background:green; color:white; padding:10px 15px; border-radius:6px; text-decoration:none; display:inline-block; font-weight: bold;">
-        ✅ Ya pagué (Reportar transferencia)
-    </a>
+    <form method="POST" action="{% url 'confirmar_pago_publico' pedido.token_publico %}" style="display: inline-block;">
+        {% csrf_token %}
+        <button type="submit" 
+            style="background: green; color: white; padding: 10px 15px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold; border: none; cursor: pointer; font-size: 14px;">
+            ✅ Ya pagué (Reportar transferencia)
+        </button>
+    </form>
+    
 
     {% if pedido.id %}
         <hr style="margin: 20px 0; border: 0; border-top: 1px dashed #ccc;">
