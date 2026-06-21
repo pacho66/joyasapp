@@ -41,33 +41,38 @@
 
 </div>
 
-<!-- 🔥 BOTONES -->
+<!-- 🔥 BOTONES CORREGIDOS Y SEGUROS -->
 <div style="display:flex; gap:10px; flex-wrap:wrap; margin:20px 0;">
 
-<a href="{% url 'pedido_pdf' pedido.id %}" target="_blank"
-style="flex:1; padding:12px; background:#28a745; color:white; border-radius:8px; text-align:center; text-decoration:none;">
-📄 Descargar PDF
-</a>
+    <a href="{{ link_pdf }}" target="_blank"
+       style="flex:1; min-width:120px; padding:12px; background:#28a745; color:white; border-radius:8px; text-align:center; text-decoration:none; font-weight: bold;">
+        📄 Descargar PDF
+    </a>
 
-<a href="{{ link_publico }}" target="_blank"
-style="flex:1; padding:12px; background:#007bff; color:white; border-radius:8px; text-align:center; text-decoration:none;">
-🌐 Factura pública
-</a>
+    <a href="{{ link_publico }}" target="_blank"
+       style="flex:1; min-width:120px; padding:12px; background:#007bff; color:white; border-radius:8px; text-align:center; text-decoration:none; font-weight: bold;">
+        🌐 Factura pública
+    </a>
 
-<a href="{{ whatsapp_url }}" target="_blank"
-style="flex:1; padding:12px; background:#25D366; color:white; border-radius:8px; text-align:center; text-decoration:none;">
- 📲 Enviar factura por WhatsApp
-</a>
+    <a href="{{ whatsapp_url }}" target="_blank"
+       style="flex:1; min-width:120px; padding:12px; background:#25D366; color:white; border-radius:8px; text-align:center; text-decoration:none; font-weight: bold;">
+         📲 Enviar por WhatsApp
+    </a>
 
-<a href="{% url 'pagar_wompi' pedido.id %}"
-style="background:#6f42c1;color:white;padding:10px 15px;border-radius:8px;">
-💳 Pagar con Wompi
-</a>
+    <a href="{% url 'pagar_wompi' pedido.id %}"
+       style="flex:1; min-width:120px; padding:12px; background:#6f42c1; color:white; border-radius:8px; text-align:center; text-decoration:none; font-weight: bold;">
+        💳 Wompi
+    </a>
 
-<button onclick="window.print()"
-style="flex:1; padding:12px; background:#343a40; color:white; border:none; border-radius:8px;">
-🖨️ Imprimir
-</button>
+    <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}"
+        style="flex:1; min-width:120px; padding:12px; background:#009ee3; color:white; border-radius:8px; text-align:center; text-decoration:none; font-weight: bold;">
+        🔵 Mercado Pago
+    </a>
+    
+    <button onclick="window.print()"
+            style="flex:1; min-width:120px; padding:12px; background:#343a40; color:white; border:none; border-radius:8px; font-weight: bold; cursor: pointer;">
+        🖨️ Imprimir
+    </button>
 
 </div>
 
