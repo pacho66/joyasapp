@@ -1882,19 +1882,16 @@ def lista_pedidos(request):
 
     return render(request, 'lista_pedidos.html', {'pedidos': pedidos})
 
-
 @login_required
 def detalle_pedido(request, pedido_id):
+    # 🎯 Buscamos el pedido asegurando que pertenezca al joyero autenticado
     pedido = get_object_or_404(
         Pedido,
         id=pedido_id,
         usuario=request.user
     )
 
-    items = pedido.items.select_related(
-        'producto',
-        'variante'
-    ).all()
+    items = pedido.items.select_related('producto', 'variante').all()
 
     # ===============================
     # 🔢 TOTALES
@@ -1903,21 +1900,18 @@ def detalle_pedido(request, pedido_id):
     iva_total = sum(Decimal(item.iva or 0) for item in items)
     descuento_total = sum(Decimal(item.descuento or 0) for item in items)
     retefuente_total = sum(Decimal(item.retefuente or 0) for item in items)
-
-    # 🔥 CORREGIDO
     envio = Decimal(pedido.costo_envio or 0)
-
     total_final = Decimal(pedido.total or 0)
 
-    # 🔗 PDF
+    # 🔗 ENLACES NATIVOS (Usando tus rutas reales)
     link_pdf = request.build_absolute_uri(
         reverse('pedido_pdf', args=[pedido.id])
     )
-
-    # 🔥 FUTURO SAAS
+    
+    # Apunta a la vista que el cliente abre desde WhatsApp (Usa el token UUID)
     link_publico = request.build_absolute_uri(
-        reverse('factura_publica', args=[pedido.token_publico])
-)
+        reverse('confirmar_pago_publico', args=[pedido.token_publico])
+    )
 
     # 📲 WHATSAPP
     whatsapp_url = generar_link_whatsapp(request, pedido)
@@ -1926,7 +1920,6 @@ def detalle_pedido(request, pedido_id):
     # 💳 CRÉDITO
     # ===============================
     hoy = timezone.now().date()
-
     estado_credito = None
 
     if pedido.tipo_pago == 'credito':
@@ -1944,13 +1937,24 @@ def detalle_pedido(request, pedido_id):
     total_abonado = sum(a.monto for a in abonos) if abonos else 0
 
     # ===============================
-    # 📦 CONTEXT
+    # 📦 CONTEXT (REPARADO Y SEGURO)
     # ===============================
-    perfil = request.user.perfil
+    try:
+        perfil = get_object_or_404(Perfil, usuario=request.user)
+        empresa_nombre = perfil.nombre_tienda or "Mi Joyería"
+        empresa_nit = perfil.nit or "Sin NIT"
+        empresa_telefono = perfil.whatsapp or "Sin teléfono"
+        empresa_direccion = perfil.direccion or "Sin dirección"
+    except Http404:
+        empresa_nombre = "Mi Joyería (Configurar Perfil)"
+        empresa_nit = "000000000-0"
+        empresa_telefono = "-"
+        empresa_direccion = "-"
+
     context = {
         'pedido': pedido,
         'items': items,
-
+        
         'subtotal': subtotal,
         'iva_total': iva_total,
         'descuento_total': descuento_total,
@@ -1960,49 +1964,63 @@ def detalle_pedido(request, pedido_id):
 
         'link_pdf': link_pdf,
         'link_publico': link_publico,
-
+        
         'whatsapp_url': whatsapp_url,
 
         'estado_credito': estado_credito,
         'abonos': abonos,
         'total_abonado': total_abonado,
 
-        # 🔥 EMPRESA (IMPORTANTE)
-        'empresa_nombre': perfil.nombre_tienda,
-        'empresa_nit': perfil.nit,
-        'empresa_telefono': perfil.whatsapp,
-        'empresa_direccion': perfil.direccion,
+        # 🏢 DATOS DE EMPRESA SEGUROS
+        'empresa_nombre': empresa_nombre,
+        'empresa_nit': empresa_nit,
+        'empresa_telefono': empresa_telefono,
+        'empresa_direccion': empresa_direccion,
 
-        # 🔥 QR (temporal funcional)
-        'qr_pago_url': link_pdf,
-}
+        'qr_pago_url': link_publico,
+    }
 
-    return render(
-        request,
-        'detalle_pedido.html',
-        context
-    )
+    # 🔥 CORREGIDO: Línea alineada correctamente con 4 espacios adentro de la función
+    return render(request, 'detalle_pedido.html', context)
+
 
 def pedido_pdf(request, pedido_id):
-
-    pedido = get_object_or_404(Pedido, token_publico=pedido_id)
+    # 🎯 Buscamos por ID numérico real
+    pedido = get_object_or_404(Pedido, id=pedido_id)
     items = pedido.items.all()
 
-    perfil = pedido.usuario.perfil
-
-    if not perfil.activa:
-        return HttpResponse("Cuenta inactiva")
-
-    if perfil.logo:
-        logo_path = perfil.logo.path
-    else:
+    # 🛡️ PROTECCIÓN DEL PERFIL PARA EL PDF: Evita caídas fulminantes
+    try:
+        perfil = Perfil.objects.get(usuario=pedido.usuario)
+        empresa_nombre = perfil.nombre_tienda or "Mi Joyería"
+        empresa_nit = perfil.nit or "Sin NIT"
+        empresa_telefono = perfil.whatsapp or "Sin teléfono"
+        empresa_direccion = perfil.direccion or "Sin dirección"
+        color_primario = perfil.color_primario or "#000000"
+        color_secundario = perfil.color_secundario or "#333333"
+        activa = perfil.activa
+        
+        if perfil.logo:
+            logo_path = perfil.logo.path
+        else:
+            logo_path = os.path.join(settings.BASE_DIR, 'static/img/logo.png')
+    except Perfil.DoesNotExist:
+        empresa_nombre = "Mi Joyería"
+        empresa_nit = "Sin NIT"
+        empresa_telefono = "-"
+        empresa_direccion = "-"
+        color_primario = "#000000"
+        color_secundario = "#333333"
         logo_path = os.path.join(settings.BASE_DIR, 'static/img/logo.png')
+        activa = True
+
+    if not activa:
+        return HttpResponse("Cuenta inactiva", status=403)
 
     subtotal = sum(item.subtotal or 0 for item in items)
     iva_total = sum(item.iva or 0 for item in items)
     descuento_total = sum(item.descuento or 0 for item in items)
     retefuente_total = sum(item.retefuente or 0 for item in items)
-
     envio = pedido.costo_envio or 0
     total_final = pedido.total
 
@@ -2011,15 +2029,14 @@ def pedido_pdf(request, pedido_id):
         'items': items,
         'cliente': pedido.cliente,
 
-        'empresa_nombre': perfil.nombre_tienda,
-        'empresa_nit': perfil.nit,
-        'empresa_telefono': perfil.whatsapp,
-        'empresa_direccion': perfil.direccion,
+        'empresa_nombre': empresa_nombre,
+        'empresa_nit': empresa_nit,
+        'empresa_telefono': empresa_telefono,
+        'empresa_direccion': empresa_direccion,
 
         'logo_path': logo_path,
-
-        'color_primario': perfil.color_primario,
-        'color_secundario': perfil.color_secundario,
+        'color_primario': color_primario,
+        'color_secundario': color_secundario,
 
         'subtotal': subtotal,
         'iva_total': iva_total,
@@ -2036,7 +2053,6 @@ def pedido_pdf(request, pedido_id):
     response['Content-Disposition'] = f'attachment; filename="pedido_{pedido.numero_orden}.pdf"'
 
     pisa.CreatePDF(html, dest=response)
-
     return response
 
 @login_required
@@ -2610,5 +2626,3 @@ def whatsapp_segmento(request):
     )
 
     return redirect(url_whatsapp)
-#   F o r z a n d o   r e c o m p i l a c i o n   d e   s e g u r i d a d   d e l   S a a S  
- 
