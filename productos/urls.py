@@ -47,7 +47,7 @@ urlpatterns = [
     path('pagar/mercadopago/<uuid:token>/', views.pagar_con_mercadopago),
     path('pagar/<int:pedido_id>/', views.pagar_wompi, name='pagar_wompi'),
     path('pago-exitoso/<uuid:token>/', views.pago_exitoso),
-    path('confirmar-pago/<uuid:token>/', views.confirmar_pago_publico),
+     path('confirmar-pago/<uuid:token>/', views.confirmar_pago_publico, name='confirmar_pago_publico'),
     path('confirmar-pago/<int:pedido_id>/', views.confirmar_pago, name='confirmar_pago'),
 
     # ===============================
