@@ -2610,3 +2610,5 @@ def whatsapp_segmento(request):
     )
 
     return redirect(url_whatsapp)
+#   F o r z a n d o   r e c o m p i l a c i o n   d e   s e g u r i d a d   d e l   S a a S  
+ 
