@@ -1903,12 +1903,10 @@ def detalle_pedido(request, pedido_id):
     envio = Decimal(pedido.costo_envio or 0)
     total_final = Decimal(pedido.total or 0)
 
-    # 🔗 ENLACES NATIVOS (Usando tus rutas reales)
+    # 🔗 ENLACES NATIVOS
     link_pdf = request.build_absolute_uri(
         reverse('pedido_pdf', args=[pedido.id])
     )
-    
-    # Apunta a la vista que el cliente abre desde WhatsApp (Usa el token UUID)
     link_publico = request.build_absolute_uri(
         reverse('confirmar_pago_publico', args=[pedido.token_publico])
     )
@@ -1937,15 +1935,16 @@ def detalle_pedido(request, pedido_id):
     total_abonado = sum(a.monto for a in abonos) if abonos else 0
 
     # ===============================
-    # 📦 CONTEXT (REPARADO Y SEGURO)
+    # 📦 CONTEXT (¡CORREGIDO CON user=!)
     # ===============================
     try:
-        perfil = get_object_or_404(Perfil, usuario=request.user)
+        # 🔥 Aquí corregimos el campo real: 'user' en vez de 'usuario'
+        perfil = Perfil.objects.get(user=request.user)
         empresa_nombre = perfil.nombre_tienda or "Mi Joyería"
         empresa_nit = perfil.nit or "Sin NIT"
         empresa_telefono = perfil.whatsapp or "Sin teléfono"
         empresa_direccion = perfil.direccion or "Sin dirección"
-    except Http404:
+    except Perfil.DoesNotExist:
         empresa_nombre = "Mi Joyería (Configurar Perfil)"
         empresa_nit = "000000000-0"
         empresa_telefono = "-"
@@ -1980,7 +1979,6 @@ def detalle_pedido(request, pedido_id):
         'qr_pago_url': link_publico,
     }
 
-    # 🔥 CORREGIDO: Línea alineada correctamente con 4 espacios adentro de la función
     return render(request, 'detalle_pedido.html', context)
 
 
@@ -1989,23 +1987,33 @@ def pedido_pdf(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
     items = pedido.items.all()
 
-    # 🛡️ PROTECCIÓN DEL PERFIL PARA EL PDF: Evita caídas fulminantes
+    # 🛡️ PROTECCIÓN ABSOLUTA DEL PERFIL Y LOGO (A prueba de usuarios nulos)
     try:
-        perfil = Perfil.objects.get(usuario=pedido.usuario)
-        empresa_nombre = perfil.nombre_tienda or "Mi Joyería"
-        empresa_nit = perfil.nit or "Sin NIT"
-        empresa_telefono = perfil.whatsapp or "Sin teléfono"
-        empresa_direccion = perfil.direccion or "Sin dirección"
-        color_primario = perfil.color_primario or "#000000"
-        color_secundario = perfil.color_secundario or "#333333"
-        activa = perfil.activa
-        
-        if perfil.logo:
-            logo_path = perfil.logo.path
+        # Validamos primero si el pedido tiene un usuario/joyero asociado
+        if pedido.usuario:
+            perfil = Perfil.objects.get(user=pedido.usuario)
+            empresa_nombre = perfil.nombre_tienda or "Mi Joyería"
+            empresa_nit = perfil.nit or "Sin NIT"
+            empresa_telefono = perfil.whatsapp or "Sin teléfono"
+            empresa_direccion = perfil.direccion or "Sin dirección"
+            
+            color_primario = perfil.color_primario or "#000000"
+            color_secundario = perfil.color_secundario or "#333333"
+            activa = perfil.activa
+            
+            if perfil.logo:
+                try:
+                    logo_path = perfil.logo.path
+                except (NotImplementedError, AttributeError, ValueError):
+                    logo_path = os.path.join(settings.BASE_DIR, 'static/img/logo.png')
+            else:
+                logo_path = os.path.join(settings.BASE_DIR, 'static/img/logo.png')
         else:
-            logo_path = os.path.join(settings.BASE_DIR, 'static/img/logo.png')
+            # Si el pedido no tiene usuario, forzamos la caída al plan de emergencia
+            raise Perfil.DoesNotExist
+
     except Perfil.DoesNotExist:
-        empresa_nombre = "Mi Joyería"
+        empresa_nombre = "Mi Joyería General"
         empresa_nit = "Sin NIT"
         empresa_telefono = "-"
         empresa_direccion = "-"
@@ -2013,7 +2021,7 @@ def pedido_pdf(request, pedido_id):
         color_secundario = "#333333"
         logo_path = os.path.join(settings.BASE_DIR, 'static/img/logo.png')
         activa = True
-
+    
     if not activa:
         return HttpResponse("Cuenta inactiva", status=403)
 
@@ -2027,7 +2035,7 @@ def pedido_pdf(request, pedido_id):
     context = {
         'pedido': pedido,
         'items': items,
-        'cliente': pedido.cliente,
+        'cliente': pedido.cliente,  # Ojo a la validación en el HTML con {% if cliente %}
 
         'empresa_nombre': empresa_nombre,
         'empresa_nit': empresa_nit,

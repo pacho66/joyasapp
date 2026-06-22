@@ -23,19 +23,25 @@
 
 <hr>
 
-<!-- 🧾 INFO PEDIDO -->
 <h2 style="text-align:center;">📦 Pedido #{{ pedido.numero_orden }}</h2>
 
 <div style="display:flex; justify-content:space-between; flex-wrap:wrap; margin-bottom:15px;">
 
     <div>
         <strong>Cliente:</strong><br>
-        {{ pedido.cliente_nombre|default:"No definido" }}<br>
-        {{ pedido.cliente_telefono|default:"Sin teléfono" }}
+        {% if cliente %}
+            {# 💎 Si el pedido tiene un cliente asociado en la BD #}
+            {{ cliente.nombre }}<br>
+            {{ cliente.telefono|default:"Sin teléfono" }}
+        {% else %}
+            {# 🏪 Fallback seguro para ventas rápidas de mostrador u ocasionales #}
+            Cliente Ocasional / Mostrador<br>
+            Sin teléfono
+        {% endif %}
     </div>
 
     <div style="text-align:right;">
-        <strong>Estado:</strong> {{ pedido.estado }}<br>
+        <strong>Estado:</strong> <span class="badge">{{ pedido.get_estado_display|default:pedido.estado }}</span><br>
         <strong>Fecha:</strong> {{ pedido.fecha|date:"d/m/Y" }}
     </div>
 
