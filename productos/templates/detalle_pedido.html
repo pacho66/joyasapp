@@ -2,200 +2,350 @@
 {% load static %}
 
 {% block content %}
+<style>
+    /* 💎 HOJA DE ESTILOS PREMIUM - JOYASAPP DETALLE INTERNO */
+    .dashboard-container {
+        max-width: 900px;
+        margin: 20px auto;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #212529;
+        padding: 0 15px;
+    }
 
-<div style="max-width:900px; margin:auto; font-family:Arial;">
+    /* Tarjetas de Contenedor */
+    .pedido-card {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        border: 1px solid #e9ecef;
+        padding: 24px;
+        margin-bottom: 25px;
+    }
 
-<!-- 🧾 HEADER -->
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    /* Encabezado Principal */
+    .pedido-header-table {
+        width: 100%;
+        margin-bottom: 15px;
+        border-collapse: collapse;
+    }
+    .pedido-header-logo {
+        width: 40%;
+        vertical-align: middle;
+    }
+    .pedido-header-logo img {
+        max-height: 65px;
+        object-fit: contain;
+    }
+    .pedido-header-empresa {
+        width: 60%;
+        text-align: right;
+        vertical-align: middle;
+        line-height: 1.4;
+    }
+    .pedido-header-empresa h3 {
+        margin: 0 0 4px 0;
+        font-size: 18px;
+        color: #111111;
+        text-transform: uppercase;
+    }
 
-    <div>
-        <img src="{% static 'img/logo.png' %}" style="max-height:70px;">
-    </div>
+    /* Bloques de Datos Intermedios */
+    .pedido-meta-table {
+        width: 100%;
+        margin-top: 15px;
+        margin-bottom: 15px;
+    }
+    .pedido-meta-celda {
+        width: 50%;
+        vertical-align: top;
+        font-size: 14px;
+        line-height: 1.5;
+    }
 
-    <div style="text-align:right;">
-        <h3 style="margin:0;">{{ empresa_nombre }}</h3>
-        <small>NIT: {{ empresa_nit }}</small><br>
-        <small>{{ empresa_telefono }}</small><br>
-        <small>{{ empresa_direccion }}</small>
-    </div>
+    /* Sistema de Botones de Acción (Grid Limpio) */
+    .acciones-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin: 25px 0;
+    }
+    .btn-joyas {
+        padding: 12px 10px;
+        color: white;
+        border-radius: 8px;
+        text-align: center;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 13px;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.1s ease, opacity 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+    .btn-joyas:active { transform: scale(0.98); }
+    .btn-joyas:hover { opacity: 0.95; }
 
-</div>
+    .bj-pdf { background: #28a745; box-shadow: 0 3px 8px rgba(40,167,69,0.2); }
+    .bj-publico { background: #007bff; box-shadow: 0 3px 8px rgba(0,123,255,0.2); }
+    .bj-wp { background: #25D366; box-shadow: 0 3px 8px rgba(37,211,102,0.2); }
+    .bj-wompi { background: #635BFF; box-shadow: 0 3px 8px rgba(99,91,255,0.2); }
+    .bj-mp { background: #009ee3; box-shadow: 0 3px 8px rgba(0,158,227,0.2); }
+    .bj-print { background: #343a40; }
 
-<hr>
-
-<h2 style="text-align:center;">📦 Pedido #{{ pedido.numero_orden }}</h2>
-
-<div style="display:flex; justify-content:space-between; flex-wrap:wrap; margin-bottom:15px;">
-
-    <div>
-        <strong>Cliente:</strong><br>
-        {% if cliente %}
-            {# 💎 Si el pedido tiene un cliente asociado en la BD #}
-            {{ cliente.nombre }}<br>
-            {{ cliente.telefono|default:"Sin teléfono" }}
-        {% else %}
-            {# 🏪 Fallback seguro para ventas rápidas de mostrador u ocasionales #}
-            Cliente Ocasional / Mostrador<br>
-            Sin teléfono
-        {% endif %}
-    </div>
-
-    <div style="text-align:right;">
-        <strong>Estado:</strong> <span class="badge">{{ pedido.get_estado_display|default:pedido.estado }}</span><br>
-        <strong>Fecha:</strong> {{ pedido.fecha|date:"d/m/Y" }}
-    </div>
-
-</div>
-
-<!-- 🔥 BOTONES CORREGIDOS Y SEGUROS -->
-<div style="display:flex; gap:10px; flex-wrap:wrap; margin:20px 0;">
-
-    <a href="{{ link_pdf }}" target="_blank"
-       style="flex:1; min-width:120px; padding:12px; background:#28a745; color:white; border-radius:8px; text-align:center; text-decoration:none; font-weight: bold;">
-        📄 Descargar PDF
-    </a>
-
-    <a href="{{ link_publico }}" target="_blank"
-       style="flex:1; min-width:120px; padding:12px; background:#007bff; color:white; border-radius:8px; text-align:center; text-decoration:none; font-weight: bold;">
-        🌐 Factura pública
-    </a>
-
-    <a href="{{ whatsapp_url }}" target="_blank"
-       style="flex:1; min-width:120px; padding:12px; background:#25D366; color:white; border-radius:8px; text-align:center; text-decoration:none; font-weight: bold;">
-         📲 Enviar por WhatsApp
-    </a>
-
-    <a href="{% url 'pagar_wompi' pedido.id %}"
-       style="flex:1; min-width:120px; padding:12px; background:#6f42c1; color:white; border-radius:8px; text-align:center; text-decoration:none; font-weight: bold;">
-        💳 Wompi
-    </a>
-
-    <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}"
-        style="flex:1; min-width:120px; padding:12px; background:#009ee3; color:white; border-radius:8px; text-align:center; text-decoration:none; font-weight: bold;">
-        🔵 Mercado Pago
-    </a>
+    /* Tablas de Contenido */
+    .tabla-joyas {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+        margin-bottom: 20px;
+    }
+    .tabla-joyas th {
+        background: #f8f9fa;
+        color: #495057;
+        font-size: 12px;
+        text-transform: uppercase;
+        font-weight: 600;
+        padding: 12px 10px;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .tabla-joyas td {
+        padding: 14px 10px;
+        font-size: 14px;
+        border-bottom: 1px solid #edf2f7;
+        color: #2d3748;
+    }
     
-    <button onclick="window.print()"
-            style="flex:1; min-width:120px; padding:12px; background:#343a40; color:white; border:none; border-radius:8px; font-weight: bold; cursor: pointer;">
-        🖨️ Imprimir
-    </button>
+    /* Alineaciones lógicas de columnas */
+    .al-izq { text-align: left; }
+    .al-cen { text-align: center; }
+    .al-der { text-align: right; }
 
+    /* Contenedor Flex de Liquidación */
+    .liquidacion-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+    .liq-bloque-izq {
+        flex: 1;
+        min-width: 280px;
+    }
+    .liq-bloque-der {
+        width: 320px;
+        background: #fdfdfd;
+        border: 1px solid #eef1f6;
+        border-radius: 8px;
+        padding: 15px;
+    }
+    .liq-fila {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        font-size: 14px;
+        color: #495057;
+    }
+    .liq-total {
+        font-size: 24px;
+        font-weight: 700;
+        color: #28a745;
+        text-align: right;
+        margin-top: 10px;
+        border-top: 1px solid #dee2e6;
+        padding-top: 10px;
+    }
+
+    /* Badges de Estado */
+    .badge-estado {
+        background: #e2e8f0;
+        color: #4a5568;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    /* Secciones de Bloques Especiales (Créditos/Abonos) */
+    .seccion-especial {
+        margin-top: 20px;
+        padding: 16px;
+        border-radius: 10px;
+        border: 1px solid #eef1f6;
+    }
+</style>
+
+<div class="dashboard-container">
+    <div class="pedido-card">
+
+        <table class="pedido-header-table">
+            <tr>
+                <td class="pedido-header-logo">
+                    {# 🛡️ Intenta pintar el logo del perfil seguro; si falla usa el fallback estático #}
+                    {% if logo_path %}
+                        <img src="{{ logo_path }}" alt="Logo Empresa">
+                    {% else %}
+                        <img src="{% static 'img/logo.png' %}" alt="Logo Defecto">
+                    {% endif %}
+                </td>
+                <td class="pedido-header-empresa">
+                    <h3>{{ empresa_nombre }}</h3>
+                    <small>NIT: {{ empresa_nit }}</small><br>
+                    <small>WhatsApp: {{ empresa_telefono }}</small><br>
+                    <small>{{ empresa_direccion }}</small>
+                </td>
+            </tr>
+        </table>
+
+        <hr style="border: 0; border-top: 1px solid #e9ecef; margin: 20px 0;">
+
+        <h2 style="text-align: center; margin-top: 0; font-size: 22px; color: #111;">📦 Pedido #{{ pedido.numero_orden }}</h2>
+
+        <table class="pedido-meta-table">
+            <tr>
+                <td class="pedido-meta-celda class al-izq">
+                    <strong>Cliente:</strong><br>
+                    {% if cliente %}
+                        {{ cliente.nombre }}<br>
+                        {{ cliente.telefono|default:"Sin teléfono" }}
+                    {% else %}
+                        <span style="color: #6c757d; font-style: italic;">Cliente Ocasional / Mostrador</span>
+                    {% endif %}
+                </td>
+                <td class="pedido-meta-celda" style="text-align: right;">
+                    <strong>Estado:</strong> <span class="badge-estado">{{ pedido.get_estado_display|default:pedido.estado }}</span><br>
+                    <strong>Fecha:</strong> {{ pedido.fecha|date:"d/m/Y" }}
+                </td>
+            </tr>
+        </table>
+
+        <div class="acciones-grid">
+            <a href="{{ link_pdf }}" target="_blank" class="btn-joyas bj-pdf">📄 PDF</a>
+            <a href="{{ link_publico }}" target="_blank" class="btn-joyas bj-publico">🌐 Pública</a>
+            <a href="{{ whatsapp_url }}" target="_blank" class="btn-joyas bj-wp">📲 WhatsApp</a>
+            <a href="{% url 'pagar_wompi' pedido.id %}" class="btn-joyas bj-wompi">💳 Wompi</a>
+            <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}" class="btn-joyas bj-mp">🔵 M. Pago</a>
+            <button onclick="window.print()" class="btn-joyas bj-print">🖨️ Imprimir</button>
+        </div>
+
+        <h3 style="font-size: 16px; margin-bottom: 10px; border-bottom: 2px solid #111; padding-bottom: 5px;">🛍️ Productos del Pedido</h3>
+        <table class="tabla-joyas">
+            <thead>
+                <tr>
+                    <th class="al-izq">Producto / Descripción</th>
+                    <th class="al-cen" style="width: 15%;">Cant.</th>
+                    <th class="al-der" style="width: 20%;">Precio Unit.</th>
+                    <th class="al-der" style="width: 25%;">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td class="al-izq">
+                        <strong>{{ item.producto.nombre }}</strong>
+                        {% if item.variante %}
+                            <br><small style="color:#6c757d;">Variante: {{ item.variante.nombre }}</small>
+                        {% endif %}
+                    </td>
+                    <td class="al-cen">{{ item.cantidad }} u</td>
+                    <td class="al-der">${{ item.precio|floatformat:"0" }}</td> <td class="al-der">${{ item.subtotal|floatformat:"0" }}</td>  </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="liquidacion-wrapper">
+            
+            <div class="liq-bloque-izq">
+                <div style="padding-right: 20px;">
+                    {% if envio > 0 %}
+                        <p style="font-size: 14px; margin: 5px 0;"><strong>🚚 Envío de Seguridad:</strong> ${{ envio|floatformat:"0" }}</p>
+                    {% else %}
+                        <p style="font-size: 14px; margin: 5px 0; color: #28a745;"><strong>🚚 Envío:</strong> ¡GRATIS!</p>
+                    {% endif %}
+                    
+                    <div style="margin-top: 25px; border: 1px solid #edf2f7; padding: 12px; border-radius: 8px; display: inline-block; background: #fff;">
+                        <small style="display: block; color: #718096; margin-bottom: 5px; font-weight: 600; text-align: center;">Escanea para recaudar</small>
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={{ qr_pago_url }}" style="display: block; margin: 0 auto;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="liq-bloque-der">
+                <div class="liq-fila">
+                    <span>Subtotal Neto:</span>
+                    <span>${{ subtotal|floatformat:"0" }}</span>
+                </div>
+                {% if iva_total > 0 %}
+                <div class="liq-fila">
+                    <span>IVA liquidado:</span>
+                    <span>+${{ iva_total|floatformat:"0" }}</span>
+                </div>
+                {% endif %}
+                {% if descuento_total > 0 %}
+                <div class="liq-fila" style="color: #c0392b;">
+                    <span>Descuento Otorgado:</span>
+                    <span>-${{ descuento_total|floatformat:"0" }}</span>
+                </div>
+                {% endif %}
+                {% if retefuente_total > 0 %}
+                <div class="liq-fila" style="color: #c0392b;">
+                    <span>Retención en Fuente:</span>
+                    <span>-${{ retefuente_total|floatformat:"0" }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="liq-total">
+                    Total: ${{ total_final|floatformat:"0" }} COP
+                </div>
+            </div>
+        </div>
+
+        {% if pedido.tipo_pago == 'credito' %}
+        <div class="seccion-especial" style="background: #fff3cd; border-color: #ffeeba;">
+            <h3 style="margin-top: 0; font-size: 15px; color: #856404; text-transform: uppercase;">💳 Control de Venta a Crédito</h3>
+            <p style="margin: 4px 0;"><strong>Saldo Pendiente:</strong> ${{ pedido.saldo_pendiente|default:0|floatformat:"0" }}</p>
+            <p style="margin: 4px 0;"><strong>Fecha Límite de Cobro:</strong> {{ pedido.fecha_limite|default:"No definida" }}</p>
+            
+            {% if pedido.saldo_pendiente > 0 %}
+                <span style="color: #721c24; background: #f8d7da; padding: 3px 8px; border-radius: 4px; font-weight: 600; font-size: 11px;">🔴 COBRO EN MORA / PENDIENTE</span>
+            {% else %}
+                <span style="color: #155724; background: #d4edda; padding: 3px 8px; border-radius: 4px; font-weight: 600; font-size: 11px;">✅ CRÉDITO LIBERADO / PAGADO</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if abonos %}
+        <div class="seccion-especial" style="background: #f8f9fa;">
+            <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 14px; text-transform: uppercase; color: #495057;">Historial de Abonos Recibidos</h4>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid #dee2e6;">
+                        <th style="text-align: left; padding: 6px; font-size: 12px; color: #6c757d;">Fecha de Abono</th>
+                        <th style="text-align: right; padding: 6px; font-size: 12px; color: #6c757d;">Monto Ingresado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for abono in abonos %}
+                    <tr style="border-bottom: 1px solid #edf2f7;">
+                        <td style="text-align: left; padding: 8px 6px; font-size: 13px;">{{ abono.fecha|date:"d/m/Y" }}</td>
+                        <td style="text-align: right; padding: 8px 6px; font-size: 13px; font-weight: bold; color: #28a745;">+${{ abono.monto|floatformat:"0" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <hr style="border: 0; border-top: 1px solid #e9ecef; margin: 25px 0;">
+
+        <div style="text-align: center; font-size: 12px; color: #7f8c8d; line-height: 1.5;">
+            Sistema de Gestión Corporativo — Orden #{{ pedido.numero_orden }}<br>
+            <strong>JoyasApp SaaS</strong> 💎
+        </div>
+
+    </div>
 </div>
-
-<hr>
-
-<!-- 🛍️ PRODUCTOS -->
-<h3>🛍️ Productos</h3>
-
-<table style="width:100%; border-collapse:collapse;">
-<tr style="background:#f5f5f5;">
-    <th>Producto</th>
-    <th>Cantidad</th>
-    <th>Precio</th>
-    <th>Subtotal</th>
-</tr>
-
-{% for item in items %}
-<tr>
-    <td>{{ item.producto.nombre }}</td>
-    <td>{{ item.cantidad }}</td>
-    <td>${{ item.precio }}</td>
-    <td>${{ item.subtotal }}</td>
-</tr>
-{% endfor %}
-</table>
-
-<hr>
-
-{% if envio > 0 %}
-<p><strong>🚚 Envío:</strong> ${{ envio }}</p>
-{% else %}
-<p><strong>🚚 Envío:</strong> GRATIS</p>
-{% endif %}
-
-<!-- 💰 TOTALES -->
-<p><strong>Subtotal:</strong> ${{ subtotal }}</p>
-<p><strong>IVA:</strong> ${{ iva_total }}</p>
-<p><strong>Descuento:</strong> ${{ descuento_total }}</p>
-<p><strong>Retefuente:</strong> ${{ retefuente_total }}</p>
-
-<h2 style="color:#28a745;">
-${{ total_final|floatformat:0 }}
-</h2>
-
-<!-- 🔳 QR PAGO -->
-<div style="text-align:center; margin-top:20px;">
-    <p>Escanea para pagar</p>
-    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ qr_pago_url }}">
-</div>
-
-<div style="text-align:center; margin-top:15px;">
-
-    <a href="{{ link_pdf }}" target="_blank"
-    style="
-        display:inline-block;
-        background:#28a745;
-        color:white;
-        padding:12px 18px;
-        border-radius:8px;
-        text-decoration:none;
-        font-weight:bold;
-    ">
-        📄 Descargar PDF
-    </a>
-
-</div>
-
-<!-- 💳 CRÉDITO -->
-{% if pedido.tipo_pago == 'credito' %}
-<div style="margin-top:20px; padding:15px; background:#fff3cd; border-radius:10px;">
-
-<h3>💳 Venta a crédito</h3>
-
-<p><strong>Saldo:</strong> ${{ pedido.saldo_pendiente|default:0 }}</p>
-<p><strong>Fecha límite:</strong> {{ pedido.fecha_limite|default:"No definida" }}</p>
-
-{% if pedido.saldo_pendiente > 0 %}
-<p style="color:red;">🔴 Pendiente</p>
-{% else %}
-<p style="color:green;">✅ Pagado</p>
-{% endif %}
-
-</div>
-{% endif %}
-
-<!-- 💰 ABONOS -->
-{% if abonos %}
-<div style="margin-top:20px; padding:15px; background:#f8f9fa; border-radius:10px;">
-
-<h4>Historial de abonos</h4>
-
-<table style="width:100%;">
-<tr>
-    <th>Fecha</th>
-    <th>Monto</th>
-</tr>
-
-{% for abono in abonos %}
-<tr>
-    <td>{{ abono.fecha|date:"d/m/Y" }}</td>
-    <td>${{ abono.monto }}</td>
-</tr>
-{% endfor %}
-
-</table>
-
-</div>
-{% endif %}
-
-<hr>
-
-<!-- 🧾 FOOTER -->
-<div style="text-align:center; font-size:12px; color:#777; margin-top:20px;">
-    Pedido #{{ pedido.numero_orden }}<br>
-    Gracias por tu compra 💎
-</div>
-
-</div>
-
 {% endblock %}

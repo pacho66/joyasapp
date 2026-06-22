@@ -5,65 +5,107 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-body{
-    font-family: Arial, sans-serif;
-    background:#f5f5f5;
-    margin:0;
-    padding:0;
+/* 💎 ESTILOS PREMIUM - JOYASAPP FACTURA PÚBLICA */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f8f9fa; /* Gris claro sutil de fondo */
+    margin: 0;
+    padding: 0;
+    color: #212529;
 }
 
-.container{
-    max-width:500px;
-    margin:auto;
-    background:white;
-    padding:20px;
+.container {
+    max-width: 500px;
+    margin: 0 auto;
+    background: #ffffff;
+    padding: 24px;
     box-sizing: border-box;
     min-height: 100vh;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); /* Sombra elegante */
 }
 
-/* HEADER */
-.header{
-    text-align:center;
+/* 🏢 HEADER */
+.header {
+    text-align: center;
+    margin-bottom: 25px;
 }
 
-.titulo{
-    text-align:center;
-    font-size:20px;
-    margin:15px 0;
+.titulo {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #1a1a1a;
+    margin: 10px 0;
+    text-transform: uppercase;
 }
 
-/* ESTADO */
-.estado{
-    text-align:center;
-    padding:10px;
-    border-radius:8px;
-    margin-bottom:15px;
-    font-weight:bold;
-}
-
-.pendiente{ background:#fff3cd; color:#856404; }
-.pagado{ background:#d4edda; color:#155724; }
-
-/* TABLA */
-.tabla{
-    width:100%;
-    border-collapse:collapse;
-    margin-bottom: 15px;
-}
-
-.tabla th, .tabla td{
-    border-bottom:1px solid #ddd;
-    padding:10px 8px;
-    text-align:center;
+/* 🏷️ ESTADO DEL PAGO */
+.estado {
+    text-align: center;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-weight: 600;
     font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* 📊 BLOC DE DESGLOSE TRIBUTARIO */
+.pendiente { 
+    background: #fff3cd; 
+    color: #856404; 
+    border: 1px solid #ffeeba;
+}
+
+.pagado { 
+    background: #d4edda; 
+    color: #155724; 
+    border: 1px solid #c3e6cb;
+}
+
+/* 📊 TABLA DE PRODUCTOS (Alineación E-commerce) */
+.tabla {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.tabla th {
+    background: #fdfdfd;
+    color: #6c757d;
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 12px 8px;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.tabla td {
+    border-bottom: 1px solid #edf2f7;
+    padding: 14px 8px;
+    font-size: 14px;
+    color: #2d3748;
+}
+
+/* Alínea las columnas de forma lógica */
+.tabla th:nth-child(1), .tabla td:nth-child(1) { text-align: left; width: 45%; } /* Producto */
+.tabla th:nth-child(2), .tabla td:nth-child(2) { text-align: center; width: 15%; } /* Cantidad */
+.tabla th:nth-child(3), .tabla td:nth-child(3) { text-align: right; width: 40%; } /* Subtotal */
+
+.tabla td span.precio-unitario {
+    display: block;
+    font-size: 11px;
+    color: #718096;
+    margin-top: 2px;
+}
+
+/* 📉 BLOQUE DE DESGLOSE TRIBUTARIO SÓLIDO */
 .desglose-contenedor {
-    margin: 15px 0;
-    padding: 5px 0;
-    border-top: 1px dashed #ddd;
-    border-bottom: 1px dashed #ddd;
+    margin: 20px 0;
+    padding: 10px 0;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
 }
 
 .desglose-fila {
@@ -71,67 +113,87 @@ body{
     justify-content: space-between;
     padding: 6px 4px;
     font-size: 14px;
-    color: #444;
+    color: #4a5568;
 }
 
 .desglose-fila.impuesto {
-    color: #666;
+    color: #718096;
 }
 
 .desglose-fila.retencion {
-    color: #c0392b; /* Rojo sutil porque resta del total */
+    color: #e53e3e; /* Rojo sutil elegante */
     font-weight: 500;
 }
 
-/* TOTAL */
-.total{
-    font-size:22px;
-    font-weight:bold;
-    text-align:center;
-    margin:20px 0;
-    color: {{ color_primario|default:'#000' }};
-    background: #fdfdfd;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #f0f0f0;
+/* 💰 TOTAL DESTACADO */
+.total {
+    font-size: 24px;
+    font-weight: 700;
+    text-align: center;
+    margin: 25px 0;
+    color: {{ color_primario|default:'#111111' }};
+    background: #f7fafc;
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    letter-spacing: -0.5px;
 }
 
-/* BOTONES */
-.btn{
-    display:block;
-    width:100%;
-    padding:14px;
-    margin-top:10px;
-    border-radius:10px;
-    text-align:center;
-    text-decoration:none;
-    font-weight:bold;
+/* 🎛️ BOTONES MODERNOS Y LIMPIOS */
+.btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    border-radius: 10px;
+    text-align: center;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
     box-sizing: border-box;
+    transition: background 0.2s ease, transform 0.1s ease;
+    border: none;
+    cursor: pointer;
 }
 
-.btn-pagar{
-    background:#635BFF;
-    color:white;
+.btn:active {
+    transform: scale(0.98);
 }
 
-.btn-whatsapp{
-    background:#25D366;
-    color:white;
+.btn-pagar {
+    background: #635BFF; /* Morado Wompi/Stripe original */
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(99, 91, 255, 0.2);
 }
 
-.btn-confirmar{
-    background:{{ color_primario|default:'#333' }};
-    color:white;
+.btn-whatsapp {
+    background: #25D366;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.2);
 }
 
-/* QR */
-.qr{
-    text-align:center;
-    margin-top:25px;
-    padding-top:15px;
-    border-top: 1px solid #eee;
+.btn-confirmar {
+    background: {{ color_primario|default:'#2d3748' }};
+    color: #ffffff;
+}
+
+/* 🔍 CÓDIGO QR SEGURO */
+.qr {
+    text-align: center;
+    margin-top: 35px;
+    padding-top: 20px;
+    border-top: 1px solid #edf2f7;
+}
+
+.qr img {
+    max-width: 150px;
+    border: 1px solid #e2e8f0;
+    padding: 8px;
+    border-radius: 8px;
+    background: #ffffff;
 }
 </style>
+
 </head>
 
 <body>
@@ -202,10 +264,10 @@ body{
 
     <div class="desglose-contenedor">
         <div class="desglose-fila">
-            <span>Subtotal General:</span>
-            <span>${{ pedido.total|django_recalcular_subtotal:pedido.costo_envio|floatformat:0|default:pedido.total }}</span>
+            <span>Subtotal general:</span>
+            <span>${{ subtotal|floatformat:"0" }}</span>
         </div>
-        
+    
         {% if pedido.porcentaje_descuento > 0 %}
         <div class="desglose-fila impuesto" style="color: red;">
             <span>Descuento ({{ pedido.porcentaje_descuento }}%):</span>
