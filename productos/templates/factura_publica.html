@@ -300,10 +300,11 @@ body {
     </div>
 
     {% if pedido.estado != 'pagado' %}
-        <a href="{% url 'crear_checkout' pedido.id %}" class="btn btn-pagar">
-            💳 Pagar con tarjeta
+        <a href="{% url 'pagar_wompi' pedido.id %}" class="btn btn-pagar">
+            💳 Pagar con Wompi
         </a>
     {% endif %}
+    
 
     <a href="https://wa.me/{{ pedido.usuario.perfil.whatsapp|default:empresa_telefono }}?text=Hola! Adjunto el comprobante de pago del pedido %23{{ pedido.numero_orden }}" 
        class="btn btn-whatsapp" target="_blank">
