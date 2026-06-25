@@ -1944,6 +1944,8 @@ def detalle_pedido(request, pedido_id):
         empresa_nit = perfil.nit or "Sin NIT"
         empresa_telefono = perfil.whatsapp or "Sin teléfono"
         empresa_direccion = perfil.direccion or "Sin dirección"
+        if perfil.logo:
+            logo_path = perfil.logo.url
     except Perfil.DoesNotExist:
         empresa_nombre = "Mi Joyería (Configurar Perfil)"
         empresa_nit = "000000000-0"
@@ -1976,11 +1978,17 @@ def detalle_pedido(request, pedido_id):
         'empresa_nit': empresa_nit,
         'empresa_telefono': empresa_telefono,
         'empresa_direccion': empresa_direccion,
+        'logo_path': logo_path,
 
         'qr_pago_url': link_publico,
     }
 
-    return render(request, 'detalle_pedido.html', context)
+    try:
+        return render(request, 'detalle_pedido.html', context)
+
+    except Exception as e:
+        print("ERROR DETALLE PEDIDO:", str(e))
+        raise
 
 def pedido_pdf(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
