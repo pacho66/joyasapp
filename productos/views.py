@@ -1981,15 +1981,18 @@ def detalle_pedido(request, pedido_id):
 
     return render(request, 'detalle_pedido.html', context)
 
-
 def pedido_pdf(request, pedido_id):
     # 🎯 Buscamos por ID numérico real
     pedido = get_object_or_404(Pedido, id=pedido_id)
     items = pedido.items.all()
 
-    # 🛡️ PROTECCIÓN ABSOLUTA DEL PERFIL Y LOGO (A prueba de usuarios nulos)
+    # 📁 Determinamos dinámicamente la carpeta de estáticos según el entorno
+    # Si DEBUG es False, usamos 'staticfiles', de lo contrario 'static'
+    folder_static = 'staticfiles' if not settings.DEBUG else 'static'
+    fallback_logo = os.path.join(settings.BASE_DIR, folder_static, 'img/logo.png')
+
+    # 🛡️ PROTECCIÓN ABSOLUTA DEL PERFIL Y LOGO
     try:
-        # Validamos primero si el pedido tiene un usuario/joyero asociado
         if pedido.usuario:
             perfil = Perfil.objects.get(user=pedido.usuario)
             empresa_nombre = perfil.nombre_tienda or "Mi Joyería"
@@ -2003,13 +2006,16 @@ def pedido_pdf(request, pedido_id):
             
             if perfil.logo:
                 try:
-                    logo_path = perfil.logo.path
+                    # Si el archivo físico del logo subido por el usuario existe en Render, lo usamos
+                    if os.path.exists(perfil.logo.path):
+                        logo_path = perfil.logo.path
+                    else:
+                        logo_path = fallback_logo
                 except (NotImplementedError, AttributeError, ValueError):
-                    logo_path = os.path.join(settings.BASE_DIR, 'static/img/logo.png')
+                    logo_path = fallback_logo
             else:
-                logo_path = os.path.join(settings.BASE_DIR, 'static/img/logo.png')
+                logo_path = fallback_logo
         else:
-            # Si el pedido no tiene usuario, forzamos la caída al plan de emergencia
             raise Perfil.DoesNotExist
 
     except Perfil.DoesNotExist:
@@ -2019,9 +2025,9 @@ def pedido_pdf(request, pedido_id):
         empresa_direccion = "-"
         color_primario = "#000000"
         color_secundario = "#333333"
-        logo_path = os.path.join(settings.BASE_DIR, 'static/img/logo.png')
+        logo_path = fallback_logo
         activa = True
-    
+
     if not activa:
         return HttpResponse("Cuenta inactiva", status=403)
 
