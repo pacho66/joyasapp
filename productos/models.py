@@ -189,9 +189,10 @@ class Producto(models.Model):
 
 class ProductoImagen(models.Model):
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='imagenes')
-    imagen = models.ImageField(upload_to='productos/galeria/')
+    # 🚀 Cambiamos ImageField por CloudinaryField
+    imagen = CloudinaryField('imagen', blank=True, null=True)
 
-    def __str__(self):
+    def _str_(self):
         return f"Imagen de {self.producto.nombre}"
 
 
@@ -341,13 +342,7 @@ class Pedido(models.Model):
 
     fecha = models.DateTimeField(auto_now_add=True)
 
-    cliente = models.ForeignKey(
-    'Cliente',
-    on_delete=models.SET_NULL,
-    null=True,
-    blank=True,
-    related_name='pedidos'
-)
+    cliente = models.ForeignKey('Cliente',on_delete=models.SET_NULL,null=True,blank=True,related_name='pedidos')
 
     # 🔹 CLIENTE
     cliente_nombre = models.CharField(max_length=100, blank=True, null=True)
