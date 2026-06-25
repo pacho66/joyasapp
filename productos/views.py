@@ -1982,15 +1982,14 @@ def detalle_pedido(request, pedido_id):
 
     return render(request, 'detalle_pedido.html', context)
 
-
 def pedido_pdf(request, pedido_id):
-    # 🎯 Buscamos por ID numérico real
     pedido = get_object_or_404(Pedido, id=pedido_id)
     items = pedido.items.all()
 
+    # 1. 🚀 FORZAMOS LOGO NULL (Sugerencia de PG para aislar almacenamiento remoto)
     logo_path = None
 
-    # 🛡️ PROTECCIÓN ABSOLUTA DEL PERFIL Y LOGO
+    # Obtención segura del perfil
     try:
         if pedido.usuario:
             perfil = Perfil.objects.get(user=pedido.usuario)
@@ -1998,21 +1997,11 @@ def pedido_pdf(request, pedido_id):
             empresa_nit = perfil.nit or "Sin NIT"
             empresa_telefono = perfil.whatsapp or "Sin teléfono"
             empresa_direccion = perfil.direccion or "Sin dirección"
-            
             color_primario = perfil.color_primario or "#000000"
             color_secundario = perfil.color_secundario or "#333333"
             activa = perfil.activa
-            
-            if perfil.logo:
-                try:
-                    # Si el archivo físico del logo subido por el usuario existe en Render, lo usamos
-                    if os.path.exists(perfil.logo.path):
-                        logo_path = perfil.logo.path
-                except (NotImplementedError, AttributeError, ValueError):
-                    logo_path = None
         else:
             raise Perfil.DoesNotExist
-
     except Perfil.DoesNotExist:
         empresa_nombre = "Mi Joyería General"
         empresa_nit = "Sin NIT"
@@ -2025,6 +2014,7 @@ def pedido_pdf(request, pedido_id):
     if not activa:
         return HttpResponse("Cuenta inactiva", status=403)
 
+    # Cálculos seguros
     subtotal = sum(item.subtotal or 0 for item in items)
     iva_total = sum(item.iva or 0 for item in items)
     descuento_total = sum(item.descuento or 0 for item in items)
@@ -2032,10 +2022,27 @@ def pedido_pdf(request, pedido_id):
     envio = pedido.costo_envio or 0
     total_final = pedido.total
 
+    # 2. 🚀 FECHA CORREGIDA (Sincronizada con el campo 'fecha')
+    if hasattr(pedido, 'fecha') and pedido.fecha:
+        fecha_str = pedido.fecha.strftime('%Y-%m-%d')
+    elif hasattr(pedido, 'fecha_creacion') and pedido.fecha_creacion:
+        fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d')
+    else:
+        fecha_str = "S/F"
+
+    # 🔍 PRINT DE DIAGNÓSTICO EN CONSOLA DE RENDER
+    print("\n" + "📊" * 15)
+    print(f"PEDIDO ID: {pedido.id}")
+    print(f"USUARIO: {pedido.usuario}")
+    print(f"LOGO PATH (FORZADO): {logo_path}")
+    print(f"CLIENTE: {getattr(pedido, 'cliente', 'Mostrador')}")
+    print(f"NUMERO ORDEN: {pedido.numero_orden}")
+    print("📊" * 15 + "\n")
+
     context = {
         'pedido': pedido,
         'items': items,
-        'cliente': getattr(pedido, 'cliente', None),  # Validación de cliente en PDF
+        'cliente': getattr(pedido, 'cliente', None),
 
         'empresa_nombre': empresa_nombre,
         'empresa_nit': empresa_nit,
@@ -2052,6 +2059,7 @@ def pedido_pdf(request, pedido_id):
         'retefuente_total': retefuente_total,
         'envio': envio,
         'total_final': total_final,
+        'fecha_str': fecha_str,  # Pasamos el string limpio
     }
 
     template = get_template('pedido_pdf.html')
@@ -2060,8 +2068,15 @@ def pedido_pdf(request, pedido_id):
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="pedido_{pedido.numero_orden}.pdf"'
 
-    pisa.CreatePDF(html, dest=response)
+    # 4. 🚀 CAPTURA DE ERROR EN MOTOR PDF
+    pdf = pisa.CreatePDF(html, dest=response)
+    if pdf.err:
+        print(f"❌ ERROR CRÍTICO EN XHTML2PDF: {pdf.err}")
+        return HttpResponse(f"Error generando PDF: {pdf.err}", status=500)
+
     return response
+
+
 
 @login_required
 def gastos(request):
