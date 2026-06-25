@@ -171,6 +171,7 @@
                 <strong>{{ empresa_nombre }}</strong><br>
                 NIT: {{ empresa_nit }}<br>
                 WhatsApp: {{ empresa_telefono }}<br>
+                <strong>Email:</strong> {{ empresa_email }}<br>
                 {{ empresa_direccion }}
             </td>
         </tr>
@@ -221,24 +222,40 @@
                 <th class="align-right" style="width: 25%;">Subtotal</th>
             </tr>
         </thead>
+        
         <tbody>
             {% for item in items %}
-            
             <tr>
                 <td class="align-left">
                     {{ item.producto.nombre }}
                     {% if item.variante %}
-                         <br><small style="color: #666666; font-size: 9px;">Variante: {{ item.variante }}</small>
+                <br>
+                <small style="color:#666666;font-size:9px;">
+                    Variante: {{ item.variante }}
+                </small>
                     {% endif %}
+            </td>
+
+                <td class="align-center">
+                 {{ item.cantidad }} u
                 </td>
-                <td class="align-center">{{ item.cantidad }} u</td>
-                <td class="align-right">${{ item.precio|floatformat:"0" }}</td> 
-                <td class="align-right">${{ item.subtotal|floatformat:"0" }}</td>
+
+                <td class="align-right">
+                ${{ item.precio|floatformat:"0" }}
+            </td>
+
+                <td class="align-right">
+                ${{ item.subtotal|floatformat:"0" }}
+                </td>
             </tr>
+
+                {% empty %}
             <tr>
-                <td colspan="4" class="align-center">No hay productos registrados en este pedido.</td>
+                <td colspan="4" class="align-center">
+                No hay productos registrados en este pedido.
+                </td>
             </tr>
-            {% endfor %}
+                {% endfor %}
         </tbody>
     </table>
 

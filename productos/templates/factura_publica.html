@@ -275,12 +275,13 @@ body {
         </div>
         {% endif %}
 
-        {% if pedido.aplica_iva %}
+        {% if iva_total > 0 %}
         <div class="desglose-fila impuesto">
             <span>IVA (19%):</span>
-            <span>+ ${{ pedido.iva|floatformat:0 }}</span>
+            <span>+ ${{ iva_total|floatformat:0 }}</span>
         </div>
         {% endif %}
+        
 
         {% if pedido.es_retenedor %}
         <div class="desglose-fila retencion">

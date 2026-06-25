@@ -1982,6 +1982,12 @@ def detalle_pedido(request, pedido_id):
 
         'qr_pago_url': link_publico,
     }
+    print("DETALLE PEDIDO OK")
+    print("Pedido:", pedido.id)
+    print("Numero:", pedido.numero_orden)
+    print("Cliente:", getattr(pedido, 'cliente', None))
+    print("Fecha:", getattr(pedido, 'fecha', None))
+    print("Fecha creación:", getattr(pedido, 'fecha_creacion', None))
 
     try:
         return render(request, 'detalle_pedido.html', context)
@@ -2005,6 +2011,7 @@ def pedido_pdf(request, pedido_id):
             empresa_nit = perfil.nit or "Sin NIT"
             empresa_telefono = perfil.whatsapp or "Sin teléfono"
             empresa_direccion = perfil.direccion or "Sin dirección"
+            empresa_email = perfil.email_empresa or "Sin correo"
             color_primario = perfil.color_primario or "#000000"
             color_secundario = perfil.color_secundario or "#333333"
             activa = perfil.activa
@@ -2015,6 +2022,7 @@ def pedido_pdf(request, pedido_id):
         empresa_nit = "Sin NIT"
         empresa_telefono = "-"
         empresa_direccion = "-"
+        empresa_email = "-"
         color_primario = "#000000"
         color_secundario = "#333333"
         activa = True
@@ -2056,6 +2064,7 @@ def pedido_pdf(request, pedido_id):
         'empresa_nit': empresa_nit,
         'empresa_telefono': empresa_telefono,
         'empresa_direccion': empresa_direccion,
+        'empresa_email': empresa_email,
 
         'logo_path': logo_path,
         'color_primario': color_primario,
@@ -2347,7 +2356,7 @@ def factura_publica(request, token):
     
     retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
     envio = Decimal(str(pedido.costo_envio or 0))
-    pedido_total = Decimal(str(pedido.total or 0))
+    total_final = subtotal + iva_total + envio - descuento_total - retefuente_total
 
     # =========================================================
     # 🟢 CORRECCIÓN DEL MOTOR DE ESTADOS (Original de PG)
