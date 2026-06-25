@@ -260,15 +260,19 @@
             
             <div class="liq-bloque-izq">
                 <div style="padding-right: 20px;">
-                    {% if envio > 0 %}
-                        <p style="font-size: 14px; margin: 5px 0;"><strong>🚚 Envío de Seguridad:</strong> ${{ envio|floatformat:"0" }}</p>
+                    {% if envio and envio > 0 %}
+                        <p style="font-size: 14px; margin: 5px 0;"><strong>🚚 Envío de Seguridad:</strong> ${{ envio|default:0|floatformat:"0" }}</p>
                     {% else %}
                         <p style="font-size: 14px; margin: 5px 0; color: #28a745;"><strong>🚚 Envío:</strong> ¡GRATIS!</p>
                     {% endif %}
                     
                     <div style="margin-top: 25px; border: 1px solid #edf2f7; padding: 12px; border-radius: 8px; display: inline-block; background: #fff;">
                         <small style="display: block; color: #718096; margin-bottom: 5px; font-weight: 600; text-align: center;">Escanea para recaudar</small>
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={{ qr_pago_url }}" style="display: block; margin: 0 auto;">
+                        {% if qr_pago_url %}
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={{ qr_pago_url }}" style="display: block; margin: 0 auto;">
+                        {% else %}
+                            <small style="color: #6c757d; font-style: italic;">QR no disponible</small>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -276,29 +280,29 @@
             <div class="liq-bloque-der">
                 <div class="liq-fila">
                     <span>Subtotal Neto:</span>
-                    <span>${{ subtotal|floatformat:"0" }}</span>
+                    <span>${{ subtotal|default:0|floatformat:"0" }}</span>
                 </div>
-                {% if iva_total > 0 %}
+                {% if iva_total and iva_total > 0 %}
                 <div class="liq-fila">
                     <span>IVA liquidado:</span>
-                    <span>+${{ iva_total|floatformat:"0" }}</span>
+                    <span>+${{ iva_total|default:0|floatformat:"0" }}</span>
                 </div>
                 {% endif %}
-                {% if descuento_total > 0 %}
+                {% if descuento_total and descuento_total > 0 %}
                 <div class="liq-fila" style="color: #c0392b;">
                     <span>Descuento Otorgado:</span>
-                    <span>-${{ descuento_total|floatformat:"0" }}</span>
+                    <span>-${{ descuento_total|default:0|floatformat:"0" }}</span>
                 </div>
                 {% endif %}
-                {% if retefuente_total > 0 %}
+                {% if retefuente_total and retefuente_total > 0 %}
                 <div class="liq-fila" style="color: #c0392b;">
                     <span>Retención en Fuente:</span>
-                    <span>-${{ retefuente_total|floatformat:"0" }}</span>
+                    <span>-${{ retefuente_total|default:0|floatformat:"0" }}</span>
                 </div>
                 {% endif %}
                 
                 <div class="liq-total">
-                    Total: ${{ total_final|floatformat:"0" }} COP
+                    Total: ${{ total_final|default:0|floatformat:"0" }} COP
                 </div>
             </div>
         </div>
