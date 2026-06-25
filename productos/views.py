@@ -1953,6 +1953,7 @@ def detalle_pedido(request, pedido_id):
     context = {
         'pedido': pedido,
         'items': items,
+        'cliente': getattr(pedido, 'cliente', None),  # 🚀 Inyección segura para evitar errores en el HTML
         
         'subtotal': subtotal,
         'iva_total': iva_total,
@@ -1981,15 +1982,13 @@ def detalle_pedido(request, pedido_id):
 
     return render(request, 'detalle_pedido.html', context)
 
+
 def pedido_pdf(request, pedido_id):
     # 🎯 Buscamos por ID numérico real
     pedido = get_object_or_404(Pedido, id=pedido_id)
     items = pedido.items.all()
 
-    # 📁 Determinamos dinámicamente la carpeta de estáticos según el entorno
-    # Si DEBUG es False, usamos 'staticfiles', de lo contrario 'static'
-    folder_static = 'staticfiles' if not settings.DEBUG else 'static'
-    fallback_logo = os.path.join(settings.BASE_DIR, folder_static, 'img/logo.png')
+    logo_path = None
 
     # 🛡️ PROTECCIÓN ABSOLUTA DEL PERFIL Y LOGO
     try:
@@ -2009,12 +2008,8 @@ def pedido_pdf(request, pedido_id):
                     # Si el archivo físico del logo subido por el usuario existe en Render, lo usamos
                     if os.path.exists(perfil.logo.path):
                         logo_path = perfil.logo.path
-                    else:
-                        logo_path = fallback_logo
                 except (NotImplementedError, AttributeError, ValueError):
-                    logo_path = fallback_logo
-            else:
-                logo_path = fallback_logo
+                    logo_path = None
         else:
             raise Perfil.DoesNotExist
 
@@ -2025,7 +2020,6 @@ def pedido_pdf(request, pedido_id):
         empresa_direccion = "-"
         color_primario = "#000000"
         color_secundario = "#333333"
-        logo_path = fallback_logo
         activa = True
 
     if not activa:
@@ -2041,7 +2035,7 @@ def pedido_pdf(request, pedido_id):
     context = {
         'pedido': pedido,
         'items': items,
-        'cliente': pedido.cliente,  # Ojo a la validación en el HTML con {% if cliente %}
+        'cliente': getattr(pedido, 'cliente', None),  # Validación de cliente en PDF
 
         'empresa_nombre': empresa_nombre,
         'empresa_nit': empresa_nit,
