@@ -1554,10 +1554,10 @@ def comprar_whatsapp(request, producto_id=None):
             cliente_ciudad=ciudad_destino,
             cliente_direccion=direccion_entrega,
             cliente_nit=nit,
-            total=total_final,
-            porcentaje_descuento=porcentaje_descuento,
-            descuento_total=descuento,
-            costo_envio=costo_envio,
+            total=float(total_final),  # 🚀 Aseguramos tipo nativo compatible con la DB
+            porcentaje_descuento=float(porcentaje_descuento),  # 🚀 Evita el choque de tipos en DB
+            descuento_total=float(descuento),
+            costo_envio=float(costo_envio),
             aplica_iva=aplica_iva,
             es_retenedor=es_retenedor,
             estado="pendiente"
@@ -1575,12 +1575,12 @@ def comprar_whatsapp(request, producto_id=None):
                 producto=data['producto'],
                 variante=data['variante'],
                 cantidad=int(data['cantidad']),
-                total_gramos=Decimal(str(data['total_gramos'])), 
-                precio=data['precio'],
-                subtotal=subtotal,
-                iva=iva_item,
-                retefuente=retefuente_item,
-                total_final=total_item
+                total_gramos=float(data['total_gramos']), 
+                precio=float(data['precio']),
+                subtotal=float(subtotal),
+                iva=float(iva_item),
+                retefuente=float(retefuente_item),
+                total_final=float(total_item)
             )
 
             # Descontar del inventario/stock
@@ -1601,7 +1601,7 @@ def comprar_whatsapp(request, producto_id=None):
             f"🛍️ ¡Hola! Acabo de confirmar mi pedido.\n\n"
             f"📦 Orden N°: {pedido.numero_orden}\n"
             f"👤 Cliente: {nombre_cliente}\n"
-            f"💰 Total Neto: ${total_final:,.0f}\n\n"
+            f"💰 Total Neto: ${float(total_final):,.0f}\n\n"
             f"📄 Ver detalles y datos de facturación aquí:\n{url_factura}\n\n"
             f"Quedo atento a tus indicaciones para realizar el pago. ¡Muchas gracias!"
         ).replace(",", ".")
