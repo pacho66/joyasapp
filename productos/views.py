@@ -1363,7 +1363,6 @@ def disminuir_cantidad(request, item_id):
 
     return redirect('ver_carrito')
 
-
 def eliminar_del_carrito(request, item_id):
     # 1. Capturar la sesión del visitante
     session_key = request.session.session_key
@@ -1382,6 +1381,7 @@ def eliminar_del_carrito(request, item_id):
     
     messages.success(request, f"Se eliminó '{nombre_producto}' del carrito.")
     return redirect('ver_carrito')
+
 @transaction.atomic
 def comprar_whatsapp(request, producto_id=None):
     """
@@ -2303,20 +2303,32 @@ def factura_publica(request, token):
     """
     pedido = get_object_or_404(Pedido, token_publico=token)
     items = pedido.items.select_related('producto', 'variante').all()
-    perfil = pedido.usuario.perfil
+    
+    # 🛡️ PROTECCIÓN CRÍTICA: Obtención segura del perfil para evitar Error 500
+    usuario_pedido = getattr(pedido, 'usuario', None)
+    perfil = getattr(usuario_pedido, 'perfil', None) if usuario_pedido else None
 
-    # Cálculos internos del sistema
-    subtotal = sum(item.subtotal for item in items)
-    iva_total = sum(item.iva or 0 for item in items)
-    descuento_total = subtotal * (pedido.porcentaje_descuento / Decimal('100')) if pedido.porcentaje_descuento else Decimal('0')
-    retefuente_total = sum(item.retefuente or 0 for item in items)
-    envio = pedido.costo_envio or 0
+    # Si no hay perfil, creamos variables fallback para que no estalle el contexto ni el HTML
+    empresa_nombre = getattr(perfil, 'nombre_tienda', 'Mi Joyería') or "Mi Joyería"
+    empresa_nit = getattr(perfil, 'nit', 'Sin NIT') or "Sin NIT"
+    empresa_telefono = getattr(perfil, 'whatsapp', '-') or "-"
+    color_primario = getattr(perfil, 'color_primario', '#000000') or "#000000"
+    color_secundario = getattr(perfil, 'color_secundario', '#333333') or "#333333"
+
+    # 🛡️ PROTECCIÓN DE CÁLCULOS MATEMÁTICOS CONTRA VALORES NULL
+    subtotal = sum(Decimal(str(item.subtotal or 0)) for item in items)
+    iva_total = sum(Decimal(str(item.iva or 0)) for item in items)
+    
+    porcentaje_desc = getattr(pedido, 'porcentaje_descuento', 0) or 0
+    descuento_total = subtotal * (Decimal(str(porcentaje_desc)) / Decimal('100')) if porcentaje_desc else Decimal('0')
+    
+    retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
+    envio = Decimal(str(pedido.costo_envio or 0))
+    pedido_total = Decimal(str(pedido.total or 0))
 
     # =========================================================
-    # 🟢 CORRECCIÓN DEL MOTOR DE ESTADOS
+    # 🟢 CORRECCIÓN DEL MOTOR DE ESTADOS (Original de PG)
     # =========================================================
-    # Primero validamos el estado directo de la base de datos. 
-    # Si explícitamente dice 'pendiente', se queda como pendiente.
     if pedido.estado == "pendiente":
         estado = "pendiente"
     elif pedido.saldo_pendiente is not None and pedido.saldo_pendiente <= 0:
@@ -2324,13 +2336,14 @@ def factura_publica(request, token):
     elif pedido.fecha_limite and pedido.fecha_limite < timezone.now().date():
         estado = "vencido"
     else:
-        estado = pedido.estado  # Fallback al estado que tenga el modelo ('pendiente', 'pagado', etc.)
+        estado = pedido.estado
 
     # =========================================================
-    # 💬 INTEGRACIÓN DE WHATSAPP Y QR
+    # 💬 INTEGRACIÓN DE WHATSAPP Y QR (Protegido contra campos vacíos)
     # =========================================================
-    mensaje = f"Hola! Adjunto el comprobante de pago del pedido #{pedido.numero_orden} por valor de ${pedido.total:,.0f}".replace(",", ".")
-    whatsapp_url = f"https://wa.me/{perfil.whatsapp}?text={urllib.parse.quote(mensaje)}"
+    mensaje = f"Hola! Adjunto el comprobante de pago del pedido #{pedido.numero_orden} por valor de ${pedido_total:,.0f}".replace(",", ".")
+    whatsapp_num = empresa_telefono if empresa_telefono != "-" else ""
+    whatsapp_url = f"https://wa.me/{whatsapp_num}?text={urllib.parse.quote(mensaje)}"
     qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(whatsapp_url)}"
 
     # =========================================================
@@ -2340,30 +2353,30 @@ def factura_publica(request, token):
         'pedido': pedido,
         'items': items,
 
-        # Datos del perfil SaaS del joyero
-        'empresa_nombre': perfil.nombre_tienda,
-        'empresa_nit': perfil.nit,
-        'empresa_telefono': perfil.whatsapp,
+        # Datos del perfil SaaS del joyero seguros
+        'empresa_nombre': empresa_nombre,
+        'empresa_nit': empresa_nit,
+        'empresa_telefono': empresa_telefono,
 
-        # Identidad de marca blanca
-        'color_primario': perfil.color_primario,
-        'color_secundario': perfil.color_secundario,
+        # Identidad de marca blanca segura
+        'color_primario': color_primario,
+        'color_secundario': color_secundario,
 
         # 🎯 FIX MATEMÁTICO: Inyectamos la variable exacta que pide tu HTML
         'subtotal_general': subtotal, 
         
-        # Variables de respaldo originales
+        # Variables de respaldo originales protegidas
         'subtotal': subtotal,
         'iva_total': iva_total,
         'descuento_total': descuento_total,
         'retefuente_total': retefuente_total,
         'envio': envio,
-        'total_final': pedido.total,
+        'total_final': pedido_total,
         
         'whatsapp_url': whatsapp_url,
         'qr_url': qr_url,
         'perfil_comercio': perfil,
-        'estado': estado,  # Envía 'pendiente' correctamente
+        'estado': estado,
     }
 
     return render(request, 'factura_publica.html', context)
@@ -2379,19 +2392,25 @@ def generar_factura(request, pedido_id):
     PAGE_WIDTH, PAGE_HEIGHT = letter
     LINE_HEIGHT = 18
 
-    correo_empresa = getattr(request.user.perfil, 'email_empresa', None) or request.user.email or 'correo@empresa.com'
+    # 🛡️ OBTENCIÓN SEGURA DEL PERFIL PARA EVITAR EL ERROR 500
+    perfil = getattr(request.user, 'perfil', None)
+    nombre_tienda = getattr(perfil, 'nombre_tienda', 'Mi Joyería') or "Mi Joyería"
+    nit_tienda = getattr(perfil, 'nit', '') or ""
+    whatsapp_tienda = getattr(perfil, 'whatsapp', '') or ""
+    ciudad_tienda = getattr(perfil, 'ciudad', '') or ""
+    correo_empresa = getattr(perfil, 'email_empresa', None) or request.user.email or 'correo@empresa.com'
 
     def draw_header():
         y = 760
         # EMPRESA (Dueño del SaaS)
         p.setFont("Helvetica-Bold", 16)
-        p.drawString(50, y, request.user.perfil.nombre_tienda or "Mi Empresa")
+        p.drawString(50, y, nombre_tienda)
 
         p.setFont("Helvetica", 9)
-        p.drawString(50, y - 15, f"NIT: {request.user.perfil.nit or ''}")
-        p.drawString(50, y - 28, f"Tel: {request.user.perfil.whatsapp or ''}")
+        p.drawString(50, y - 15, f"NIT: {nit_tienda}")
+        p.drawString(50, y - 28, f"Tel: {whatsapp_tienda}")
         p.drawString(50, y - 41, f"Email: {correo_empresa}")
-        p.drawString(50, y - 54, f"{request.user.perfil.ciudad or ''}")
+        p.drawString(50, y - 54, f"{ciudad_tienda}")
 
         # FACTURA DERECHA
         p.setFont("Helvetica-Bold", 11)
@@ -2471,7 +2490,7 @@ def generar_factura(request, pedido_id):
 
         subtotal_general += Decimal(str(item.subtotal or 0))
         iva_total += Decimal(str(item.iva or 0))
-        descuento_total += Decimal(str(item.descuento_total or 0))  # Sincronizado con el modelo
+        descuento_total += Decimal(str(item.descuento_total or item.descuento or 0))
         retefuente_total += Decimal(str(item.retefuente or 0))
 
         y -= LINE_HEIGHT
@@ -2496,10 +2515,11 @@ def generar_factura(request, pedido_id):
         p.drawString(340, y, "ReteFuente:")
         p.drawRightString(540, y, f"-${retefuente_total:,.0f}".replace(",", "."))
 
-    if pedido.porcentaje_descuento > 0:
+    porcentaje_desc = getattr(pedido, 'porcentaje_descuento', 0) or 0
+    if porcentaje_desc > 0 or descuento_total > 0:
         y -= 15
-        p.drawString(340, y, f"Descuento ({pedido.porcentaje_descuento}%):")
-        p.drawRightString(540, y, f"-${pedido.descuento_total:,.0f}".replace(",", "."))
+        p.drawString(340, y, f"Descuento ({porcentaje_desc}%):")
+        p.drawRightString(540, y, f"-${descuento_total:,.0f}".replace(",", "."))
 
     y -= 15
     p.drawString(340, y, "Envío:")
@@ -2512,7 +2532,8 @@ def generar_factura(request, pedido_id):
     y -= 22
     p.setFont("Helvetica-Bold", 12)
     p.drawString(340, y, "TOTAL:")
-    p.drawRightString(540, y, f"${pedido.total:,.0f}".replace(",", "."))
+    pedido_total_num = Decimal(str(getattr(pedido, 'total', 0) or 0))
+    p.drawRightString(540, y, f"${pedido_total_num:,.0f}".replace(",", "."))
 
     draw_footer()
     p.save()
@@ -2524,7 +2545,7 @@ def generar_factura(request, pedido_id):
     if email_cliente:
         try:
             email = EmailMessage(
-                subject=f"Factura {pedido.numero_orden} - {request.user.perfil.nombre_tienda}",
+                subject=f"Factura {pedido.numero_orden} - {nombre_tienda}",
                 body="¡Gracias por tu confianza! Adjuntamos el detalle formal de tu pedido de joyería. 💎",
                 from_email=correo_empresa,
                 to=[email_cliente]
