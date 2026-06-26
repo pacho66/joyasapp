@@ -52,6 +52,16 @@
                 🔵 Pagar con Mercado Pago
             </a>
 
+            <a href="{% url 'catalogo_publico' pedido.usuario.username %}"
+                class="btn btn-primary">
+                🛍️ Volver al catálogo
+            </a>
+
+            <a href="{% url 'confirmar_pago_publico' pedido.token_publico %}"
+                class="btn btn-secondary">
+                📄 Ver factura
+            </a>
+
         </div>
     {% endif %}
 
