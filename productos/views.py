@@ -1725,9 +1725,30 @@ def pagar_pedido(request):
         costo_envio = calcular_envio(ciudad, subtotal_con_descuento)
         total_final = subtotal_con_descuento + iva_total - retefuente_total + costo_envio
 
+        # 👤 Buscar o crear cliente
+        cliente, creado = Cliente.objects.get_or_create(
+        usuario=usuario,
+        telefono=telefono,
+        defaults={
+        "nombre": nombre,
+        "email": cliente_email,
+        "ciudad": ciudad,
+        "direccion": direccion,
+        }
+        )
+
+        # Si ya existe, actualizamos sus datos
+        if not creado:
+            cliente.nombre = nombre
+            cliente.email = cliente_email
+            cliente.ciudad = ciudad
+            cliente.direccion = direccion
+            cliente.save()
+
         # 📦 PASO 3: Crear el Pedido Maestro con los totales de verdad
         pedido = Pedido.objects.create(
             usuario=usuario,
+            cliente=cliente,
             numero_orden=numero,
             cliente_nombre=nombre,        
             cliente_telefono=telefono,
@@ -1743,6 +1764,8 @@ def pagar_pedido(request):
             es_retenedor=es_retenedor,     
             estado="pendiente" 
         )
+        print("✅ Cliente asociado:", pedido.cliente)
+        print("✅ Nombre:", pedido.cliente.nombre if pedido.cliente else "NINGUNO")    
 
         # 🔄 PASO 4: Registrar cada PedidoItem y actualizar inventarios
         for linea in lineas_items:
