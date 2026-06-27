@@ -1079,6 +1079,7 @@ def configurar_negocio(request):
         if form.is_valid():
 
             perfil.nombre_tienda = form.cleaned_data['nombre_tienda']
+            perfil.nit = form.cleaned_data['nit']
             perfil.whatsapp = form.cleaned_data['whatsapp']
             perfil.email_empresa = form.cleaned_data['correo_negocio']
             perfil.direccion = form.cleaned_data['direccion']
@@ -1100,6 +1101,7 @@ def configurar_negocio(request):
     else:
         form = ConfiguracionNegocioForm(initial={
             'nombre_tienda': perfil.nombre_tienda,
+            'nit': perfil.nit,
             'whatsapp': perfil.whatsapp,
             'correo_negocio': perfil.email_empresa,
             'direccion': perfil.direccion,
@@ -2376,7 +2378,7 @@ def factura_publica(request, token):
 
     color_primario = perfil.color_primario if perfil else "#000000"
     color_secundario = perfil.color_secundario if perfil else "#333333"
-    
+
     # 🛡️ PROTECCIÓN DE CÁLCULOS MATEMÁTICOS CONTRA VALORES NULL
     subtotal = sum(Decimal(str(item.subtotal or 0)) for item in items)
     iva_total = sum(Decimal(str(item.iva or 0)) for item in items)
