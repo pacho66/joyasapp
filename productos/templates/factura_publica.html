@@ -228,7 +228,6 @@ body {
         <strong>Pedido #{{ pedido.numero_orden }}</strong>
     </div>
 
-    
     <p style="font-size: 14px; color: #333; margin-top: 0; line-height: 1.4;">
 
         <strong>Cliente:</strong>
@@ -254,15 +253,15 @@ body {
                 <strong>Ciudad:</strong> {{ pedido.cliente.ciudad }}<br>
             {% endif %}
 
-            {% else %}
+        {% else %}
 
             {% if pedido.cliente_nit %}
                 <strong>NIT/CC:</strong> {{ pedido.cliente_nit }}<br>
             {% endif %}
 
-                <strong>Celular:</strong> {{ pedido.cliente_telefono }}<br>
-                <strong>Dirección:</strong> {{ pedido.cliente_direccion }}<br>
-                <strong>Ciudad:</strong> {{ pedido.cliente_ciudad }}
+            <strong>Celular:</strong> {{ pedido.cliente_telefono }}<br>
+            <strong>Dirección:</strong> {{ pedido.cliente_direccion }}<br>
+            <strong>Ciudad:</strong> {{ pedido.cliente_ciudad }}
 
         {% endif %}
 
@@ -333,6 +332,11 @@ body {
     {% if pedido.estado != 'pagado' %}
         <a href="{% url 'pagar_wompi' pedido.id %}" class="btn btn-pagar">
             💳 Pagar con Wompi
+        </a>
+
+        <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}"
+            class="btn btn-mercadopago">
+            🔵 Pagar con Mercado Pago
         </a>
     {% endif %}
     

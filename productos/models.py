@@ -293,6 +293,7 @@ class Cliente(models.Model):
 
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     nombre = models.CharField(max_length=100)
+    nit = models.CharField(max_length=50, blank=True, null=True)
     telefono = models.CharField(max_length=20, unique=True)
     email = models.EmailField(blank=True, null=True)
 

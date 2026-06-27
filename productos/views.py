@@ -2360,18 +2360,23 @@ def factura_publica(request, token):
     items = pedido.items.select_related('producto', 'variante').all()
     
     # 🛡️ PROTECCIÓN CRÍTICA: Obtención segura del perfil para evitar Error 500
-    usuario_pedido = getattr(pedido, 'usuario', None)
-    perfil = getattr(usuario_pedido, 'perfil', None) if usuario_pedido else None
+    
+    usuario_pedido = pedido.usuario
 
-    # Si no hay perfil, creamos variables fallback para que no estalle el contexto ni el HTML
-    empresa_nombre = getattr(perfil, 'nombre_tienda', 'Mi Joyería') or "Mi Joyería"
-    empresa_nit = getattr(perfil, 'nit', 'Sin NIT') or "Sin NIT"
-    empresa_telefono = getattr(perfil, 'whatsapp', '-') or "-"
-    empresa_direccion = getattr(perfil, "direccion", "-") if perfil else "-"
-    empresa_email = getattr(perfil, "email_empresa", "-") if perfil else "-"
-    color_primario = getattr(perfil, 'color_primario', '#000000') or "#000000"
-    color_secundario = getattr(perfil, 'color_secundario', '#333333') or "#333333"
+    try:
+        perfil = Perfil.objects.get(user=usuario_pedido)
+    except Perfil.DoesNotExist:
+        perfil = None
 
+    empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
+    empresa_nit = perfil.nit if perfil else ""
+    empresa_telefono = perfil.whatsapp if perfil else ""
+    empresa_direccion = perfil.direccion if perfil else ""
+    empresa_email = perfil.email_empresa if perfil else ""
+
+    color_primario = perfil.color_primario if perfil else "#000000"
+    color_secundario = perfil.color_secundario if perfil else "#333333"
+    
     # 🛡️ PROTECCIÓN DE CÁLCULOS MATEMÁTICOS CONTRA VALORES NULL
     subtotal = sum(Decimal(str(item.subtotal or 0)) for item in items)
     iva_total = sum(Decimal(str(item.iva or 0)) for item in items)
@@ -2409,7 +2414,7 @@ def factura_publica(request, token):
     context = {
         'pedido': pedido,
         'items': items,
-        
+
         'cliente_nombre': pedido.cliente_nombre,
         'cliente_email': pedido.cliente_email,
         'cliente_telefono': pedido.cliente_telefono,
