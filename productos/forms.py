@@ -50,16 +50,6 @@ class RegistroForm(forms.Form):
         })
     )
 
-    nit = forms.CharField(
-        max_length=30,
-        required=False,
-        label='NIT',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': '901234567-8'
-        })
-    )
-
     whatsapp = forms.CharField(
         label='WhatsApp',
         max_length=20,
@@ -111,6 +101,16 @@ class ConfiguracionNegocioForm(forms.Form):
         widget=forms.TextInput(attrs={
             'class': 'form-control',
             'placeholder': 'Nombre de tu negocio'
+        })
+    )
+
+    nit = forms.CharField(
+        max_length=30,
+        required=False,
+        label='NIT',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '901234567-8'
         })
     )
 
