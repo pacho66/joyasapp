@@ -228,14 +228,44 @@ body {
         <strong>Pedido #{{ pedido.numero_orden }}</strong>
     </div>
 
-    <p style="font-size: 14px; color: #333; margin-bottom: 5px;">
-        <strong>Fecha:</strong> {{ pedido.fecha_creacion|date:"d/m/Y H:i" }}
-    </p>
+    
     <p style="font-size: 14px; color: #333; margin-top: 0; line-height: 1.4;">
-        <strong>Cliente:</strong> {{ pedido.cliente_nombre|default:"Consumidor final" }}<br>
-        {% if pedido.cliente_nit %}<strong>NIT/CC:</strong> {{ pedido.cliente_nit }}<br>{% endif %}
-        <strong>Celular:</strong> {{ pedido.cliente_telefono }}<br>
-        <strong>Destino:</strong> {{ pedido.cliente_direccion }} - {{ pedido.cliente_ciudad }}
+
+        <strong>Cliente:</strong>
+        {% if pedido.cliente %}
+            {{ pedido.cliente.nombre }}
+        {% else %}
+            {{ pedido.cliente_nombre|default:"Consumidor final" }}
+        {% endif %}
+        <br>
+
+        {% if pedido.cliente %}
+            {% if pedido.cliente.email %}
+                <strong>Email:</strong> {{ pedido.cliente.email }}<br>
+            {% endif %}
+
+            <strong>Celular:</strong> {{ pedido.cliente.telefono }}<br>
+
+            {% if pedido.cliente.direccion %}
+                <strong>Dirección:</strong> {{ pedido.cliente.direccion }}<br>
+            {% endif %}
+
+            {% if pedido.cliente.ciudad %}
+                <strong>Ciudad:</strong> {{ pedido.cliente.ciudad }}<br>
+            {% endif %}
+
+            {% else %}
+
+            {% if pedido.cliente_nit %}
+                <strong>NIT/CC:</strong> {{ pedido.cliente_nit }}<br>
+            {% endif %}
+
+                <strong>Celular:</strong> {{ pedido.cliente_telefono }}<br>
+                <strong>Dirección:</strong> {{ pedido.cliente_direccion }}<br>
+                <strong>Ciudad:</strong> {{ pedido.cliente_ciudad }}
+
+        {% endif %}
+
     </p>
 
     <table class="tabla">

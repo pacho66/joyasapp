@@ -2367,6 +2367,8 @@ def factura_publica(request, token):
     empresa_nombre = getattr(perfil, 'nombre_tienda', 'Mi Joyería') or "Mi Joyería"
     empresa_nit = getattr(perfil, 'nit', 'Sin NIT') or "Sin NIT"
     empresa_telefono = getattr(perfil, 'whatsapp', '-') or "-"
+    empresa_direccion = getattr(perfil, "direccion", "-") if perfil else "-"
+    empresa_email = getattr(perfil, "email_empresa", "-") if perfil else "-"
     color_primario = getattr(perfil, 'color_primario', '#000000') or "#000000"
     color_secundario = getattr(perfil, 'color_secundario', '#333333') or "#333333"
 
@@ -2396,7 +2398,7 @@ def factura_publica(request, token):
     # =========================================================
     # 💬 INTEGRACIÓN DE WHATSAPP Y QR (Protegido contra campos vacíos)
     # =========================================================
-    mensaje = f"Hola! Adjunto el comprobante de pago del pedido #{pedido.numero_orden} por valor de ${pedido_total:,.0f}".replace(",", ".")
+    mensaje = f"Hola! Adjunto el comprobante de pago del pedido #{pedido.numero_orden} por valor de ${total_final:,.0f}".replace(",", ".")
     whatsapp_num = empresa_telefono if empresa_telefono != "-" else ""
     whatsapp_url = f"https://wa.me/{whatsapp_num}?text={urllib.parse.quote(mensaje)}"
     qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(whatsapp_url)}"
@@ -2407,11 +2409,20 @@ def factura_publica(request, token):
     context = {
         'pedido': pedido,
         'items': items,
+        
+        'cliente_nombre': pedido.cliente_nombre,
+        'cliente_email': pedido.cliente_email,
+        'cliente_telefono': pedido.cliente_telefono,
+        'cliente_direccion': pedido.cliente_direccion,
+        'cliente_ciudad': pedido.cliente_ciudad,
+        'cliente_nit': pedido.cliente_nit,
 
         # Datos del perfil SaaS del joyero seguros
         'empresa_nombre': empresa_nombre,
         'empresa_nit': empresa_nit,
         'empresa_telefono': empresa_telefono,
+        'empresa_direccion'
+        'empresa_email'
 
         # Identidad de marca blanca segura
         'color_primario': color_primario,
@@ -2426,7 +2437,7 @@ def factura_publica(request, token):
         'descuento_total': descuento_total,
         'retefuente_total': retefuente_total,
         'envio': envio,
-        'total_final': pedido_total,
+        'total_final': total_final,
         
         'whatsapp_url': whatsapp_url,
         'qr_url': qr_url,
