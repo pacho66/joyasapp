@@ -11,10 +11,17 @@
             margin: 40px;
         }
 
+        :root{
+            --principal:#111111;
+            --gris:#444444;
+            --gris-claro:#E5E7EB;
+            --fondo:#FFFFFF;
+        }
+
         body {
             font-family: Arial, sans-serif;
             font-size: 11px;
-            color: #111111;
+            color: var(--principal);
             line-height: 1.4;
         }
 
@@ -29,36 +36,39 @@
             vertical-align: middle;
         }
 
-        .header-logo-box img {
-            max-height: 55px;
+        .header-logo-box img{
+            max-height:90px;
+            max-width:220px;
         }
 
-        .header-info-box {
-            width: 50%;
-            text-align: right;
-            vertical-align: middle;
-            font-size: 11px;
-            line-height: 1.5;
-            color: #333333;
+        .header-info-box{
+            text-align:right;
+            font-size:11px;
+            line-height:1.6;
+            color: var(--gris);color: var(--gris);
         }
 
         /* 🎫 TÍTULO PRINCIPAL DE LA FACTURA */
-        .titulo-factura-contenedor {
-            width: 100%;
-            text-align: center;
-            margin: 10px 0 20px 0;
-            border-top: 2px solid #111111;
-            border-bottom: 2px solid #111111;
-            padding: 8px 0;
+        .titulo-factura-contenedor{
+
+            text-align:center;
+
+            border-top:2px solid #111;
+
+            border-bottom:2px solid #111;
+
+            padding:12px 0;
+
+            margin:18px 0 25px 0;
+
         }
 
-        .titulo-factura {
-            font-size: 16px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #111111;
-            margin: 0;
+        .titulo-factura{
+            font-size:22px;
+            font-weight:bold;
+            letter-spacing:1px;
+            color: var(--gris);color: var(--gris);
+
         }
 
         /* 👥 INFORMACIÓN DE CLIENTE Y PEDIDO (2 Columnas perfectas) */
@@ -78,7 +88,8 @@
             font-weight: bold;
             letter-spacing: 0.5px;
             margin: 0 0 6px 0;
-            color: #111111;
+            color: var(--principal);
+            border-bottom:1px solid var(--principal);
             border-bottom: 1px solid #111111;
             padding-bottom: 3px;
             width: 90%;
@@ -99,8 +110,8 @@
         }
 
         .tabla-items th {
-            background: #111111; /* Fondo negro premium */
-            color: #ffffff;      /* Texto blanco */
+            background:var(--principal);
+            color:white;
             font-size: 10px;
             font-weight: bold;
             text-transform: uppercase;
@@ -108,7 +119,7 @@
         }
 
         .tabla-items td {
-            border-bottom: 1px solid #cccccc; /* Líneas divisorias nítidas */
+            border-bottom:1px solid var(--gris-claro);
             padding: 10px;
             font-size: 11px;
             color: #222222;
@@ -128,6 +139,7 @@
         .tabla-totales {
             width: 100%;
             border-collapse: collapse;
+            color:var(--gris);
         }
 
         .tabla-totales td {
@@ -149,37 +161,89 @@
         .fila-total-final td {
             font-size: 13px;
             font-weight: bold;
-            background: #f5f5f5;
-            color: #111111;
-            border-top: 1px solid #111111;
-            border-bottom: 2px double #111111;
+            background:#F8F9FA;
+            color:var(--principal);
+            border-top:1px solid var(--principal);
+            border-bottom:2px double var(--principal);
             padding: 8px 10px;
         }
     </style>
 </head>
 <body>
 
-    <!-- 🏢 ENCABEZADO CORPORATIVO -->
+    
+    <!-- ===================== ENCABEZADO ===================== -->
+
     <table class="header-table">
         <tr>
-            <td class="header-logo-box">
-                {% if logo_path %}
-                    <img src="{{ logo_path }}" alt="Logo Empresa">
+
+            <td class="header-logo-box" style="width:35%;">
+
+                {% if empresa_logo %}
+                    <img src="{{ empresa_logo }}"
+                        alt="{{ empresa_nombre }}"
+                        style="max-height:90px; max-width:220px;">
                 {% endif %}
+
             </td>
-            <td class="header-info-box">
-                <strong>{{ empresa_nombre }}</strong><br>
-                NIT: {{ empresa_nit }}<br>
-                WhatsApp: {{ empresa_telefono }}<br>
-                <strong>Email:</strong> {{ empresa_email }}<br>
-                {{ empresa_direccion }}
+
+            <td class="header-info-box" style="width:65%; text-align:right;">
+
+                <div style="font-size:22px;
+                        font-weight:bold;
+                        color:#111111;
+                        margin-bottom:8px;">
+                {{ empresa_nombre }}
+                </div>
+
+                {% if empresa_nit %}
+                <div>
+                    <strong>NIT:</strong> {{ empresa_nit }}
+                </div>
+                {% endif %}
+
+                {% if empresa_direccion %}
+                    <div>
+                        {{ empresa_direccion }}
+                    </div>
+                {% endif %}
+
+                {% if empresa_telefono %}
+                    <div>
+                        📲 {{ empresa_telefono }}
+                    </div>
+                {% endif %}
+
+                {% if empresa_email %}
+                    <div>
+                        ✉️ {{ empresa_email }}
+                    </div>
+                {% endif %}
+
             </td>
+
         </tr>
     </table>
 
-    <!-- 🎫 TÍTULO DE DOCUMENTO -->
+    <!-- ===================== TITULO ===================== -->
+
     <div class="titulo-factura-contenedor">
-        <h1 class="titulo-factura">Factura de Venta — Orden #{{ pedido.numero_orden }}</h1>
+
+        <h1 class="titulo-factura">
+            FACTURA DE VENTA
+        </h1>
+
+        <div style="margin-top:8px;font-size:13px;">
+
+            Pedido
+            <strong>#{{ pedido.numero_orden }}</strong>
+
+            &nbsp;&nbsp;&nbsp;&nbsp;
+
+            {{ pedido.fecha|date:"d/m/Y H:i" }}
+
+        </div>
+
     </div>
 
     <!-- 👥 INFORMACIÓN DEL PEDIDO Y DEL CLIENTE -->
@@ -216,28 +280,56 @@
     <table class="tabla-items">
         <thead>
             <tr>
-                <th class="align-left">Producto / Descripción</th>
-                <th class="align-center" style="width: 15%;">Cantidad</th>
-                <th class="align-right" style="width: 20%;">Precio Unit.</th>
-                <th class="align-right" style="width: 25%;">Subtotal</th>
+                <th class="align-left">Producto</th>
+                <th class="align-center" style="width:15%;">Cantidad</th>
+                <th class="align-right" style="width:20%;">Precio Unit.</th>
+                <th class="align-right" style="width:25%;">Subtotal</th>
             </tr>
         </thead>
         
         <tbody>
             {% for item in items %}
-            <tr>
-                <td class="align-left">
-                    {{ item.producto.nombre }}
-                    {% if item.variante %}
-                <br>
-                <small style="color:#666666;font-size:9px;">
-                    Variante: {{ item.variante }}
-                </small>
-                    {% endif %}
+            
+            <td class="align-left">
+
+            <strong>{{ item.producto.nombre }}</strong>
+
+            {% if item.producto.referencia %}
+            <br>
+            <small style="color:#666;font-size:9px;">
+            Ref: {{ item.producto.referencia }}
+            </small>
+            {% endif %}
+
+            {% if item.variante %}
+            <br>
+            <small style="color:#666;font-size:9px;">
+
+            {if item.variante.color %}
+            Color: {{ item.variante.color }}
+            {% endif %}
+
+            {% if item.variante.talla %}
+            <br>Talla: {{ item.variante.talla }}
+            {% endif %}
+
+            {% if item.variante.peso %}
+            <br>Peso: {{ item.variante.peso }} g
+            {% endif %}
+
+            </small>
+            {% endif %}
+
             </td>
 
                 <td class="align-center">
-                 {{ item.cantidad }} u
+
+                {% if item.total_gramos and item.total_gramos > 0 %}
+                {{ item.total_gramos }} g
+                {% else %}
+                {{ item.cantidad }} u
+                {% endif %}
+
                 </td>
 
                 <td class="align-right">
@@ -290,10 +382,29 @@
                         <td class="valor" style="color: #c0392b;">-${{ retefuente_total|floatformat:"0" }}</td>
                     </tr>
                     {% endif %}
+                    
                     {% if envio > 0 %}
                     <tr>
-                        <td class="label">Costo de Envío:</td>
-                        <td class="valor">+${{ envio|floatformat:"0" }}</td>
+                        <td class="label">Envío:</td>
+                        <td class="valor">
+                    +${{ envio|floatformat:"0" }}
+                    </td>
+                    </tr>
+
+                    {% elif pedido.tipo_envio == "recogida" %}
+                    <tr>
+                        <td class="label">Entrega:</td>
+                        <td class="valor">
+                        Recoge en tienda
+                        </td>
+                    </tr>
+
+                    {% else %}
+                    <tr>
+                        <td class="label">Entrega:</td>
+                        <td class="valor">
+                        Envío por acordar
+                        </td>
                     </tr>
                     {% endif %}
                     
@@ -307,11 +418,32 @@
         </tr>
     </table>
 
-    <div class="footer">
-        <p>Si tiene alguna duda sobre esta factura de venta, comuníquese al canal oficial de atención.</p>
-        <p><strong>{{ empresa_nombre }}</strong></p>
-    </div>
+    <div class="footer" style="margin-top:35px;
+                           border-top:1px solid #d9d9d9;
+                           padding-top:15px;
+                           text-align:center;
+                           font-size:10px;
+                           color:#666;">
 
+    <p style="margin:4px 0;">
+        Gracias por comprar en
+        <strong>{{ empresa_nombre }}</strong>.
+    </p>
+
+    <p style="margin:4px 0;">
+        Si tiene alguna inquietud sobre esta factura,
+        comuníquese por nuestros canales oficiales de atención.
+    </p>
+
+    <p style="margin:10px 0 4px 0;">
+        <strong>Factura generada mediante JoyasApp®</strong>
+    </p>
+
+    <p style="margin:0;">
+        www.joyasapp.com
+    </p>
+
+    </div>
 </body>
 </html>
 

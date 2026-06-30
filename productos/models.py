@@ -227,7 +227,15 @@ class ProductoVariante(models.Model):
         )
 
     def __str__(self):
-        return f"{self.producto.nombre} - {self.color or ''} {self.talla or ''}"
+        texto = self.producto.nombre
+
+        if self.color:
+            texto += f" | Color: {self.color}"
+
+        if self.talla:
+            texto += f" | Talla: {self.talla}"
+
+        return texto
 
 class CarritoItem(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)

@@ -214,14 +214,53 @@ body {
 
 <div class="container">
 
+    
     <div class="header">
-        <h2 style="color: {{ color_primario|default:'#333' }}; margin-bottom: 5px;">
-            {{ empresa_nombre|default:"Mi Joyería SaaS" }}
-        </h2>
-        {% if empresa_nit %}
-            <p style="margin: 0; color: #666; font-size: 14px;">NIT: {{ empresa_nit }}</p>
-        {% endif %}
-    </div>
+
+    {% if empresa_logo %}
+        <img src="{{ empresa_logo }}"
+             alt="{{ empresa_nombre }}"
+             style="
+                max-height:90px;
+                max-width:220px;
+                margin-bottom:15px;
+             ">
+    {% endif %}
+
+    <h1 style="
+        margin:0;
+        font-size:24px;
+        font-weight:700;
+        color:{{ color_primario|default:'#111111' }};
+    ">
+        {{ empresa_nombre }}
+    </h1>
+
+    {% if empresa_nit %}
+        <p style="margin:5px 0;">
+            <strong>NIT:</strong> {{ empresa_nit }}
+        </p>
+    {% endif %}
+
+    {% if empresa_direccion %}
+        <p style="margin:3px 0;">
+            {{ empresa_direccion }}
+        </p>
+    {% endif %}
+
+    {% if empresa_telefono %}
+        <p style="margin:3px 0;">
+            📲 {{ empresa_telefono }}
+        </p>
+    {% endif %}
+
+    {% if empresa_email %}
+        <p style="margin:3px 0;">
+            ✉️ {{ empresa_email }}
+        </p>
+    {% endif %}
+
+</div>
 
     {% if pedido.estado == 'pagado' %}
         <div class="estado pagado" style="background:#d4edda; color:#155724; text-align:center; padding:10px; border-radius:8px; margin-bottom:15px; font-weight:bold;">
@@ -237,10 +276,28 @@ body {
         </div>
     {% endif %}
 
-    <div class="titulo">
-        <strong>Pedido #{{ pedido.numero_orden }}</strong>
-    </div>
+    <div class="titulo" style="text-align:center; margin:20px 0;">
 
+    <h2 style="margin:0;
+               font-size:22px;
+               color:#111;
+               letter-spacing:1px;">
+        FACTURA DE VENTA
+    </h2>
+
+    <p style="margin:8px 0 0 0;
+              font-size:15px;
+              color:#555;">
+        Pedido <strong>#{{ pedido.numero_orden }}</strong>
+    </p>
+
+    <p style="margin:5px 0 0 0;
+              font-size:13px;
+              color:#777;">
+        {{ pedido.fecha|date:"d/m/Y H:i" }}
+    </p>
+
+</div>
     <p style="font-size: 14px; color: #333; margin-top: 0; line-height: 1.4;">
 
         <strong>Cliente:</strong>
@@ -281,87 +338,147 @@ body {
     </p>
 
     <table class="tabla">
+
     <tr style="background: {{ color_primario|default:'#444' }}; color:white;">
-        <th style="text-align: left; padding-left: 10px;">Producto</th>
-        <th>Cant</th>
-        <th style="text-align: right; padding-right: 10px;">Total</th>
+        <th style="text-align:left;padding-left:10px;">Producto</th>
+        <th style="text-align:center;">Cant.</th>
+        <th style="text-align:right;padding-right:10px;">Subtotal</th>
     </tr>
 
     {% for item in pedido.items.all %}
     <tr>
-        <td style="text-align: left; padding-left: 10px;">
-            {{ item.producto.nombre }}
-            {% if item.producto.tipo_venta == 'gramo' and item.total_gramos %}
-                <br><small style="color: #666; font-size: 11px;">📐 Peso: {{ item.total_gramos|floatformat:2 }}g</small>
-            {% endif %}
+
+        <td style="text-align:left;padding-left:10px;">
+
+            <strong>{{ item.producto.nombre }}</strong>
+
             {% if item.variante %}
-                <br><small style="color: #777; font-size: 11px;">Color: {{ item.variante.color }} / Talla: {{ item.variante.talla }}</small>
+                <br>
+                <small style="color:#666;">
+                    Color: {{ item.variante.color }}
+                </small>
+
+                {% if item.variante.talla %}
+                    |
+                    <small style="color:#666;">
+                        Talla: {{ item.variante.talla }}
+                    </small>
+                {% endif %}
             {% endif %}
+
+            {% if item.total_gramos %}
+                <br>
+                <small style="color:#666;">
+                    Peso: {{ item.total_gramos|floatformat:2 }} g
+                </small>
+            {% endif %}
+
         </td>
-        <td>{{ item.cantidad }} u</td>
-        <td style="text-align: right; padding-right: 10px;">${{ item.subtotal|floatformat:0 }}</td>
+
+        <td style="text-align:center;">
+            {{ item.cantidad }}
+        </td>
+
+        <td style="text-align:right;padding-right:10px;">
+            ${{ item.subtotal|floatformat:0 }}
+        </td>
+
+    </tr>
+
+    {% empty %}
+    <tr>
+        <td colspan="3" style="text-align:center;padding:20px;">
+            No hay productos registrados.
+        </td>
     </tr>
     {% endfor %}
-    </table>
 
+    </table>
+    
     <div class="desglose-contenedor">
+
         <div class="desglose-fila">
-            <span>Subtotal general:</span>
+            <span>Subtotal</span>
             <span>${{ subtotal|floatformat:"0" }}</span>
         </div>
-    
+
         {% if pedido.porcentaje_descuento > 0 %}
-        <div class="desglose-fila impuesto" style="color: red;">
-            <span>Descuento ({{ pedido.porcentaje_descuento }}%):</span>
-            <span>-${{ pedido.descuento_total|floatformat:0 }}</span>
+        <div class="desglose-fila">
+            <span>Descuento ({{ pedido.porcentaje_descuento }}%)</span>
+            <span style="color:#c0392b;">
+            -${{ pedido.descuento_total|floatformat:"0" }}
+            </span>
         </div>
         {% endif %}
 
         {% if iva_total > 0 %}
-        <div class="desglose-fila impuesto">
-            <span>IVA (19%):</span>
-            <span>+ ${{ iva_total|floatformat:0 }}</span>
+        <div class="desglose-fila">
+            <span>IVA</span>
+            <span>
+            +${{ iva_total|floatformat:"0" }}
+            </span>
         </div>
         {% endif %}
+
+        {% if retefuente_total > 0 %}
+        <div class="desglose-fila">
+            <span>Retefuente</span>
+            <span style="color:#c0392b;">
+            -${{ retefuente_total|floatformat:"0" }}
+            </span>
         
-
-        {% if pedido.es_retenedor %}
-        <div class="desglose-fila retencion">
-            <span>Retefuente / ReteICA (2.5%):</span>
-            <span>- ${{ pedido.retefuente|floatformat:0 }}</span>
         </div>
         {% endif %}
 
-        <div class="desglose-fila impuesto">
-            <span>Costo de Envío:</span>
-            <span>{% if pedido.costo_envio > 0 %}+ ${{ pedido.costo_envio|floatformat:0 }}{% else %}🎁 Envío gratis{% endif %}</span>
+        
+        {% if pedido.costo_envio > 0 %}
+        <div class="desglose-fila">
+            <span>Envío</span>
+            <span>${{ pedido.costo_envio|floatformat:"0" }}</span>
         </div>
+        {% elif pedido.tipo_envio == "recogida" %}
+        <div class="desglose-fila">
+            <span>Entrega</span>
+            <span>Recoge en tienda</span>
+        </div>
+        {% endif %}
+
     </div>
 
-    <div class="total" style="font-size: 18px; font-weight: bold; color: #000; padding: 10px 0; border-top: 2px solid #333;">
-        TOTAL A PAGAR: ${{ pedido.total|floatformat:0 }} COP
-    </div>
+        <div class="total">
+            TOTAL A PAGAR<br>
+            <strong>${{ pedido.total|floatformat:"0" }} COP</strong>
+        </div>
+            {% if pedido.estado != 'pagado' %}
+                <a href="{% url 'pagar_wompi' pedido.id %}" class="btn btn-pagar">
+                    💳 Pagar con Wompi
+                </a>
 
-    {% if pedido.estado != 'pagado' %}
-        <a href="{% url 'pagar_wompi' pedido.id %}" class="btn btn-pagar">
-            💳 Pagar con Wompi
-        </a>
-
-        <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}"
-            class="btn btn-mercadopago">
-            🔵 Pagar con Mercado Pago
-        </a>
-    {% endif %}
+            <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}"
+                class="btn btn-mercadopago">
+                🔵 Pagar con Mercado Pago
+            </a>
+            {% endif %}
     
 
-    <a href="https://wa.me/{{ pedido.usuario.perfil.whatsapp|default:empresa_telefono }}?text=Hola! Adjunto el comprobante de pago del pedido %23{{ pedido.numero_orden }}" 
-       class="btn btn-whatsapp" target="_blank">
-        📲 Enviar comprobante por WhatsApp
-    </a>
+            <a href="https://wa.me/{{ pedido.usuario.perfil.whatsapp|default:empresa_telefono }}?text=Hola! Adjunto el comprobante de pago del pedido %23{{ pedido.numero_orden }}" 
+                class="btn btn-whatsapp" target="_blank">
+                📲 Enviar comprobante por WhatsApp
+            </a>
 
-    <div class="qr">
-        <p style="margin-bottom: 10px; font-size: 14px; color: #555;">Escanea para pagar</p>
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ pedido.total|floatformat:0 }}" alt="QR de Pago">
+        <div class="qr">
+            <p style="margin-bottom: 10px; font-size: 14px; color: #555;">Escanea para abrir este pedido</p>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ pedido.total|floatformat:0 }}" alt="QR de Pago">
+    </div>
+    <hr style="margin:30px 0; border:none; border-top:1px solid #ddd;">
+
+    <div style="text-align:center; font-size:12px; color:#777; line-height:1.8;">
+
+        <strong>Gracias por comprar en {{ empresa_nombre }}</strong><br>
+
+        Factura generada mediante <strong>JoyasApp®</strong><br>
+
+        www.joyasapp.com
     </div>
 
 </div>    
