@@ -5,456 +5,309 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-/* 💎 ESTILOS PREMIUM - JOYASAPP FACTURA PÚBLICA (CONTRASTE NEGRO/BLANCO) */
-:root {
-    /* Forzamos el negro para mantener el estereotipo elegante de joyería */
-    --principal: #111111; 
-    --gris: #444444;
-    --gris-claro: #E5E7EB;
-    --fondo: #FFFFFF;
-}
-
+/* 💎 ESTILOS PREMIUM SIMÉTRICOS - JOYASAPP FACTURA PÚBLICA */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--fondo);
+    background: #F9FAFB; /* Fondo de pantalla sutil para hacer resaltar la factura */
     margin: 0;
-    padding: 0;
-    color: var(--principal);
+    padding: 20px 0;
+    color: #111111;
 }
 
 .container {
-    max-width: 500px;
+    max-width: 550px; /* Ancho idéntico al área de impresión segura */
     margin: 0 auto;
-    background: var(--fondo);
-    padding: 24px;
+    background: #FFFFFF;
+    padding: 40px; /* Mismo colchón de aire que los márgenes del PDF */
     box-sizing: border-box;
     min-height: 100vh;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.06); border-radius: 8px;
 }
 
-/* 🏢 HEADER */
-.header {
-    text-align: center;
+/* 🏢 HEADER DE LA EMPRESA */
+.header-table {
+    width: 100%;
+    border-collapse: collapse;
     margin-bottom: 25px;
 }
 
-.titulo {
-    font-size: 22px;
+.titulo-empresa {
+    color: #111111 !important;
+    margin: 0; 
+    font-size: 24px; 
     font-weight: 700;
-    letter-spacing: -0.5px;
-    color:var(--principal);
-    margin: 10px 0;
     text-transform: uppercase;
+    letter-spacing: -0.5px;
+}
+
+.header-datos {
+    font-size: 13px;
+    color: #444444;
+    line-height: 1.5;
+    margin-top: 5px;
 }
 
 /* 🏷️ ESTADO DEL PAGO */
-.estado {
+.estado-badge {
+    padding: 10px;
+    background-color: #F3F4F6;
+    border: 1px solid #E5E7EB;
     text-align: center;
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    font-weight: 600;
-    font-size: 14px;
+    border-radius: 4px;
+}
+
+.titulo-factura {
+    font-size: 18px;
+    font-weight: bold;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    text-align: center;
+    margin-top: 25px;
+    margin-bottom: 5px;
+    letter-spacing: 1px;
 }
 
-.pendiente { 
-    background: #fff3cd; 
-    color: #856404; 
-    border: 1px solid #ffeeba;
+.subtitulo-factura {
+    text-align: center;
+    color: #555555;
+    font-size: 13px;
+    margin-bottom: 25px;
 }
 
-.pagado { 
-    background: #d4edda; 
-    color: #155724; 
-    border: 1px solid #c3e6cb;
+/* 👤 BLOQUE CLIENTE RECUADRADO */
+.bloque-cliente {
+    background-color: #FAFAFA;
+    padding: 15px;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    margin-bottom: 25px;
 }
 
-/* 📊 TABLA DE PRODUCTOS (Fondo Negro con Letras Blancas 🎯) */
+/* 📊 TABLA DE PRODUCTOS (Barra Central Negra) */
 .tabla {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
 }
 
 .tabla th {
-    background: #111111 !important; /* Barra central en fondo negro */
-    color: #FFFFFF !important;     /* Letras blancas */
-    font-size: 12px;
+    background: #111111 !important;
+    color: #FFFFFF !important;
+    font-size: 11px;
     text-transform: uppercase;
     font-weight: 600;
     letter-spacing: 0.5px;
     padding: 12px 8px;
-    border-bottom: 2px solid #111111;
 }
 
 .tabla td {
-    border-bottom: 1px solid var(--gris-claro);
+    border-bottom: 1px solid #E5E7EB;
     padding: 14px 8px;
-    font-size: 14px;
-    color: #111111; /* Fondo blanco con letras negras */
+    font-size: 13px;
+    color: #111111;
 }
 
-.tabla th:nth-child(1), .tabla td:nth-child(1) { text-align: left; width: 45%; }
+.tabla th:nth-child(1), .tabla td:nth-child(1) { text-align: left; width: 55%; }
 .tabla th:nth-child(2), .tabla td:nth-child(2) { text-align: center; width: 15%; }
-.tabla th:nth-child(3), .tabla td:nth-child(3) { text-align: right; width: 40%; }
+.tabla th:nth-child(3), .tabla td:nth-child(3) { text-align: right; width: 30%; }
 
-.tabla td span.precio-unitario {
-    display: block;
-    font-size: 11px;
-    color: #718096;
-    margin-top: 2px;
+/* 📉 BLOQUE DE TOTALES COMPACTO ALINEADO A LA DERECHA */
+.contenedor-totales {
+    width: 100%;
+    margin-top: 15px;
+    margin-bottom: 30px;
 }
 
-
-/* 📉 BLOQUE DE DESGLOSE TRIBUTARIO SÓLIDO */
-.desglose-contenedor {
-    margin: 20px 0;
-    padding: 10px 0;
-    border-top: 1px solid #e2e8f0;
-    border-bottom: 1px solid #e2e8f0;
+.tabla-totales {
+    width: 280px; /* Mismo tamaño compacto del PDF */
+    margin-left: auto; /* Empuja la tabla a la derecha de la pantalla */
+    border-collapse: collapse;
 }
 
-.desglose-fila {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 4px;
+.tabla-totales td {
+    padding: 6px 8px;
+    font-size: 13px;
+}
+
+.total-box {
+    background-color: #111111;
+    color: #ffffff;
     font-size: 14px;
-    color:var(--gris);
+    font-weight: bold;
+    text-align: right;
+    padding: 12px 10px;
 }
 
-.desglose-fila.impuesto {
-    color: #718096;
-}
-
-.desglose-fila.retencion {
-    color: #e53e3e; /* Rojo sutil elegante */
-    font-weight: 500;
-}
-
-/* 💰 TOTAL DESTACADO */
-.total {
-    font-size: 24px;
-    font-weight: 700;
-    text-align: center;
-    margin: 25px 0;
-    color:var(--principal);
-    background: #f7fafc;
-    padding: 16px;
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    letter-spacing: -0.5px;
-}
-
-/* 🎛️ BOTONES MODERNOS Y LIMPIOS */
+/* 🎛️ BOTONES ACCIÓN ACCESIBLES */
 .btn {
     display: block;
     width: 100%;
     padding: 14px;
     margin-top: 12px;
-    border-radius: 10px;
+    border-radius: 8px;
     text-align: center;
     text-decoration: none;
     font-weight: 600;
-    font-size: 15px;
+    font-size: 14px;
     box-sizing: border-box;
-    transition: background 0.2s ease, transform 0.1s ease;
     border: none;
     cursor: pointer;
 }
 
-.btn:active {
-    transform: scale(0.98);
-}
+.btn-pagar { background: #635BFF; color: #ffffff; }
+.btn-mercadopago { background: #009EE3; color: white; }
+.btn-whatsapp { background: #25D366; color: white; }
 
-.btn-pagar {
-    background: #635BFF; /* Morado Wompi/Stripe original */
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(99, 91, 255, 0.2);
-}
-
-.btn-mercadopago{
-    display:block;
-    width:100%;
-    background:#009EE3;
-    color:white;
-    padding:15px;
-    border-radius:12px;
-    text-align:center;
-    text-decoration:none;
-    font-weight:bold;
-    margin-top:15px;
-}
-
-.btn-whatsapp {
-    background: #25D366;
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.2);
-}
-
-.btn-confirmar {
-    background:var(--principal);
-    color: #ffffff;
-}
-
-/* 🔍 CÓDIGO QR SEGURO */
 .qr {
     text-align: center;
-    margin-top: 35px;
+    margin-top: 30px;
     padding-top: 20px;
-    border-top:1px solid var(--gris-claro);
+    border-top: 1px solid #E5E7EB;
 }
-
 .qr img {
-    max-width: 150px;
-    border: 1px solid #e2e8f0;
-    padding: 8px;
-    border-radius: 8px;
+    max-width: 140px;
+    border: 1px solid #E2E8F0;
+    padding: 6px;
     background: #ffffff;
 }
 </style>
-
 </head>
 
 <body>
 
-
 <div class="container">
 
-    <div class="header">
-    {% if empresa_logo %}
-        <img src="{{ empresa_logo }}" alt="{{ empresa_nombre }}" style="max-height:90px; max-width:220px; margin-bottom:15px;">
-    {% endif %}
+    <table class="header-table">
+        <tr>
+            <td style="width: 65%; vertical-align: top;">
+                {% if empresa_logo %}
+                    <img src="{{ empresa_logo }}" alt="{{ empresa_nombre }}" style="max-height:75px; max-width:180px; margin-bottom:10px; display:block;">
+                {% endif %}
+                <h1 class="titulo-empresa">{{ empresa_nombre }}</h1>
+                <div class="header-datos">
+                    {% if empresa_nit %}<strong>NIT:</strong> {{ empresa_nit }}<br>{% endif %}
+                    {% if empresa_direccion %}<strong>Dirección:</strong> {{ empresa_direccion }}<br>{% endif %}
+                    {% if empresa_telefono %}<strong>Tel:</strong> {{ empresa_telefono }}<br>{% endif %}
+                    {% if empresa_email %}<strong>Email:</strong> {{ empresa_email }}{% endif %}
+                </div>
+            </td>
+            <td style="width: 35%; text-align: right; vertical-align: top;">
+                <div class="estado-badge">
+                    <span style="font-size: 10px; font-weight: bold; text-transform: uppercase; color: #4B5563;">Estado</span><br>
+                    <span style="font-size: 12px; font-weight: bold; color: {% if pedido.estado == 'pagado' %}#16A34A{% else %}#D97706{% endif %};">
+                        {% if pedido.estado == 'pagado' %}🟢 PAGADO{% else %}🟡 PENDIENTE{% endif %}
+                    </span>
+                </div>
+            </td>
+        </tr>
+    </table>
 
-    <!-- 🎯 Nombre de la empresa forzado a negro (#111111) -->
-    <h1 style="margin:0; font-size:24px; font-weight:700; color: #111111;">
-        {{ empresa_nombre }}
-    </h1>
+    <div class="titulo-factura">Factura de Venta</div>
+    <div class="subtitulo-factura">
+        Pedido <strong>#{{ pedido.numero_orden }}</strong> &nbsp;|&nbsp; Fecha: {{ pedido.fecha|date:"d/m/Y H:i" }}
+    </div>
 
-    {% if empresa_nit %}<p style="margin:5px 0;"><strong>NIT:</strong> {{ empresa_nit }}</p>{% endif %}
-    {% if empresa_direccion %}<p style="margin:3px 0;">{{ empresa_direccion }}</p>{% endif %}
-    {% if empresa_telefono %}<p style="margin:3px 0;">📲 {{ empresa_telefono }}</p>{% endif %}
-    {% if empresa_email %}<p style="margin:3px 0;">✉️ {{ empresa_email }}</p>{% endif %}
-</div>
-    
-    
-    {% if pedido.estado == 'pagado' %}
-        <div class="estado pagado" style="background:#d4edda; color:#155724; text-align:center; padding:10px; border-radius:8px; margin-bottom:15px; font-weight:bold;">
-            🟢 Pedido Pagado
-        </div>
-    {% elif pedido.estado == 'vencido' %}
-        <div class="estado" style="text-align:center; padding:10px; border-radius:8px; margin-bottom:15px; font-weight:bold; background:#f8d7da; color:#721c24;">
-            🔴 Vencido
-        </div>
-    {% else %}
-        <div class="estado pendiente" style="background:#fff3cd; color:#856404; text-align:center; padding:10px; border-radius:8px; margin-bottom:15px; font-weight:bold;">
-            🟡 Pendiente de Pago
-        </div>
-    {% endif %}
-
-    <div class="titulo" style="text-align:center; margin:20px 0;">
-
-    <h2 style="margin:0;
-               font-size:22px;
-               color:#111;
-               letter-spacing:1px;">
-        FACTURA DE VENTA
-    </h2>
-
-    <p style="margin:8px 0 0 0;
-              font-size:15px;
-              color:#555;">
-        Pedido <strong>#{{ pedido.numero_orden }}</strong>
-    </p>
-
-    <p style="margin:5px 0 0 0;
-              font-size:13px;
-              color:#777;">
-        {{ pedido.fecha|date:"d/m/Y H:i" }}
-    </p>
-
-</div>
-    <p style="font-size: 14px; color: #333; margin-top: 0; line-height: 1.4;">
-
-        <strong>Cliente:</strong>
-        {% if pedido.cliente %}
-            {{ pedido.cliente.nombre }}
-        {% else %}
-            {{ pedido.cliente_nombre|default:"Consumidor final" }}
-        {% endif %}
-        <br>
-
-        {% if pedido.cliente %}
-            {% if pedido.cliente.email %}
-                <strong>Email:</strong> {{ pedido.cliente.email }}<br>
-            {% endif %}
-
-            <strong>Celular:</strong> {{ pedido.cliente.telefono }}<br>
-
-            {% if pedido.cliente.direccion %}
-                <strong>Dirección:</strong> {{ pedido.cliente.direccion }}<br>
-            {% endif %}
-
-            {% if pedido.cliente.ciudad %}
-                <strong>Ciudad:</strong> {{ pedido.cliente.ciudad }}<br>
-            {% endif %}
-
-        {% else %}
-
-            {% if pedido.cliente_nit %}
-                <strong>NIT/CC:</strong> {{ pedido.cliente_nit }}<br>
-            {% endif %}
-
-            <strong>Celular:</strong> {{ pedido.cliente_telefono }}<br>
-            <strong>Dirección:</strong> {{ pedido.cliente_direccion }}<br>
-            <strong>Ciudad:</strong> {{ pedido.cliente_ciudad }}
-
-        {% endif %}
-
-    </p>
+    <div class="bloque-cliente">
+        <span style="font-size: 11px; text-transform: uppercase; font-weight: bold; color: #6B7280; display: block; margin-bottom: 6px;">Datos del Cliente</span>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <tr>
+                <td style="padding: 3px 0;"><strong>Nombre:</strong> {% if pedido.cliente %}{{ pedido.cliente.nombre }}{% else %}{{ pedido.cliente_nombre|default:"Consumidor final" }}{% endif %}</td>
+                <td style="padding: 3px 0; text-align: right;"><strong>NIT/CC:</strong> {{ pedido.cliente_nit|default:"-" }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 3px 0;"><strong>Celular:</strong> {{ pedido.cliente_telefono|default:"-" }}</td>
+                <td style="padding: 3px 0; text-align: right;"><strong>Email:</strong> {{ pedido.cliente_email|default:"-" }}</td>
+            </tr>
+            <tr>
+                <td colspan="2" style="padding: 3px 0;"><strong>Dirección:</strong> {{ pedido.cliente_direccion|default:"-" }} {% if pedido.cliente_ciudad %}({{ pedido.cliente_ciudad }}){% endif %}</td>
+            </tr>
+        </table>
+    </div>
 
     <table class="tabla">
-
-    <tr style="background: {{ color_primario|default:'#444' }}; color:white;">
-        <th style="text-align:left;padding-left:10px;">Producto</th>
-        <th style="text-align:center;">Cant.</th>
-        <th style="text-align:right;padding-right:10px;">Subtotal</th>
-    </tr>
-
-    {% for item in pedido.items.all %}
-    <tr>
-
-        <td style="text-align:left;padding-left:10px;">
-
-            <strong>{{ item.producto.nombre }}</strong>
-
-            {% if item.variante %}
-                <br>
-                <small style="color:#666;">
-                    Color: {{ item.variante.color }}
-                </small>
-
-                {% if item.variante.talla %}
-                    |
-                    <small style="color:#666;">
-                        Talla: {{ item.variante.talla }}
-                    </small>
-                {% endif %}
-            {% endif %}
-
-            {% if item.total_gramos %}
-                <br>
-                <small style="color:#666;">
-                    Peso: {{ item.total_gramos|floatformat:2 }} g
-                </small>
-            {% endif %}
-
-        </td>
-
-        <td style="text-align:center;">
-            {{ item.cantidad }}
-        </td>
-
-        <td style="text-align:right;padding-right:10px;">
-            ${{ item.subtotal|floatformat:0 }}
-        </td>
-
-    </tr>
-
-    {% empty %}
-    <tr>
-        <td colspan="3" style="text-align:center;padding:20px;">
-            No hay productos registrados.
-        </td>
-    </tr>
-    {% endfor %}
-
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cant.</th>
+                <th>Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in pedido.items.all %}
+            <tr>
+                <td>
+                    <strong>{{ item.producto.nombre }}</strong>
+                    {% if item.variante %}
+                        <br><span style="font-size: 11px; color:#555555;">Color: {{ item.variante.color }}{% if item.variante.talla %} | Talla: {{ item.variante.talla }}{% endif %}</span>
+                    {% endif %}
+                    {% if item.total_gramos %}
+                        <br><span style="font-size: 11px; color:#555555;">Peso: {{ item.total_gramos|floatformat:2 }} g</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">{{ item.cantidad }}</td>
+                <td style="text-align: right;">${{ item.subtotal|floatformat:0 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" style="text-align:center; padding:20px;">No hay productos registrados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
-    
-    <div class="desglose-contenedor">
 
-        <div class="desglose-fila">
-            <span>Subtotal</span>
-            <span>${{ subtotal|floatformat:"0" }}</span>
-        </div>
-
-        {% if pedido.porcentaje_descuento > 0 %}
-        <div class="desglose-fila">
-            <span>Descuento ({{ pedido.porcentaje_descuento }}%)</span>
-            <span style="color:#c0392b;">
-            -${{ pedido.descuento_total|floatformat:"0" }}
-            </span>
-        </div>
-        {% endif %}
-
-        {% if iva_total > 0 %}
-        <div class="desglose-fila">
-            <span>IVA</span>
-            <span>
-            +${{ iva_total|floatformat:"0" }}
-            </span>
-        </div>
-        {% endif %}
-
-        {% if retefuente_total > 0 %}
-        <div class="desglose-fila">
-            <span>Retefuente</span>
-            <span style="color:#c0392b;">
-            -${{ retefuente_total|floatformat:"0" }}
-            </span>
-        
-        </div>
-        {% endif %}
-
-        
-        {% if pedido.costo_envio > 0 %}
-        <div class="desglose-fila">
-            <span>Envío</span>
-            <span>${{ pedido.costo_envio|floatformat:"0" }}</span>
-        </div>
-        {% elif pedido.tipo_envio == "recogida" %}
-        <div class="desglose-fila">
-            <span>Entrega</span>
-            <span>Recoge en tienda</span>
-        </div>
-        {% endif %}
-
-    </div>
-
-        <div class="total">
-            TOTAL A PAGAR<br>
-            <strong>${{ pedido.total|floatformat:"0" }} COP</strong>
-        </div>
-            {% if pedido.estado != 'pagado' %}
-                <a href="{% url 'pagar_wompi' pedido.id %}" class="btn btn-pagar">
-                    💳 Pagar con Wompi
-                </a>
-
-            <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}"
-                class="btn btn-mercadopago">
-                🔵 Pagar con Mercado Pago
-            </a>
+    <div class="contenedor-totales">
+        <table class="tabla-totales">
+            <tr>
+                <td style="text-align: left; color: #555555;">Subtotal:</td>
+                <td style="text-align: right; font-weight: bold;">${{ subtotal|floatformat:"0" }}</td>
+            </tr>
+            {% if pedido.porcentaje_descuento > 0 %}
+            <tr>
+                <td style="text-align: left; color: #555555;">Descuento ({{ pedido.porcentaje_descuento }}%):</td>
+                <td style="text-align: right; color: #B91C1C;">-${{ descuento_total|floatformat:"0" }}</td>
+            </tr>
             {% endif %}
-    
-
-            <a href="https://wa.me/{{ pedido.usuario.perfil.whatsapp|default:empresa_telefono }}?text=Hola! Adjunto el comprobante de pago del pedido %23{{ pedido.numero_orden }}" 
-                class="btn btn-whatsapp" target="_blank">
-                📲 Enviar comprobante por WhatsApp
-            </a>
-
-        <div class="qr">
-            <p style="margin-bottom: 10px; font-size: 14px; color: #555;">Escanea para abrir este pedido</p>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ pedido.total|floatformat:0 }}" alt="QR de Pago">
+            {% if iva_total > 0 %}
+            <tr>
+                <td style="text-align: left; color: #555555;">IVA:</td>
+                <td style="text-align: right;">+${{ iva_total|floatformat:"0" }}</td>
+            </tr>
+            {% endif %}
+            {% if retefuente_total > 0 %}
+            <tr>
+                <td style="text-align: left; color: #555555;">Retefuente:</td>
+                <td style="text-align: right; color: #B91C1C;">-${{ retefuente_total|floatformat:"0" }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td style="text-align: left; color: #555555; border-bottom: 1px solid #E5E7EB; padding-bottom: 8px;">Envío:</td>
+                <td style="text-align: right; border-bottom: 1px solid #E5E7EB; padding-bottom: 8px;">
+                    {% if envio > 0 %}${{ envio|floatformat:"0" }}{% else %}Gratis{% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" class="total-box">
+                    TOTAL: ${{ total_final|floatformat:"0" }} COP
+                </td>
+            </tr>
+        </table>
+        <div style="clear: both;"></div>
     </div>
-    <hr style="margin:30px 0; border:none; border-top:1px solid #ddd;">
 
-    <div style="text-align:center; font-size:12px; color:#777; line-height:1.8;">
+    {% if pedido.estado != 'pagado' %}
+        <a href="{% url 'pagar_wompi' pedido.id %}" class="btn btn-pagar">💳 Pagar con Wompi</a>
+        <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}" class="btn btn-mercadopago">🔵 Pagar con Mercado Pago</a>
+    {% endif %}
 
+    <a href="{{ whatsapp_url }}" class="btn btn-whatsapp" target="_blank">📲 Enviar comprobante por WhatsApp</a>
+
+    <div class="qr">
+        <p style="margin-bottom: 10px; font-size: 13px; color: #555;">Escanea para abrir este pedido</p>
+        <img src="{{ qr_url }}" alt="QR de Pago">
+    </div>
+
+    <div style="text-align: center; font-size: 11px; color: #777777; margin-top: 40px; border-top: 1px solid #E5E7EB; padding-top: 15px;">
         <strong>Gracias por comprar en {{ empresa_nombre }}</strong><br>
-
         Factura generada mediante <strong>JoyasApp®</strong><br>
-
         www.joyasapp.com
     </div>
 
