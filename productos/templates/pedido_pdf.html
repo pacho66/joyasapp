@@ -268,6 +268,9 @@
                     {% if cliente.telefono %}
                         <p class="info-texto"><strong>Teléfono:</strong> {{ cliente.telefono }}</p>
                     {% endif %}
+                    {% if pedido.cliente_email %}
+                        <p><strong>Email:</strong> {{ pedido.cliente_email }}</p>
+                    {% endif %}
                 {% else %}
                     <p class="info-texto">Cliente Ocasional / Mostrador</p>
                     <p class="info-texto">Sin teléfono registrado</p>
@@ -289,65 +292,66 @@
         
         <tbody>
             {% for item in items %}
-            
-            <td class="align-left">
+            <tr>
 
-            <strong>{{ item.producto.nombre }}</strong>
+                <td class="align-left">
 
-            {% if item.producto.referencia %}
-            <br>
-            <small style="color:#666;font-size:9px;">
-            Ref: {{ item.producto.referencia }}
-            </small>
-            {% endif %}
+                <strong>{{ item.producto.nombre }}</strong>
 
-            {% if item.variante %}
-            <br>
-            <small style="color:#666;font-size:9px;">
+                        {% if item.producto.referencia %}
+                        <br>
+                        <small style="color:#666;font-size:9px;">
+                             Ref: {{ item.producto.referencia }}
+                        </small>
+                        {% endif %}
 
-            {if item.variante.color %}
-            Color: {{ item.variante.color }}
-            {% endif %}
+                        {% if item.variante %}
+                        <br>
+                        <small style="color:#666;font-size:9px;">
 
-            {% if item.variante.talla %}
-            <br>Talla: {{ item.variante.talla }}
-            {% endif %}
+                            {% if item.variante.color %}
+                            Color: {{ item.variante.color }}
+                            {% endif %}
 
-            {% if item.variante.peso %}
-            <br>Peso: {{ item.variante.peso }} g
-            {% endif %}
+                            {% if item.variante.talla %}
+                            <br>Talla: {{ item.variante.talla }}
+                            {% endif %}
+                        </small>
+                        {% endif %}
 
-            </small>
-            {% endif %}
+                        {% if item.total_gramos %}
+                        <br>
+                        <small style="color:#666;font-size:9px;">
+                            Peso: {{ item.total_gramos|floatformat:2 }} g
+                        </small>
+                        {% endif %}
 
-            </td>
+                    </td>
+                    <td class="align-center">
+                        {% if item.total_gramos and item.total_gramos > 0 %}
+                        {{ item.total_gramos | floatformat:2 }} g
+                        {% else %}
+                        {{ item.cantidad }} u
+                        {% endif %}
 
-                <td class="align-center">
+                    </td>
 
-                {% if item.total_gramos and item.total_gramos > 0 %}
-                {{ item.total_gramos }} g
-                {% else %}
-                {{ item.cantidad }} u
-                {% endif %}
+                    <td class="align-right">
+                        ${{ item.precio|floatformat:"0" }}
+                    </td>
 
-                </td>
-
-                <td class="align-right">
-                ${{ item.precio|floatformat:"0" }}
-            </td>
-
-                <td class="align-right">
-                ${{ item.subtotal|floatformat:"0" }}
-                </td>
-            </tr>
+                    <td class="align-right">
+                        ${{ item.subtotal|floatformat:"0" }}
+                    </td>
+                </tr>
 
                 {% empty %}
-            <tr>
-                <td colspan="4" class="align-center">
-                No hay productos registrados en este pedido.
+                <tr>
+                    <td colspan="4" class="align-center">
+                    No hay productos registrados en este pedido.
                 </td>
             </tr>
-                {% endfor %}
+            {% endfor %}
         </tbody>
     </table>
 

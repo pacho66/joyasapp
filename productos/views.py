@@ -85,24 +85,18 @@ def generar_numero_orden(usuario=None):
 
     return f"FAC-{numero:06d}"
 
-
-def calcular_envio(ciudad, subtotal):
+def calcular_envio(ciudad=None, subtotal=0):
     """
-    Calcula envío automático.
+    JoyasApp
+
+    El costo del envío NO se calcula automáticamente.
+
+    Cada joyero define posteriormente el valor del envío
+    según la transportadora, ciudad o país.
+
+    El pedido inicia con envío = 0.
     """
-
-    if subtotal >= 300000:
-        return Decimal('0')
-
-    ciudad = (ciudad or '').lower()
-
-    if ciudad in ['medellin', 'medellín']:
-        return Decimal('10000')
-
-    elif ciudad in ['bogota', 'bogotá', 'cali']:
-        return Decimal('15000')
-
-    return Decimal('20000')
+    return Decimal("0")
 
 def calcular_precio_producto(producto, cantidad):
     cantidad = Decimal(str(cantidad))

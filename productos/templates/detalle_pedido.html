@@ -258,23 +258,60 @@
 
         <div class="liquidacion-wrapper">
             
+            
             <div class="liq-bloque-izq">
-                <div style="padding-right: 20px;">
-                    {% if envio and envio > 0 %}
-                        <p style="font-size: 14px; margin: 5px 0;"><strong>🚚 Envío de Seguridad:</strong> ${{ envio|default:0|floatformat:"0" }}</p>
+
+                <div style="padding-right:20px;">
+
+                    {% if pedido.tipo_envio == "recogida" %}
+
+                        <p style="font-size:14px;margin:5px 0;color:#28a745;">
+                            <strong>🏬 Entrega:</strong> Recoge en tienda
+                        </p>
+
+                    {% elif envio and envio > 0 %}
+
+                        <p style="font-size:14px;margin:5px 0;">
+                            <strong>🚚 Envío:</strong>
+                            ${{ envio|floatformat:"0" }}
+                        </p>
+
                     {% else %}
-                        <p style="font-size: 14px; margin: 5px 0; color: #28a745;"><strong>🚚 Envío:</strong> ¡GRATIS!</p>
+
+                        <p style="font-size:14px;margin:5px 0;color:#555;">
+                            <strong>🚚 Entrega:</strong>
+                            Valor del envío por acordar con el vendedor.
+                        </p>
+
                     {% endif %}
-                    
-                    <div style="margin-top: 25px; border: 1px solid #edf2f7; padding: 12px; border-radius: 8px; display: inline-block; background: #fff;">
-                        <small style="display: block; color: #718096; margin-bottom: 5px; font-weight: 600; text-align: center;">Escanea para recaudar</small>
+
+                    <div style="margin-top:25px;
+                    border:1px solid #edf2f7;
+                    padding:12px;
+                    border-radius:8px;
+                    display:inline-block;
+                    background:#fff;">
+
+                        <small style="display:block;
+                        color:#718096;
+                        margin-bottom:5px;
+                        font-weight:600;
+                        text-align:center;">
+                        Escanea para pagar
+                        </small>
+
                         {% if qr_pago_url %}
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={{ qr_pago_url }}" style="display: block; margin: 0 auto;">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={{ qr_pago_url }}">
                         {% else %}
-                            <small style="color: #6c757d; font-style: italic;">QR no disponible</small>
+                            <small style="color:#6c757d;">
+                                QR no disponible
+                            </small>
                         {% endif %}
+
                     </div>
+
                 </div>
+
             </div>
 
             <div class="liq-bloque-der">
