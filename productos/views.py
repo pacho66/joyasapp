@@ -2019,10 +2019,10 @@ def pedido_pdf(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
     items = pedido.items.all()
 
-    # 1. 🚀 FORZAMOS LOGO NULL (Sugerencia de PG para aislar almacenamiento remoto)
+    # 1. 🚀 FORZAMOS LOGO NULL temporalmente para blindar weasyprint/xhtml2pdf en la nube
     logo_path = None
 
-    # Obtención segura del perfil
+    # Obtención segura del perfil idéntica a la pública
     try:
         if pedido.usuario:
             perfil = Perfil.objects.get(user=pedido.usuario)
@@ -2049,7 +2049,7 @@ def pedido_pdf(request, pedido_id):
     if not activa:
         return HttpResponse("Cuenta inactiva", status=403)
 
-    # Cálculos seguros
+    # Cálculos seguros idénticos
     subtotal = sum(item.subtotal or 0 for item in items)
     iva_total = sum(item.iva or 0 for item in items)
     descuento_total = sum(item.descuento or 0 for item in items)
@@ -2057,7 +2057,6 @@ def pedido_pdf(request, pedido_id):
     envio = pedido.costo_envio or 0
     total_final = pedido.total
 
-    # 2. 🚀 FECHA CORREGIDA (Sincronizada con el campo 'fecha')
     if hasattr(pedido, 'fecha') and pedido.fecha:
         fecha_str = pedido.fecha.strftime('%Y-%m-%d')
     elif hasattr(pedido, 'fecha_creacion') and pedido.fecha_creacion:
@@ -2065,20 +2064,12 @@ def pedido_pdf(request, pedido_id):
     else:
         fecha_str = "S/F"
 
-    # 🔍 PRINT DE DIAGNÓSTICO EN CONSOLA DE RENDER
-    print("\n" + "📊" * 15)
-    print(f"PEDIDO ID: {pedido.id}")
-    print(f"USUARIO: {pedido.usuario}")
-    print(f"LOGO PATH (FORZADO): {logo_path}")
-    print(f"CLIENTE: {getattr(pedido, 'cliente', 'Mostrador')}")
-    print(f"NUMERO ORDEN: {pedido.numero_orden}")
-    print("📊" * 15 + "\n")
-
     context = {
         'pedido': pedido,
         'items': items,
         'cliente': getattr(pedido, 'cliente', None),
 
+        # Unificación absoluta de variables de empresa
         'empresa_nombre': empresa_nombre,
         'empresa_nit': empresa_nit,
         'empresa_telefono': empresa_telefono,
@@ -2095,7 +2086,7 @@ def pedido_pdf(request, pedido_id):
         'retefuente_total': retefuente_total,
         'envio': envio,
         'total_final': total_final,
-        'fecha_str': fecha_str,  # Pasamos el string limpio
+        'fecha_str': fecha_str,
     }
 
     template = get_template('pedido_pdf.html')
@@ -2104,15 +2095,13 @@ def pedido_pdf(request, pedido_id):
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="pedido_{pedido.numero_orden}.pdf"'
 
-    # 4. 🚀 CAPTURA DE ERROR EN MOTOR PDF
+    # Generación segura
     pdf = pisa.CreatePDF(html, dest=response)
     if pdf.err:
         print(f"❌ ERROR CRÍTICO EN XHTML2PDF: {pdf.err}")
         return HttpResponse(f"Error generando PDF: {pdf.err}", status=500)
 
     return response
-
-
 
 @login_required
 def gastos(request):
@@ -2347,7 +2336,6 @@ def cartera_clientes(request):
         'morosos_total': morosos_total,
         'morosos_count': morosos_count
 })
-
 def factura_publica(request, token):
     """
     Vista que renderiza el recibo público para el cliente mediante el token UUID.
@@ -2356,7 +2344,6 @@ def factura_publica(request, token):
     items = pedido.items.select_related('producto', 'variante').all()
     
     # 🛡️ PROTECCIÓN CRÍTICA: Obtención segura del perfil para evitar Error 500
-    
     usuario_pedido = pedido.usuario
 
     try:
@@ -2369,6 +2356,14 @@ def factura_publica(request, token):
     empresa_telefono = perfil.whatsapp if perfil else ""
     empresa_direccion = perfil.direccion if perfil else ""
     empresa_email = perfil.email_empresa if perfil else ""
+    
+    # Obtención segura del logo de la empresa para evitar cortocircuitos si no hay archivo
+    empresa_logo = ""
+    if perfil and hasattr(perfil, 'logo') and perfil.logo:
+        try:
+            empresa_logo = perfil.logo.url
+        except Exception:
+            empresa_logo = ""
 
     color_primario = perfil.color_primario if perfil else "#000000"
     color_secundario = perfil.color_secundario if perfil else "#333333"
@@ -2385,7 +2380,7 @@ def factura_publica(request, token):
     total_final = subtotal + iva_total + envio - descuento_total - retefuente_total
 
     # =========================================================
-    # 🟢 CORRECCIÓN DEL MOTOR DE ESTADOS (Original de PG)
+    # 🟢 CORRECCIÓN DEL MOTOR DE ESTADOS
     # =========================================================
     if pedido.estado == "pendiente":
         estado = "pendiente"
@@ -2397,7 +2392,7 @@ def factura_publica(request, token):
         estado = pedido.estado
 
     # =========================================================
-    # 💬 INTEGRACIÓN DE WHATSAPP Y QR (Protegido contra campos vacíos)
+    # 💬 INTEGRACIÓN DE WHATSAPP Y QR
     # =========================================================
     mensaje = f"Hola! Adjunto el comprobante de pago del pedido #{pedido.numero_orden} por valor de ${total_final:,.0f}".replace(",", ".")
     whatsapp_num = empresa_telefono if empresa_telefono != "-" else ""
@@ -2418,18 +2413,19 @@ def factura_publica(request, token):
         'cliente_ciudad': pedido.cliente_ciudad,
         'cliente_nit': pedido.cliente_nit,
 
-        # Datos del perfil SaaS del joyero seguros
+        # Datos del perfil SaaS del joyero asignados correctamente con su clave/valor 🎯
         'empresa_nombre': empresa_nombre,
         'empresa_nit': empresa_nit,
         'empresa_telefono': empresa_telefono,
-        'empresa_direccion'
-        'empresa_email'
+        'empresa_direccion': empresa_direccion,
+        'empresa_email': empresa_email,
+        'empresa_logo': empresa_logo,
 
         # Identidad de marca blanca segura
         'color_primario': color_primario,
         'color_secundario': color_secundario,
 
-        # 🎯 FIX MATEMÁTICO: Inyectamos la variable exacta que pide tu HTML
+        # FIX MATEMÁTICO: Inyectamos la variable exacta que pide tu HTML
         'subtotal_general': subtotal, 
         
         # Variables de respaldo originales protegidas

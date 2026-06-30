@@ -1,456 +1,199 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Factura_{{ pedido.numero_orden }}</title>
-    <style>
-        /* 💎 ESTILOS FACTURA PDF PREMIUM - JOYASAPP */
-        
-        @page {
-            size: letter;
-            margin: 40px;
-        }
-
-        :root{
-            --principal:#111111;
-            --gris:#444444;
-            --gris-claro:#E5E7EB;
-            --fondo:#FFFFFF;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 11px;
-            color: var(--principal);
-            line-height: 1.4;
-        }
-
-        /* 🏢 ESTRUCTURA EN CABEZOTE (Tablas puras para evitar errores de Flexbox) */
-        .header-table {
-            width: 100%;
-            margin-bottom: 15px;
-        }
-
-        .header-logo-box {
-            width: 50%;
-            vertical-align: middle;
-        }
-
-        .header-logo-box img{
-            max-height:90px;
-            max-width:220px;
-        }
-
-        .header-info-box{
-            text-align:right;
-            font-size:11px;
-            line-height:1.6;
-            color: var(--gris);color: var(--gris);
-        }
-
-        /* 🎫 TÍTULO PRINCIPAL DE LA FACTURA */
-        .titulo-factura-contenedor{
-
-            text-align:center;
-
-            border-top:2px solid #111;
-
-            border-bottom:2px solid #111;
-
-            padding:12px 0;
-
-            margin:18px 0 25px 0;
-
-        }
-
-        .titulo-factura{
-            font-size:22px;
-            font-weight:bold;
-            letter-spacing:1px;
-            color: var(--gris);color: var(--gris);
-
-        }
-
-        /* 👥 INFORMACIÓN DE CLIENTE Y PEDIDO (2 Columnas perfectas) */
-        .info-bloque-table {
-            width: 100%;
-            margin-bottom: 20px;
-        }
-
-        .info-bloque-celda {
-            width: 50%;
-            vertical-align: top;
-        }
-
-        .info-bloque-celda h3 {
-            font-size: 11px;
-            text-transform: uppercase;
-            font-weight: bold;
-            letter-spacing: 0.5px;
-            margin: 0 0 6px 0;
-            color: var(--principal);
-            border-bottom:1px solid var(--principal);
-            border-bottom: 1px solid #111111;
-            padding-bottom: 3px;
-            width: 90%;
-        }
-
-        .info-texto {
-            font-size: 11px;
-            margin: 2px 0;
-            color: #222222;
-        }
-
-        /* 📊 TABLA DE PRODUCTOS IMPECABLE Y DE ALTO CONTRASTE */
-        .tabla-items {
-            width: 100%;
-            margin-top: 10px;
-            margin-bottom: 25px;
-            border-collapse: collapse;
-        }
-
-        .tabla-items th {
-            background:var(--principal);
-            color:white;
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-            padding: 8px 10px;
-        }
-
-        .tabla-items td {
-            border-bottom:1px solid var(--gris-claro);
-            padding: 10px;
-            font-size: 11px;
-            color: #222222;
-        }
-
-        /* Alineaciones de columnas */
-        .align-left { text-align: left; }
-        .align-center { text-align: center; }
-        .align-right { text-align: right; }
-
-        /* 📉 SECCIÓN DE TOTALES */
-        .totales-contenedor-table {
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        .tabla-totales {
-            width: 100%;
-            border-collapse: collapse;
-            color:var(--gris);
-        }
-
-        .tabla-totales td {
-            padding: 5px 10px;
-            font-size: 11px;
-            color: #333333;
-        }
-
-        .tabla-totales td.label {
-            text-align: left;
-            font-weight: bold;
-        }
-
-        .tabla-totales td.valor {
-            text-align: right;
-        }
-
-        /* Fila de Total Destacado */
-        .fila-total-final td {
-            font-size: 13px;
-            font-weight: bold;
-            background:#F8F9FA;
-            color:var(--principal);
-            border-top:1px solid var(--principal);
-            border-bottom:2px double var(--principal);
-            padding: 8px 10px;
-        }
-    </style>
+<meta charset="UTF-8">
+<style>
+    @page {
+        size: letter;
+        margin: 40px;
+    }
+    body {
+        font-family: Helvetica, Arial, sans-serif;
+        color: #111111;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+    .header-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+    .titulo-factura {
+        font-size: 20px;
+        font-weight: bold;
+        text-transform: uppercase;
+        text-align: center;
+        margin-top: 10px;
+        margin-bottom: 5px;
+    }
+    .subtitulo-factura {
+        text-align: center;
+        color: #555555;
+        font-size: 14px;
+        margin-bottom: 15px;
+    }
+    .tabla-productos {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+        margin-bottom: 15px;
+    }
+    .tabla-productos th {
+        background-color: {{ color_primario|default:"#111111" }};
+        color: #ffffff;
+        font-size: 11px;
+        text-transform: uppercase;
+        padding: 8px;
+        font-weight: bold;
+    }
+    .titulo-empresa {
+        color: {{ color_primario|default:"#111111" }};
+        margin: 0; 
+        font-size: 22px; 
+        font-weight: bold;
+    }
+    .tabla-productos td {
+        border-bottom: 1px solid #E5E7EB;
+        padding: 10px 8px;
+    }
+    .desglose-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+    .desglose-table td {
+        padding: 4px 0;
+        font-size: 13px;
+    }
+    .total-box {
+        background-color: #F7FAFC;
+        border: 1px solid #E2E8F0;
+        padding: 12px;
+        text-align: center;
+        font-size: 16px;
+        font-weight: bold;
+        margin-top: 15px;
+    }
+</style>
 </head>
 <body>
 
-    
-    <!-- ===================== ENCABEZADO ===================== -->
-
     <table class="header-table">
         <tr>
-
-            <td class="header-logo-box" style="width:35%;">
-
-                {% if empresa_logo %}
-                    <img src="{{ empresa_logo }}"
-                        alt="{{ empresa_nombre }}"
-                        style="max-height:90px; max-width:220px;">
-                {% endif %}
-
+            <td style="width: 60%; vertical-align: top;">
+                <h1 style="margin: 0; font-size: 22px; font-weight: bold; color: {{ color_primario|default:'#111111' }};">
+                    {{ empresa_nombre }}
+                </h1>
+                <p style="margin: 4px 0; font-size: 12px; color: #444;">
+                    {% if empresa_nit and empresa_nit != "Sin NIT" %}<strong>NIT:</strong> {{ empresa_nit }}<br>{% endif %}
+                    {% if empresa_direccion and empresa_direccion != "-" %}<strong>Dir:</strong> {{ empresa_direccion }}<br>{% endif %}
+                    {% if empresa_telefono and empresa_telefono != "-" %}<strong>Tel:</strong> {{ empresa_telefono }}<br>{% endif %}
+                    {% if empresa_email and empresa_email != "-" %}<strong>Email:</strong> {{ empresa_email }}{% endif %}
+                </p>
             </td>
-
-            <td class="header-info-box" style="width:65%; text-align:right;">
-
-                <div style="font-size:22px;
-                        font-weight:bold;
-                        color:#111111;
-                        margin-bottom:8px;">
-                {{ empresa_nombre }}
+            <td style="width: 40%; text-align: right; vertical-align: top;">
+                <div style="padding: 8px; background-color: #F3F4F6; border-radius: 6px; text-align: center;">
+                    <span style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #374151;">Estado</span><br>
+                    <span style="font-size: 13px; font-weight: bold; color: {% if pedido.estado == 'pagado' %}#155724{% else %}#856404{% endif %};">
+                        {% if pedido.estado == 'pagado' %}🟢 PAGADO{% else %}🟡 PENDIENTE{% endif %}
+                    </span>
                 </div>
-
-                {% if empresa_nit %}
-                <div>
-                    <strong>NIT:</strong> {{ empresa_nit }}
-                </div>
-                {% endif %}
-
-                {% if empresa_direccion %}
-                    <div>
-                        {{ empresa_direccion }}
-                    </div>
-                {% endif %}
-
-                {% if empresa_telefono %}
-                    <div>
-                        📲 {{ empresa_telefono }}
-                    </div>
-                {% endif %}
-
-                {% if empresa_email %}
-                    <div>
-                        ✉️ {{ empresa_email }}
-                    </div>
-                {% endif %}
-
             </td>
-
         </tr>
     </table>
 
-    <!-- ===================== TITULO ===================== -->
-
-    <div class="titulo-factura-contenedor">
-
-        <h1 class="titulo-factura">
-            FACTURA DE VENTA
-        </h1>
-
-        <div style="margin-top:8px;font-size:13px;">
-
-            Pedido
-            <strong>#{{ pedido.numero_orden }}</strong>
-
-            &nbsp;&nbsp;&nbsp;&nbsp;
-
-            {{ pedido.fecha|date:"d/m/Y H:i" }}
-
-        </div>
-
+    <div class="titulo-factura">Factura de Venta</div>
+    <div class="subtitulo-factura">
+        Pedido <strong>#{{ pedido.numero_orden }}</strong> | Fecha: {{ fecha_str }}
     </div>
 
-    <!-- 👥 INFORMACIÓN DEL PEDIDO Y DEL CLIENTE -->
-    <table class="info-bloque-table">
-        <tr>
-            <!-- Datos del Pedido -->
-            <td class="info-bloque-celda">
-                <h3>Detalle del Pedido</h3>
-                <p class="info-texto"><strong>Fecha de emisión:</strong> {{ pedido.fecha|date:"d/m/Y" }}</p>
-                <p class="info-texto"><strong>Tipo de Pago:</strong> {{ pedido.tipo_pago|upper }}</p>
-                <p class="info-texto"><strong>Estado actual:</strong> {{ pedido.get_estado_display|default:pedido.estado }}</p>
-            </td>
-            
-            <!-- Datos del Cliente Saneados (Evita Error 500 si es nulo) -->
-            <td class="info-bloque-celda">
-                <h3>Datos del Cliente</h3>
-                {% if cliente %}
-                    <p class="info-texto"><strong>Nombre:</strong> {{ cliente.nombre }}</p>
-                    {% if cliente.cedula_nit %}
-                        <p class="info-texto"><strong>Cédula/NIT:</strong> {{ cliente.cedula_nit }}</p>
-                    {% endif %}
-                    {% if cliente.telefono %}
-                        <p class="info-texto"><strong>Teléfono:</strong> {{ cliente.telefono }}</p>
-                    {% endif %}
-                    {% if pedido.cliente_email %}
-                        <p class="info-texto">
-                            <strong>Email:</strong> {{ pedido.cliente_email }}
-                        </p>
-                    {% endif %}
-                    
-                    {% else %}
-                        <p class="info-texto">Cliente Ocasional / Mostrador</p>
-                        <p class="info-texto">Sin teléfono registrado</p>
-                {% endif %}
-            </td>
-        </tr>
-    </table>
+    <div style="background-color: #FAFAFA; padding: 12px; border: 1px solid #E5E7EB; border-radius: 6px;">
+        <strong>Cliente:</strong> 
+        {% if pedido.cliente %}{{ pedido.cliente.nombre }}{% else %}{{ pedido.cliente_nombre|default:"Consumidor final" }}{% endif %}<br>
+        
+        {% if pedido.cliente %}
+            {% if pedido.cliente.email %}<strong>Email:</strong> {{ pedido.cliente.email }}<br>{% endif %}
+            <strong>Celular:</strong> {{ pedido.cliente.telefono }}<br>
+            {% if pedido.cliente.direccion %}<strong>Dirección:</strong> {{ pedido.cliente.direccion }}<br>{% endif %}
+            {% if pedido.cliente.ciudad %}<strong>Ciudad:</strong> {{ pedido.cliente.ciudad }}{% endif %}
+        {% else %}
+            {% if pedido.cliente_nit %}<strong>NIT/CC:</strong> {{ pedido.cliente_nit }}<br>{% endif %}
+            <strong>Celular:</strong> {{ pedido.cliente_telefono }}<br>
+            <strong>Dirección:</strong> {{ pedido.cliente_direccion }}<br>
+            <strong>Ciudad:</strong> {{ pedido.cliente_ciudad }}
+        {% endif %}
+    </div>
 
-    <!-- 📊 TABLA DE PRODUCTOS COMPRADOS -->
-    <table class="tabla-items">
+    <table class="tabla-productos">
         <thead>
             <tr>
-                <th class="align-left">Producto</th>
-                <th class="align-center" style="width:15%;">Cantidad</th>
-                <th class="align-right" style="width:20%;">Precio Unit.</th>
-                <th class="align-right" style="width:25%;">Subtotal</th>
+                <th style="text-align: left; width: 50%;">Producto</th>
+                <th style="text-align: center; width: 15%;">Cant.</th>
+                <th style="text-align: right; width: 35%;">Subtotal</th>
             </tr>
         </thead>
-        
         <tbody>
             {% for item in items %}
             <tr>
-
-                <td class="align-left">
-
-                <strong>{{ item.producto.nombre }}</strong>
-
-                        {% if item.producto.referencia %}
-                        <br>
-                        <small style="color:#666;font-size:9px;">
-                             Ref: {{ item.producto.referencia }}
-                        </small>
-                        {% endif %}
-
-                        {% if item.variante %}
-                        <br>
-                        <small style="color:#666;font-size:9px;">
-
-                            {% if item.variante.color %}
-                            Color: {{ item.variante.color }}
-                            {% endif %}
-
-                            {% if item.variante.talla %}
-                            <br>Talla: {{ item.variante.talla }}
-                            {% endif %}
-                        </small>
-                        {% endif %}
-
-                        {% if item.total_gramos and item.total_gramos > 0 %}
-                        <br>
-                        <small style="color:#666;font-size:9px;">
-                            Peso: {{ item.total_gramos|floatformat:2 }} g
-                        </small>
-                        {% endif %}
-
-                    </td>
-                    <td class="align-center">
-                        {% if item.total_gramos and item.total_gramos > 0 %}
-                        {{ item.total_gramos | floatformat:2 }} g
-                        {% else %}
-                        {{ item.cantidad }} u
-                        {% endif %}
-
-                    </td>
-
-                    <td class="align-right">
-                        ${{ item.precio|floatformat:"0" }}
-                    </td>
-
-                    <td class="align-right">
-                        ${{ item.subtotal|floatformat:"0" }}
-                    </td>
-                </tr>
-
-                {% empty %}
-                <tr>
-                    <td colspan="4" class="align-center">
-                    No hay productos registrados en este pedido.
+                <td style="text-align: left;">
+                    <strong>{{ item.producto.nombre }}</strong>
+                    {% if item.variante %}
+                        <br><span style="font-size: 11px; color:#555;">Color: {{ item.variante.color }}{% if item.variante.talla %} | Talla: {{ item.variante.talla }}{% endif %}</span>
+                    {% endif %}
+                    {% if item.total_gramos %}
+                        <br><span style="font-size: 11px; color:#555;">Peso: {{ item.total_gramos|floatformat:2 }} g</span>
+                    {% endif %}
                 </td>
+                <td style="text-align: center;">{{ item.cantidad }}</td>
+                <td style="text-align: right;">${{ item.subtotal|floatformat:0 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" style="text-align: center;">No hay productos registrados.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <!-- 📉 SECCIÓN DE LIQUIDACIÓN Y TOTALES -->
-    <table class="totales-contenedor-table">
+    <table class="desglose-table">
         <tr>
-            <!-- Espacio izquierdo vacío para empujar los totales a la derecha -->
-            <td class="totales-space-izq" style="width: 55%;"></td>
-            
-            <!-- Contenedor de cálculos -->
-            <td class="totales-valores-der" style="width: 45%;">
-                <table class="tabla-totales">
-                    <tr>
-                        <td class="label">Subtotal:</td>
-                        <td class="valor">${{ subtotal|floatformat:"0" }}</td>
-                    </tr>
-                    {% if iva_total > 0 %}
-                    <tr>
-                        <td class="label">IVA General:</td>
-                        <td class="valor">+${{ iva_total|floatformat:"0" }}</td>
-                    </tr>
-                    {% endif %}
-                    {% if descuento_total > 0 %}
-                    <tr>
-                        <td class="label" style="color: #c0392b;">Descuento:</td>
-                        <td class="valor" style="color: #c0392b;">-${{ descuento_total|floatformat:"0" }}</td>
-                    </tr>
-                    {% endif %}
-                    {% if retefuente_total > 0 %}
-                    <tr>
-                        <td class="label" style="color: #c0392b;">Retefuente:</td>
-                        <td class="valor" style="color: #c0392b;">-${{ retefuente_total|floatformat:"0" }}</td>
-                    </tr>
-                    {% endif %}
-                    
-                    {% if envio > 0 %}
-                    <tr>
-                        <td class="label">Envío:</td>
-                        <td class="valor">
-                    +${{ envio|floatformat:"0" }}
-                    </td>
-                    </tr>
-
-                    {% elif pedido.tipo_envio == "recogida" %}
-                    <tr>
-                        <td class="label">Entrega:</td>
-                        <td class="valor">
-                        Recoge en tienda
-                        </td>
-                    </tr>
-
-                    {% else %}
-                    <tr>
-                        <td class="label">Entrega:</td>
-                        <td class="valor">
-                        Envío por acordar
-                        </td>
-                    </tr>
-                    {% endif %}
-                    
-                    <!-- Fila del Total Destacada -->
-                    <tr class="fila-total-final">
-                        <td class="label">TOTAL NETO:</td>
-                        <td class="valor">${{ total_final|floatformat:"0" }} COP</td>
-                    </tr>
-                </table>
+            <td style="text-align: left; color: #555;">Subtotal</td>
+            <td style="text-align: right; font-weight: bold;">${{ subtotal|floatformat:"0" }}</td>
+        </tr>
+        {% if pedido.porcentaje_descuento > 0 %}
+        <tr>
+            <td style="text-align: left; color: #555;">Descuento ({{ pedido.porcentaje_descuento }}%)</td>
+            <td style="text-align: right; color: #C0392B;">-${{ descuento_total|floatformat:"0" }}</td>
+        </tr>
+        {% endif %}
+        {% if iva_total > 0 %}
+        <tr>
+            <td style="text-align: left; color: #555;">IVA</td>
+            <td style="text-align: right; color: #111;">+${{ iva_total|floatformat:"0" }}</td>
+        </tr>
+        {% endif %}
+        {% if retefuente_total > 0 %}
+        <tr>
+            <td style="text-align: left; color: #555;">Retefuente</td>
+            <td style="text-align: right; color: #C0392B;">-${{ retefuente_total|floatformat:"0" }}</td>
+        </tr>
+        {% endif %}
+        <tr>
+            <td style="text-align: left; color: #555;">Envío</td>
+            <td style="text-align: right;">
+                {% if envio > 0 %}${{ envio|floatformat:"0" }}{% else %}Recoge en tienda o gratis{% endif %}
             </td>
         </tr>
     </table>
 
-    <div class="footer" style="margin-top:35px;
-                           border-top:1px solid #d9d9d9;
-                           padding-top:15px;
-                           text-align:center;
-                           font-size:10px;
-                           color:#666;">
-
-    <p style="margin:4px 0;">
-        Gracias por comprar en
-        <strong>{{ empresa_nombre }}</strong>.
-    </p>
-
-    <p style="margin:4px 0;">
-        Si tiene alguna inquietud sobre esta factura,
-        comuníquese por nuestros canales oficiales de atención.
-    </p>
-
-    <p style="margin:10px 0 4px 0;">
-        <strong>Factura generada mediante JoyasApp®</strong>
-    </p>
-
-    <p style="margin:0;">
-        www.joyasapp.com
-    </p>
-
+    <div class="total-box">
+        TOTAL A PAGAR: ${{ total_final|floatformat:"0" }} COP
     </div>
+
+    <div style="text-align: center; font-size: 11px; color: #777; margin-top: 40px; border-top: 1px solid #E5E7EB; padding-top: 15px;">
+        <strong>Gracias por comprar en {{ empresa_nombre }}</strong><br>
+        Factura formalizada mediante <strong>JoyasApp®</strong> - www.joyasapp.com
+    </div>
+
 </body>
 </html>
-
