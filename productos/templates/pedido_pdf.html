@@ -254,7 +254,7 @@
                 <h3>Detalle del Pedido</h3>
                 <p class="info-texto"><strong>Fecha de emisión:</strong> {{ pedido.fecha|date:"d/m/Y" }}</p>
                 <p class="info-texto"><strong>Tipo de Pago:</strong> {{ pedido.tipo_pago|upper }}</p>
-                <p class="info-texto"><strong>Estado actual:</strong> {{ pedido.estado|upper }}</p>
+                <p class="info-texto"><strong>Estado actual:</strong> {{ pedido.get_estado_display|default:pedido.estado }}</p>
             </td>
             
             <!-- Datos del Cliente Saneados (Evita Error 500 si es nulo) -->
@@ -269,11 +269,14 @@
                         <p class="info-texto"><strong>Teléfono:</strong> {{ cliente.telefono }}</p>
                     {% endif %}
                     {% if pedido.cliente_email %}
-                        <p><strong>Email:</strong> {{ pedido.cliente_email }}</p>
+                        <p class="info-texto">
+                            <strong>Email:</strong> {{ pedido.cliente_email }}
+                        </p>
                     {% endif %}
-                {% else %}
-                    <p class="info-texto">Cliente Ocasional / Mostrador</p>
-                    <p class="info-texto">Sin teléfono registrado</p>
+                    
+                    {% else %}
+                        <p class="info-texto">Cliente Ocasional / Mostrador</p>
+                        <p class="info-texto">Sin teléfono registrado</p>
                 {% endif %}
             </td>
         </tr>
@@ -319,7 +322,7 @@
                         </small>
                         {% endif %}
 
-                        {% if item.total_gramos %}
+                        {% if item.total_gramos and item.total_gramos > 0 %}
                         <br>
                         <small style="color:#666;font-size:9px;">
                             Peso: {{ item.total_gramos|floatformat:2 }} g
