@@ -5,23 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-/* 💎 ESTILOS PREMIUM - JOYASAPP FACTURA PÚBLICA */
+/* 💎 ESTILOS PREMIUM - JOYASAPP FACTURA PÚBLICA (CONTRASTE NEGRO/BLANCO) */
+:root {
+    /* Forzamos el negro para mantener el estereotipo elegante de joyería */
+    --principal: #111111; 
+    --gris: #444444;
+    --gris-claro: #E5E7EB;
+    --fondo: #FFFFFF;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: #f8f9fa; /* Gris claro sutil de fondo */
+    background: var(--fondo);
     margin: 0;
     padding: 0;
-    color: #212529;
+    color: var(--principal);
 }
 
 .container {
     max-width: 500px;
     margin: 0 auto;
-    background: #ffffff;
+    background: var(--fondo);
     padding: 24px;
     box-sizing: border-box;
     min-height: 100vh;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); /* Sombra elegante */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
 /* 🏢 HEADER */
@@ -34,7 +42,7 @@ body {
     font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.5px;
-    color: #1a1a1a;
+    color:var(--principal);
     margin: 10px 0;
     text-transform: uppercase;
 }
@@ -63,7 +71,7 @@ body {
     border: 1px solid #c3e6cb;
 }
 
-/* 📊 TABLA DE PRODUCTOS (Alineación E-commerce) */
+/* 📊 TABLA DE PRODUCTOS (Fondo Negro con Letras Blancas 🎯) */
 .tabla {
     width: 100%;
     border-collapse: collapse;
@@ -71,27 +79,26 @@ body {
 }
 
 .tabla th {
-    background: #fdfdfd;
-    color: #6c757d;
+    background: #111111 !important; /* Barra central en fondo negro */
+    color: #FFFFFF !important;     /* Letras blancas */
     font-size: 12px;
     text-transform: uppercase;
     font-weight: 600;
     letter-spacing: 0.5px;
     padding: 12px 8px;
-    border-bottom: 2px solid #dee2e6;
+    border-bottom: 2px solid #111111;
 }
 
 .tabla td {
-    border-bottom: 1px solid #edf2f7;
+    border-bottom: 1px solid var(--gris-claro);
     padding: 14px 8px;
     font-size: 14px;
-    color: #2d3748;
+    color: #111111; /* Fondo blanco con letras negras */
 }
 
-/* Alínea las columnas de forma lógica */
-.tabla th:nth-child(1), .tabla td:nth-child(1) { text-align: left; width: 45%; } /* Producto */
-.tabla th:nth-child(2), .tabla td:nth-child(2) { text-align: center; width: 15%; } /* Cantidad */
-.tabla th:nth-child(3), .tabla td:nth-child(3) { text-align: right; width: 40%; } /* Subtotal */
+.tabla th:nth-child(1), .tabla td:nth-child(1) { text-align: left; width: 45%; }
+.tabla th:nth-child(2), .tabla td:nth-child(2) { text-align: center; width: 15%; }
+.tabla th:nth-child(3), .tabla td:nth-child(3) { text-align: right; width: 40%; }
 
 .tabla td span.precio-unitario {
     display: block;
@@ -99,6 +106,7 @@ body {
     color: #718096;
     margin-top: 2px;
 }
+
 
 /* 📉 BLOQUE DE DESGLOSE TRIBUTARIO SÓLIDO */
 .desglose-contenedor {
@@ -113,7 +121,7 @@ body {
     justify-content: space-between;
     padding: 6px 4px;
     font-size: 14px;
-    color: #4a5568;
+    color:var(--gris);
 }
 
 .desglose-fila.impuesto {
@@ -131,7 +139,7 @@ body {
     font-weight: 700;
     text-align: center;
     margin: 25px 0;
-    color: {{ color_primario|default:'#111111' }};
+    color:var(--principal);
     background: #f7fafc;
     padding: 16px;
     border-radius: 10px;
@@ -186,7 +194,7 @@ body {
 }
 
 .btn-confirmar {
-    background: {{ color_primario|default:'#2d3748' }};
+    background:var(--principal);
     color: #ffffff;
 }
 
@@ -195,7 +203,7 @@ body {
     text-align: center;
     margin-top: 35px;
     padding-top: 20px;
-    border-top: 1px solid #edf2f7;
+    border-top:1px solid var(--gris-claro);
 }
 
 .qr img {
@@ -214,54 +222,23 @@ body {
 
 <div class="container">
 
-    
     <div class="header">
-
     {% if empresa_logo %}
-        <img src="{{ empresa_logo }}"
-             alt="{{ empresa_nombre }}"
-             style="
-                max-height:90px;
-                max-width:220px;
-                margin-bottom:15px;
-             ">
+        <img src="{{ empresa_logo }}" alt="{{ empresa_nombre }}" style="max-height:90px; max-width:220px; margin-bottom:15px;">
     {% endif %}
 
-    <h1 style="
-        margin:0;
-        font-size:24px;
-        font-weight:700;
-        color:{{ color_primario|default:'#111111' }};
-    ">
+    <!-- 🎯 Nombre de la empresa forzado a negro (#111111) -->
+    <h1 style="margin:0; font-size:24px; font-weight:700; color: #111111;">
         {{ empresa_nombre }}
     </h1>
 
-    {% if empresa_nit %}
-        <p style="margin:5px 0;">
-            <strong>NIT:</strong> {{ empresa_nit }}
-        </p>
-    {% endif %}
-
-    {% if empresa_direccion %}
-        <p style="margin:3px 0;">
-            {{ empresa_direccion }}
-        </p>
-    {% endif %}
-
-    {% if empresa_telefono %}
-        <p style="margin:3px 0;">
-            📲 {{ empresa_telefono }}
-        </p>
-    {% endif %}
-
-    {% if empresa_email %}
-        <p style="margin:3px 0;">
-            ✉️ {{ empresa_email }}
-        </p>
-    {% endif %}
-
+    {% if empresa_nit %}<p style="margin:5px 0;"><strong>NIT:</strong> {{ empresa_nit }}</p>{% endif %}
+    {% if empresa_direccion %}<p style="margin:3px 0;">{{ empresa_direccion }}</p>{% endif %}
+    {% if empresa_telefono %}<p style="margin:3px 0;">📲 {{ empresa_telefono }}</p>{% endif %}
+    {% if empresa_email %}<p style="margin:3px 0;">✉️ {{ empresa_email }}</p>{% endif %}
 </div>
-
+    
+    
     {% if pedido.estado == 'pagado' %}
         <div class="estado pagado" style="background:#d4edda; color:#155724; text-align:center; padding:10px; border-radius:8px; margin-bottom:15px; font-weight:bold;">
             🟢 Pedido Pagado
