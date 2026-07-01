@@ -1067,13 +1067,12 @@ def inventario(request):
 
 @login_required
 def configurar_negocio(request):
-    perfil = request.user.perfil
+    perfil = request.user.perfil # Usando tu related_name original 'perfil'
 
     if request.method == 'POST':
-        form = ConfiguracionNegocioForm(request.POST, request.FILES)  # 👈 CLAVE
+        form = ConfiguracionNegocioForm(request.POST, request.FILES)
 
         if form.is_valid():
-
             perfil.nombre_tienda = form.cleaned_data['nombre_tienda']
             perfil.nit = form.cleaned_data['nit']
             perfil.whatsapp = form.cleaned_data['whatsapp']
@@ -1081,11 +1080,16 @@ def configurar_negocio(request):
             perfil.direccion = form.cleaned_data['direccion']
             perfil.ciudad = form.cleaned_data['ciudad']
 
-            # 🔥 NUEVO (LOGO)
+            # 🔥 CAPTURA DE PASARELAS Y ENVÍOS
+            perfil.wompi_public_key = form.cleaned_data.get('wompi_public_key', '').strip()
+            perfil.mercadopago_access_token = form.cleaned_data.get('mercadopago_access_token', '').strip()
+            perfil.costo_envio_estandar = form.cleaned_data.get('costo_envio_estandar') or Decimal('0.00')
+
+            # LOGO
             if request.FILES.get('logo'):
                 perfil.logo = request.FILES['logo']
 
-             # 🔥 COLORES
+            # COLORES
             perfil.color_primario = request.POST.get('color_primario', '#28a745')
             perfil.color_secundario = request.POST.get('color_secundario', '#000000')
 
@@ -1095,6 +1099,7 @@ def configurar_negocio(request):
             return redirect('dashboard')
 
     else:
+        # Pasamos los valores iniciales para que salgan en las casillas al cargar la página
         form = ConfiguracionNegocioForm(initial={
             'nombre_tienda': perfil.nombre_tienda,
             'nit': perfil.nit,
@@ -1102,11 +1107,14 @@ def configurar_negocio(request):
             'correo_negocio': perfil.email_empresa,
             'direccion': perfil.direccion,
             'ciudad': perfil.ciudad,
+            'wompi_public_key': perfil.wompi_public_key,
+            'mercadopago_access_token': perfil.mercadopago_access_token,
+            'costo_envio_estandar': perfil.costo_envio_estandar,
         })
 
     return render(request, 'configurar_negocio.html', {
         'form': form,
-        'perfil': perfil  # 👈 para mostrar logo
+        'perfil': perfil 
     })
 
 @login_required

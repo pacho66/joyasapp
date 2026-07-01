@@ -26,6 +26,16 @@
     font-size:14px;
 }
 
+/* Estilo para separar secciones de pasarelas */
+.sub-seccion-titulo {
+    font-size: 18px;
+    margin-top: 25px;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px dashed #eee;
+    color: #111;
+}
+
 .grupo{
     margin-bottom:15px;
 }
@@ -158,6 +168,25 @@ textarea{
         background:white;">
     </div>
     {% endif %}
+
+    <h3 class="sub-seccion-titulo">💳 Pasarelas de Pago</h3>
+    
+    <div class="grupo">
+        <label>🔑 Wompi Public Key</label>
+        {{ form.wompi_public_key }}
+    </div>
+
+    <div class="grupo">
+        <label>🔑 Mercado Pago Access Token</label>
+        {{ form.mercadopago_access_token }}
+    </div>
+
+    <h3 class="sub-seccion-titulo">🚚 Envíos</h3>
+    
+    <div class="grupo">
+        <label>💰 Costo de envío estándar (COP)</label>
+        {{ form.costo_envio_estandar }}
+    </div>
 
     <div class="botones">
         <button type="submit" class="btn guardar">💾 Guardar</button>

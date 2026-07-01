@@ -93,7 +93,6 @@ class RegistroForm(forms.Form):
 
         return cleaned_data
 
-
 class ConfiguracionNegocioForm(forms.Form):
     nombre_tienda = forms.CharField(
         max_length=120,
@@ -150,6 +149,39 @@ class ConfiguracionNegocioForm(forms.Form):
         })
     )
 
+    # 💳 PASARELAS DE PAGO (CAMPOS NUEVOS)
+    wompi_public_key = forms.CharField(
+        max_length=255,
+        required=False,
+        label='Wompi Public Key',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'pub_prod_XxxXxx...'
+        })
+    )
+
+    mercadopago_access_token = forms.CharField(
+        max_length=255,
+        required=False,
+        label='Mercado Pago Access Token',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'APP_USR-...'
+        })
+    )
+
+    # 🚚 CONFIGURACIÓN DE ENVÍOS (CAMPO NUEVO)
+    costo_envio_estandar = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        initial=0.00,
+        label='Costo Envío Estándar',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '0.00'
+        })
+    )
 
 class GastoForm(forms.ModelForm):
     class Meta:
