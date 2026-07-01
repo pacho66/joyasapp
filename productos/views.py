@@ -2031,7 +2031,14 @@ def pedido_pdf(request, pedido_id):
     empresa_telefono = perfil.whatsapp if perfil else ""
     empresa_direccion = perfil.direccion if perfil else ""
     empresa_email = perfil.email_empresa if perfil else ""
-    empresa_logo = ""
+    # 🛡️ Obtención segura del logo de la empresa (Cloudinary o URL local)
+    empresa_logo = None
+    if perfil and perfil.logo:
+        try:
+            # Extraemos la URL segura del logo guardado en Cloudinary
+            empresa_logo = perfil.logo.url
+        except Exception:
+            empresa_logo = None
 
     color_primario = perfil.color_primario if perfil else "#111111"
     color_secundario = perfil.color_secundario if perfil else "#333333"
