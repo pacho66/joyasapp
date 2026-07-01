@@ -2019,7 +2019,6 @@ def pedido_pdf(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
     items = pedido.items.select_related('producto', 'variante').all()
     
-    # 🛡️ Obtención segura del perfil idéntica a la pública
     usuario_pedido = pedido.usuario
 
     try:
@@ -2032,27 +2031,34 @@ def pedido_pdf(request, pedido_id):
     empresa_telefono = perfil.whatsapp if perfil else ""
     empresa_direccion = perfil.direccion if perfil else ""
     empresa_email = perfil.email_empresa if perfil else ""
-    
-    # El logo en el PDF se fuerza a None o vacío para evitar bloqueos de red en Render
     empresa_logo = ""
 
-    color_primario = perfil.color_primario if perfil else "#000000"
+    color_primario = perfil.color_primario if perfil else "#111111"
     color_secundario = perfil.color_secundario if perfil else "#333333"
 
-    # 🛡️ PROTECCIÓN DE CÁLCULOS MATEMÁTICOS IDÉNTICA A LA WEB (Previene el 'NotImplementedType')
-    subtotal = sum(Decimal(str(item.subtotal or 0)) for item in items)
-    iva_total = sum(Decimal(str(item.iva or 0)) for item in items)
-    
+    # 🛡️ PROTECCIÓN MANUAL DE CÁLCULOS ANTI-NOT_ITERABLE 
+    subtotal = Decimal('0')
+    iva_total = Decimal('0')
+    descuento_total = Decimal('0')
+    retefuente_total = Decimal('0')
+
+    for item in items:
+        if item.subtotal:
+            subtotal += Decimal(str(item.subtotal))
+        if item.iva:
+            iva_total += Decimal(str(item.iva))
+        if item.descuento:
+            descuento_total += Decimal(str(item.descuento))
+        if item.retefuente:
+            retefuente_total += Decimal(str(item.retefuente))
+
     porcentaje_desc = getattr(pedido, 'porcentaje_descuento', 0) or 0
-    descuento_total = subtotal * (Decimal(str(porcentaje_desc)) / Decimal('100')) if porcentaje_desc else Decimal('0')
-    
-    retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
+    if porcentaje_desc and descuento_total == 0:
+        descuento_total = subtotal * (Decimal(str(porcentaje_desc)) / Decimal('100'))
+        
     envio = Decimal(str(pedido.costo_envio or 0))
-    
-    # Calculado paso a paso de forma segura
     total_final = subtotal + iva_total + envio - descuento_total - retefuente_total
 
-    # Formateo seguro de fecha
     if hasattr(pedido, 'fecha') and pedido.fecha:
         fecha_str = pedido.fecha.strftime('%Y-%m-%d')
     elif hasattr(pedido, 'fecha_creacion') and pedido.fecha_creacion:
@@ -2060,7 +2066,6 @@ def pedido_pdf(request, pedido_id):
     else:
         fecha_str = "S/F"
 
-    # Contexto unificado y parejo para el template del PDF
     context = {
         'pedido': pedido,
         'items': items,
@@ -2098,7 +2103,6 @@ def pedido_pdf(request, pedido_id):
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="pedido_{pedido.numero_orden}.pdf"'
 
-        # Renderizado de xhtml2pdf
         pdf = pisa.CreatePDF(html, dest=response)
         if pdf.err:
             print(f"❌ ERROR EN XHTML2PDF: {pdf.err}")
@@ -2119,6 +2123,31 @@ def lista_gastos(request):
     return render(request, 'lista_gastos.html', {
         'gastos': gastos
     })
+
+@login_required
+def gastos(request):
+    from django.db.models import Sum
+    from .models import Gasto
+    from .forms import GastoForm # Cambia este import si tu formulario se llama distinto
+    
+    gastos = Gasto.objects.filter(usuario=request.user).order_by('-fecha')
+    form = GastoForm(request.POST or None)
+    
+    if request.method == 'POST':
+        if form.is_valid():
+            gasto = form.save(commit=False)
+            gasto.usuario = request.user
+            gasto.save()
+            return redirect('gastos')
+            
+    total_gastos = gastos.aggregate(total=Sum('monto'))['total'] or 0
+    
+    context = {
+        'form': form,
+        'gastos': gastos,
+        'total_gastos': total_gastos
+    }
+    return render(request, 'gastos.html', context)
 
 @login_required
 def registrar_abono(request, pedido_id):
