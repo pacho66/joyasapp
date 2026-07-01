@@ -34,7 +34,6 @@
         font-size: 13px;
         margin-bottom: 20px;
     }
-    /* Contenedor del Cliente estructurado como tabla para evitar caídas */
     .tabla-bloque-cliente {
         width: 100%;
         background-color: #FAFAFA;
@@ -117,19 +116,11 @@
         <tr>
             <td>
                 <span style="font-size: 11px; font-weight: bold; color: #6B7280; text-transform: uppercase;">Datos del Cliente</span><br>
-                <strong>Nombre:</strong> {% if pedido.cliente %}{{ pedido.cliente.nombre }}{% else %}{{ pedido.cliente_nombre|default:"Consumidor final" }}{% endif %}<br>
-                
-                {% if pedido.cliente %}
-                    {% if pedido.cliente.email %}<strong>Email:</strong> {{ pedido.cliente.email }}<br>{% endif %}
-                    <strong>Celular:</strong> {{ pedido.cliente.telefono }}<br>
-                    {% if pedido.cliente.direccion %}<strong>Dirección:</strong> {{ pedido.cliente.direccion }}<br>{% endif %}
-                    {% if pedido.cliente.ciudad %}<strong>Ciudad:</strong> {{ pedido.cliente.ciudad }}{% endif %}
-                {% else %}
-                    {% if pedido.cliente_nit %}<strong>NIT/CC:</strong> {{ pedido.cliente_nit }}<br>{% endif %}
-                    <strong>Celular:</strong> {{ pedido.cliente_telefono }}<br>
-                    <strong>Dirección:</strong> {{ pedido.cliente_direccion }}
-                    {% if pedido.cliente_ciudad %}<br><strong>Ciudad:</strong> {{ pedido.cliente_ciudad }}{% endif %}
-                {% endif %}
+                <strong>Nombre:</strong> {{ cliente_nombre|default:"Consumidor final" }}<br>
+                {% if cliente_nit %}<strong>NIT/CC:</strong> {{ cliente_nit }}<br>{% endif %}
+                <strong>Celular:</strong> {{ cliente_telefono|default:"-" }}<br>
+                <strong>Dirección:</strong> {{ cliente_direccion|default:"-" }}
+                {% if cliente_ciudad %}<br><strong>Ciudad:</strong> {{ cliente_ciudad }}{% endif %}
             </td>
         </tr>
     </table>
