@@ -54,6 +54,7 @@ urlpatterns = [
     # 💳 WEBHOOKS AUTOMÁTICOS
     # ===============================
     path('webhooks/wompi/', views.webhook_wompi, name='webhook_wompi'),
+    path('webhooks/mercadopago/', views.webhook_mercadopago, name='webhook_mercadopago'), 
     
     # ===============================
     # 📦 PEDIDOS
