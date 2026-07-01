@@ -54,6 +54,13 @@ class Perfil(models.Model):
 
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
+    # 💳 PASARELAS DE PAGO INDEPENDIENTES (SAAS)
+    wompi_public_key = models.CharField(max_length=255, blank=True, null=True, verbose_name="Wompi Public Key")
+    mercadopago_access_token = models.CharField(max_length=255, blank=True, null=True, verbose_name="Mercado Pago Access Token")
+    
+    # 🚚 CONFIGURACIÓN DE ENVÍOS 
+    costo_envio_estandar = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name="Costo de Envío")
+
 
     def __str__(self):
         return f"{self.user.username} - {self.nombre_tienda}"   
