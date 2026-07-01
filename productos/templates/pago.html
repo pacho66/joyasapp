@@ -1,9 +1,10 @@
 {% load static %}
+{% load humanize %} 
 {# Usamos un filtro fallback por si acaso 'moneda' no está registrado en el entorno local de render #}
 <h2>💳 Pago del pedido</h2>
 
 <p><b>Orden:</b> {{ pedido.numero_orden }}</p>
-<p><b>Total:</b> ${{ pedido.total }} COP</p>
+<p><b>Total:</b> ${{ pedido.total|floatformat:0|intcomma }} COP</p>
 
 <hr>
 

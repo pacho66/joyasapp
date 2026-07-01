@@ -402,6 +402,11 @@ class Pedido(models.Model):
     @property
     def costo_total(self):
         return self.costo_material + self.costo_mano_obra
+    
+    @property
+    def total_limpio(self):
+        """Devuelve el total como un entero para usar fácilmente en HTML o pasarelas"""
+        return int(self.total)
 
     def __str__(self):
         return self.numero_orden

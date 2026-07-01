@@ -1917,24 +1917,21 @@ def pagar_con_mercadopago(request, token):
     sdk = mercadopago.SDK(token_cliente)
 
     preference_data = {
-        "items": [
-            {
-                "title": f"Pedido #{pedido.numero_orden}",
-                "quantity": 1,
-                "currency_id": "COP",
-                "unit_price": float(pedido.total),
-            }
-        ],
-        "back_urls": {
-            "success": request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/"),
-        },
-        "auto_return": "approved",
-        
-        # 🔥 EL TRUCO EN EL CÓDIGO: Mercado Pago leerá esta URL y enviará el webhook aquí automáticamente
-        "notification_url": request.build_absolute_uri("/webhooks/mercadopago/"),
-        
-        # Súper importante para que el webhook sepa qué pedido se está pagando
-        "external_reference": pedido.numero_orden 
+    "items": [
+        {
+            "title": f"Pedido #{pedido.numero_orden}",
+            "quantity": 1,
+            "currency_id": "COP",
+            "unit_price": pedido.total_limpio, 
+        }
+    ],
+    "back_urls": {
+        "success": request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/").replace("http://", "https://"),
+    },
+    "auto_return": "approved",
+    # 🔥 Forzamos https:// en la notificación por si las moscas
+    "notification_url": request.build_absolute_uri("/webhooks/mercadopago/").replace("http://", "https://"),
+    "external_reference": pedido.numero_orden 
     }
 
     preference = sdk.preference().create(preference_data)
