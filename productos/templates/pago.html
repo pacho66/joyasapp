@@ -37,12 +37,10 @@
     
 
     {% if pedido.id %}
-        <hr style="margin: 20px 0; border: 0; border-top: 1px dashed #ccc;">
-        <h4>2. Pago en Línea Automático (PSE, Tarjetas)</h4>
-        
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
             
-            <a href="{% url 'pagar_wompi' pedido.id %}" 
+            <!-- Ahora le pasamos pedido.token_publico en vez de pedido.id -->
+            <a href="{% url 'pagar_wompi' pedido.token_publico %}" 
                style="background:#121212; color:white; padding:12px 20px; border-radius:6px; text-decoration:none; display:inline-block; font-weight: bold;">
                 💳 Pagar con Wompi
             </a>

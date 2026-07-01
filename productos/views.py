@@ -30,6 +30,8 @@ from django.utils import timezone
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from xhtml2pdf import pisa
+import hashlib
+from django.views.decorators.csrf import csrf_exempt
 
 # 🏪 IMPORTACIONES DE LA APP PRODUCTOS
 from productos.models import Producto, Categoria, ProductoImagen, CarritoItem, Cliente
@@ -1824,11 +1826,9 @@ def confirmar_pago(request, pedido_id):
     pedido.save()
     return render(request, 'pago_confirmado.html', {'pedido': pedido})
 
-
-def pagar_wompi(request, pedido_id):
-    pedido = Pedido.objects.get(id=pedido_id)
+def pagar_wompi(request, token): # <-- Cambiado de pedido_id a token
+    pedido = get_object_or_404(Pedido, token_publico=token) # <-- get_object_or_404 seguro
     return crear_checkout_wompi(request, pedido)
-
 
 def crear_checkout_wompi(request, pedido):
     # 🔥 FIX CONEXIÓN: Cambiamos pedido.id por pedido.token_publico para mantener coherencia con pago_exitoso
@@ -1845,6 +1845,41 @@ def crear_checkout_wompi(request, pedido):
     )
     print("URL FINAL WOMPI:", checkout_url)
     return redirect(checkout_url)
+
+@csrf_exempt
+def webhook_wompi(request):
+    if request.method != 'POST':
+        return HttpResponse("Método no permitido", status=405)
+        
+    try:
+        # 1. Parsear los datos que envía Wompi
+        data = json.loads(request.body)
+        
+        # Opcional: Validar integridad con la firma de Wompi (si configuras WOMPI_EVENTS_SECRET)
+        # Por ahora procesamos el evento de forma directa y segura por ID de orden
+        
+        transaccion = data.get('data', {}).get('transaction', {})
+        referencia_orden = transaccion.get('reference') # Ejemplo: #FAC-00022
+        estado_wompi = transaccion.get('status') # APPROVED, DECLINED, VOIDED
+        
+        if referencia_orden and estado_wompi == 'APPROVED':
+            # 2. Buscar el pedido por su número de orden único
+            pedido = Pedido.objects.filter(numero_orden=referencia_orden).first()
+            
+            if pedido and pedido.estado != 'pagado':
+                # 3. Actualizar el estado de manera definitiva
+                pedido.estado = 'pagado'
+                pedido.saldo_pendiente = Decimal('0.00')
+                pedido.save()
+                print(f"✅ Webhook exitoso: Pedido {referencia_orden} marcado como PAGADO.")
+                
+        # Wompi exige que le respondas un HTTP 200 para saber que recibiste la notificación
+        return HttpResponse("Evento recibido", status=200)
+        
+    except Exception as e:
+        print(f"💥 Error en Webhook Wompi: {str(e)}")
+        # Respondemos 200 o 400 igual para evitar que Wompi reintente infinitamente si es error de código
+        return HttpResponse("Error interno procesado", status=200)
 
 
 def pagar_con_mercadopago(request, token):

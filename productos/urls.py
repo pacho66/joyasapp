@@ -39,17 +39,22 @@ urlpatterns = [
     path('carrito/disminuir/<int:item_id>/', views.disminuir_cantidad, name='disminuir_cantidad'),
 
     # ===============================
-    # 💳 COMPRAS / PAGOS
+    # 💳 COMPRAS / PAGOS UNIFICADOS
     # ===============================
     path('comprar-whatsapp/', views.comprar_whatsapp, name='comprar_whatsapp'),
     path('comprar-directo/<int:producto_id>/', views.comprar_whatsapp, name='comprar_directo'),
     path('pagar/', views.pagar_pedido, name='pagar_pedido'),
     path('pagar/mercadopago/<uuid:token>/', views.pagar_con_mercadopago, name='pagar_con_mercadopago'),
-    path('pagar/<int:pedido_id>/', views.pagar_wompi, name='pagar_wompi'),
+    path('pagar/wompi/<uuid:token>/', views.pagar_wompi, name='pagar_wompi'), # <-- Corregido a uuid y renombrado para claridad
     path('pago-exitoso/<uuid:token>/', views.pago_exitoso),
     path('confirmar-pago/<uuid:token>/', views.confirmar_pago_publico, name='confirmar_pago_publico'),
     path('confirmar-pago/<int:pedido_id>/', views.confirmar_pago, name='confirmar_pago'),
 
+    # ===============================
+    # 💳 WEBHOOKS AUTOMÁTICOS
+    # ===============================
+    path('webhooks/wompi/', views.webhook_wompi, name='webhook_wompi'),
+    
     # ===============================
     # 📦 PEDIDOS
     # ===============================
