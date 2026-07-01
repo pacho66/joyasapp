@@ -2019,9 +2019,6 @@ def pedido_pdf(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
     items = pedido.items.all()
 
-    # 1. 🚀 FORZAMOS LOGO NULL temporalmente para blindar weasyprint/xhtml2pdf en la nube
-    logo_path = None
-
     # Obtención segura del perfil idéntica a la pública
     try:
         if pedido.usuario:
@@ -2049,13 +2046,15 @@ def pedido_pdf(request, pedido_id):
     if not activa:
         return HttpResponse("Cuenta inactiva", status=403)
 
-    # Cálculos seguros idénticos
-    subtotal = sum(item.subtotal or 0 for item in items)
-    iva_total = sum(item.iva or 0 for item in items)
-    descuento_total = sum(item.descuento or 0 for item in items)
-    retefuente_total = sum(item.retefuente or 0 for item in items)
-    envio = pedido.costo_envio or 0
-    total_final = pedido.total
+    # 🛡️ FIX MATEMÁTICO: Forzar Decimal('0') para evitar errores de tipo en la suma
+    subtotal = sum(Decimal(str(item.subtotal or 0)) for item in items)
+    iva_total = sum(Decimal(str(item.iva or 0)) for item in items)
+    descuento_total = sum(Decimal(str(item.descuento or 0)) for item in items)
+    retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
+    envio = Decimal(str(pedido.costo_envio or 0))
+    
+    # Respaldo seguro por si pedido.total llega a ser None
+    total_final = Decimal(str(pedido.total or 0))
 
     if hasattr(pedido, 'fecha') and pedido.fecha:
         fecha_str = pedido.fecha.strftime('%Y-%m-%d')
@@ -2076,7 +2075,8 @@ def pedido_pdf(request, pedido_id):
         'empresa_direccion': empresa_direccion,
         'empresa_email': empresa_email,
 
-        'logo_path': logo_path,
+        # 🚀 FIX CLAVE: Cambiamos 'logo_path' por 'empresa_logo' y lo forzamos a None para testear sin imágenes
+        'empresa_logo': None, 
         'color_primario': color_primario,
         'color_secundario': color_secundario,
 
@@ -2084,24 +2084,33 @@ def pedido_pdf(request, pedido_id):
         'iva_total': iva_total,
         'descuento_total': descuento_total,
         'retefuente_total': retefuente_total,
-        'envio': envio,
+        'costo_envio': envio, # Sincronizado con el HTML del PDF que pide 'costo_envio'
         'total_final': total_final,
         'fecha_str': fecha_str,
     }
 
-    template = get_template('pedido_pdf.html')
-    html = template.render(context)
+    try:
+        template = get_template('pedido_pdf.html')
+        html = template.render(context)
 
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="pedido_{pedido.numero_orden}.pdf"'
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="pedido_{pedido.numero_orden}.pdf"'
 
-    # Generación segura
-    pdf = pisa.CreatePDF(html, dest=response)
-    if pdf.err:
-        print(f"❌ ERROR CRÍTICO EN XHTML2PDF: {pdf.err}")
-        return HttpResponse(f"Error generando PDF: {pdf.err}", status=500)
+        # Generación segura
+        pdf = pisa.CreatePDF(html, dest=response)
+        if pdf.err:
+            print(f"❌ ERROR CRÍTICO EN XHTML2PDF: {pdf.err}")
+            return HttpResponse(f"Error generando PDF: {pdf.err}", status=500)
 
-    return response
+        return response
+        
+    except Exception as e:
+        # Esto atrapará cualquier otro fallo oculto y lo mandará directo a los logs de Render
+        print("====== 🚨 ERROR CRÍTICO EN LOGICA PDF ======")
+        print(str(e))
+        import traceback
+        traceback.print_exc()
+        return HttpResponse(f"Error interno del servidor al procesar PDF: {str(e)}", status=500)
 
 @login_required
 def gastos(request):
