@@ -2399,13 +2399,20 @@ def factura_publica(request, token):
     whatsapp_url = f"https://wa.me/{whatsapp_num}?text={urllib.parse.quote(mensaje)}"
     qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(whatsapp_url)}"
 
-    # =========================================================
-    # 🗂️ CONTEXTO RECONCILIADO CON TU HTML
-    # =========================================================
+    # 1. SOLUCIÓN AL AMARILLO: Declaramos fecha_str antes de usarla en el contexto
+    if hasattr(pedido, 'fecha') and pedido.fecha:
+        fecha_str = pedido.fecha.strftime('%Y-%m-%d')
+    elif hasattr(pedido, 'fecha_creacion') and pedido.fecha_creacion:
+        fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d')
+    else:
+        fecha_str = "S/F"
+
+    # 2. UNIFICACIÓN DE CONTEXTO: Cambiamos el nombre a 'context' y añadimos los datos web
     context = {
         'pedido': pedido,
         'items': items,
 
+        # Datos del Cliente desglosados
         'cliente_nombre': pedido.cliente_nombre,
         'cliente_email': pedido.cliente_email,
         'cliente_telefono': pedido.cliente_telefono,
@@ -2413,7 +2420,7 @@ def factura_publica(request, token):
         'cliente_ciudad': pedido.cliente_ciudad,
         'cliente_nit': pedido.cliente_nit,
 
-        # Datos del perfil SaaS del joyero asignados correctamente con su clave/valor 🎯
+        # Perfil SaaS del Joyero
         'empresa_nombre': empresa_nombre,
         'empresa_nit': empresa_nit,
         'empresa_telefono': empresa_telefono,
@@ -2421,29 +2428,30 @@ def factura_publica(request, token):
         'empresa_email': empresa_email,
         'empresa_logo': empresa_logo,
 
-        # Identidad de marca blanca segura
+        # Identidad de marca blanca segura (necesaria para la web)
         'color_primario': color_primario,
         'color_secundario': color_secundario,
 
-        # FIX MATEMÁTICO: Inyectamos la variable exacta que pide tu HTML
-        'subtotal_general': subtotal, 
-        
-        # Variables de respaldo originales protegidas
+        # Fecha formateada que ya no dará error
+        'fecha_str': fecha_str,
+
+        # Variables de totales exactas
         'subtotal': subtotal,
         'iva_total': iva_total,
+        'total_final': total_final,
         'descuento_total': descuento_total,
         'retefuente_total': retefuente_total,
-        'envio': envio,
-        'total_final': total_final,
-        
+    
+        # Sincronización de variables clave de JoyasApp 🛠️
+        'costo_envio': envio,   
+        'qr_pago_url': qr_url,  
         'whatsapp_url': whatsapp_url,
-        'qr_url': qr_url,
-        'perfil_comercio': perfil,
         'estado': estado,
     }
-
+    
+    # 3. SOLUCIÓN AL RETURN: Ahora 'context' coincide perfectamente con el diccionario de arriba
     return render(request, 'factura_publica.html', context)
-
+    
 @login_required
 def generar_factura(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
