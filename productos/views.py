@@ -1831,19 +1831,34 @@ def pagar_wompi(request, token): # <-- Cambiado de pedido_id a token
     return crear_checkout_wompi(request, pedido)
 
 def crear_checkout_wompi(request, pedido):
-    # 🔥 FIX CONEXIÓN: Cambiamos pedido.id por pedido.token_publico para mantener coherencia con pago_exitoso
     redirect_url = request.build_absolute_uri(f'/pago-exitoso/{pedido.token_publico}/')
     redirect_url_encoded = quote(redirect_url, safe='')
 
+    # 🏪 1. Buscamos el perfil del dueño de la joyería
+    perfil_dueno = pedido.usuario.perfil
+    
+    # 🔑 2. Buscamos ÚNICAMENTE la llave del usuario en la base de datos
+    wompi_public_key = getattr(perfil_dueno, 'wompi_public_key', None)
+
+    # 🚨 EL ESCUDO: Si el usuario NO tiene su llave configurada, frenamos todo
+    if not wompi_public_key or wompi_public_key.strip() == "":
+        print(f"⚠️ Alerta de Seguridad: El usuario {pedido.usuario.username} intentó recibir un pago pero no tiene configurada su Wompi Public Key.")
+        return HttpResponse(
+            "<h3>Método de pago temporalmente no disponible</h3>"
+            "<p>Esta tienda aún no ha terminado de configurar sus credenciales de pago en línea. "
+            "Por favor, ponte en contacto con el administrador de la joyería para completar tu compra por WhatsApp.</p>", 
+            status=400
+        )
+
+    # 🚀 Si sí tiene su llave, el flujo continúa normal y el dinero va a SU cuenta bancaria
     checkout_url = (
         "https://checkout.wompi.co/p/"
-        f"?public-key={settings.WOMPI_PUBLIC_KEY}"
+        f"?public-key={wompi_public_key.strip()}" 
         f"&currency=COP"
         f"&amount-in-cents={int(pedido.total * 100)}"
         f"&reference={pedido.numero_orden}"
         f"&redirect-url={redirect_url_encoded}"
     )
-    print("URL FINAL WOMPI:", checkout_url)
     return redirect(checkout_url)
 
 @csrf_exempt
@@ -1881,10 +1896,18 @@ def webhook_wompi(request):
         # Respondemos 200 o 400 igual para evitar que Wompi reintente infinitamente si es error de código
         return HttpResponse("Error interno procesado", status=200)
 
-
 def pagar_con_mercadopago(request, token):
     pedido = get_object_or_404(Pedido, token_publico=token)
-    sdk = mercadopago.SDK("APP_USR_xxx")
+    
+    # 🏪 Traemos el perfil del dueño de este pedido específico
+    perfil_dueno = pedido.usuario.perfil 
+    token_cliente = perfil_dueno.mercadopago_access_token # Llave guardada por el usuario
+    
+    if not token_cliente:
+        return HttpResponse("Esta tienda aún no ha configurado Mercado Pago", status=400)
+
+    # 🔑 Inicializamos el SDK con la llave del USUARIO, NO la tuya de settings
+    sdk = mercadopago.SDK(token_cliente)
 
     preference_data = {
         "items": [
