@@ -5,18 +5,10 @@
 <style>
     @page {
         size: letter;
-        margin-top: 50px;
-        margin-bottom: 90px;
-        margin-left: 55px;
-        margin-right: 55px;
-        
-        @bottom-right {
-            content: counter(page);
-            font-family: Helvetica, Arial, sans-serif;
-            font-size: 11px;
-            color: #555555;
-            font-weight: bold;
-        }
+        margin-top: 45px;
+        margin-bottom: 45px;
+        margin-left: 50px;
+        margin-right: 50px;
     }
     body {
         font-family: Helvetica, Arial, sans-serif;
@@ -26,38 +18,32 @@
     }
     .header-table {
         width: 100%;
-        margin-bottom: 20px;
-    }
-    .titulo-empresa {
-        color: #111111 !important;
-        margin: 0; 
-        font-size: 22px; 
-        font-weight: bold;
-        text-transform: uppercase;
+        margin-bottom: 25px;
     }
     .titulo-factura {
-        font-size: 18px;
+        font-size: 22px;
         font-weight: bold;
         text-transform: uppercase;
         text-align: center;
-        margin-top: 15px;
-        margin-bottom: 5px;
+        margin-top: 10px;
+        margin-bottom: 3px;
     }
     .subtitulo-factura {
         text-align: center;
         color: #555555;
-        font-size: 12px;
+        font-size: 13px;
         margin-bottom: 20px;
     }
-    .bloque-cliente {
+    /* Contenedor del Cliente estructurado como tabla para evitar caídas */
+    .tabla-bloque-cliente {
+        width: 100%;
         background-color: #FAFAFA;
         border: 1px solid #E5E7EB;
-        padding: 10px 15px;
         margin-bottom: 20px;
     }
-    .cliente-linea {
-        margin: 4px 0;
-        font-size: 12px;
+    .tabla-bloque-cliente td {
+        padding: 12px;
+        line-height: 1.5;
     }
     .tabla-productos {
         width: 100%;
@@ -65,11 +51,11 @@
         margin-bottom: 15px;
     }
     .tabla-productos th {
-        background-color: #111111 !important;
+        background-color: {{ color_primario|default:"#111111" }} !important;
         color: #ffffff !important;
         font-size: 11px;
         text-transform: uppercase;
-        padding: 8px;
+        padding: 9px 8px;
         font-weight: bold;
     }
     .tabla-productos td {
@@ -77,54 +63,44 @@
         padding: 10px 8px;
         font-size: 12px;
     }
-    .tabla-totales {
-        width: 250px;
-        margin-left: auto;
+    .desglose-table {
+        width: 100%;
+        margin-top: 15px;
     }
-    .tabla-totales td {
-        padding: 4px 8px;
-        font-size: 12px;
+    .desglose-table td {
+        padding: 5px 8px;
+        font-size: 13px;
     }
     .total-box {
-        background-color: #111111 !important;
-        color: #ffffff !important;
+        background-color: #F3F4F6;
+        border: 1px solid #D1D5DB;
+        padding: 12px;
+        text-align: center;
+        font-size: 16px;
         font-weight: bold;
-        text-align: right;
-        padding: 8px;
-    }
-    .pdf-footer {
-        text-align: center; 
-        font-size: 11px; 
-        color: #777777; 
-        margin-top: 40px; 
-        border-top: 1px solid #E5E7EB; 
-        padding-top: 15px;
-        line-height: 1.4;
+        margin-top: 20px;
     }
 </style>
 </head>
 <body>
 
-    {% if empresa_logo %}
-    <img src="{{ empresa_logo }}" style="max-height:90px; max-width:220px;">
-    <br><br>
-    {% endif %}
-
     <table class="header-table">
         <tr>
             <td style="width: 65%; vertical-align: top;">
-                <h1 class="titulo-empresa">{{ empresa_nombre }}</h1>
-                <p style="margin: 4px 0 0 0; font-size: 12px; color: #444444;">
-                    {% if empresa_nit %}<strong>NIT:</strong> {{ empresa_nit }}<br>{% endif %}
-                    {% if empresa_direccion %}<strong>Dirección:</strong> {{ empresa_direccion }}<br>{% endif %}
-                    {% if empresa_telefono %}<strong>Teléfono:</strong> {{ empresa_telefono }}<br>{% endif %}
-                    {% if empresa_email %}<strong>Email:</strong> {{ empresa_email }}{% endif %}
+                <h1 style="margin: 0; font-size: 24px; font-weight: bold; color: {{ color_primario|default:'#111111' }}; text-transform: uppercase;">
+                    {{ empresa_nombre }}
+                </h1>
+                <p style="margin: 6px 0 0 0; font-size: 12px; color: #444444; line-height: 1.4;">
+                    {% if empresa_nit and empresa_nit != "Sin NIT" %}<strong>NIT:</strong> {{ empresa_nit }}<br>{% endif %}
+                    {% if empresa_direccion and empresa_direccion != "-" %}<strong>Dirección:</strong> {{ empresa_direccion }}<br>{% endif %}
+                    {% if empresa_telefono and empresa_telefono != "-" %}<strong>Teléfono:</strong> {{ empresa_telefono }}<br>{% endif %}
+                    {% if empresa_email and empresa_email != "-" %}<strong>Email:</strong> {{ empresa_email }}{% endif %}
                 </p>
             </td>
             <td style="width: 35%; text-align: right; vertical-align: top;">
-                <div style="padding: 8px; background-color: #F3F4F6; border: 1px solid #E5E7EB; text-align: center;">
-                    <span style="font-size: 9px; font-weight: bold; color: #4B5563;">ESTADO</span><br>
-                    <span style="font-size: 11px; font-weight: bold;">
+                <div style="padding: 10px; background-color: #F3F4F6; border: 1px solid #E5E7EB; text-align: center;">
+                    <span style="font-size: 10px; font-weight: bold; color: #4B5563; text-transform: uppercase;">Estado</span><br>
+                    <span style="font-size: 13px; font-weight: bold; color: #111111;">
                         {{ pedido.get_estado_display|upper }}
                     </span>
                 </div>
@@ -137,23 +113,32 @@
         Pedido <strong>#{{ pedido.numero_orden }}</strong> | Fecha: {{ fecha_str }}
     </div>
 
-    <div class="bloque-cliente">
-        <p style="margin: 0 0 5px 0; font-size: 11px; font-weight: bold; color: #6B7280; text-transform: uppercase;">Datos del Cliente</p>
-        <p class="cliente-linea"><strong>Nombre:</strong> {% if pedido.cliente %}{{ pedido.cliente.nombre }}{% else %}{{ pedido.cliente_nombre|default:"Consumidor final" }}{% endif %} &nbsp;&nbsp;&nbsp;&nbsp; <strong>NIT/CC:</strong> {{ pedido.cliente_nit|default:"-" }}</p>
-        <p class="cliente-linea"><strong>Celular:</strong> {{ pedido.cliente_telefono|default:"-" }} &nbsp;&nbsp;&nbsp;&nbsp; <strong>Email:</strong> {{ pedido.cliente_email|default:"-" }}</p>
-        <p class="cliente-linea">
-            <strong>Dirección:</strong> {{ pedido.cliente_direccion|default:"-" }}
-            {% if pedido.cliente_ciudad %}
-            <br>{{ pedido.cliente_ciudad }}
-            {% endif %}
-        </p>
-    </div>
+    <table class="tabla-bloque-cliente">
+        <tr>
+            <td>
+                <span style="font-size: 11px; font-weight: bold; color: #6B7280; text-transform: uppercase;">Datos del Cliente</span><br>
+                <strong>Nombre:</strong> {% if pedido.cliente %}{{ pedido.cliente.nombre }}{% else %}{{ pedido.cliente_nombre|default:"Consumidor final" }}{% endif %}<br>
+                
+                {% if pedido.cliente %}
+                    {% if pedido.cliente.email %}<strong>Email:</strong> {{ pedido.cliente.email }}<br>{% endif %}
+                    <strong>Celular:</strong> {{ pedido.cliente.telefono }}<br>
+                    {% if pedido.cliente.direccion %}<strong>Dirección:</strong> {{ pedido.cliente.direccion }}<br>{% endif %}
+                    {% if pedido.cliente.ciudad %}<strong>Ciudad:</strong> {{ pedido.cliente.ciudad }}{% endif %}
+                {% else %}
+                    {% if pedido.cliente_nit %}<strong>NIT/CC:</strong> {{ pedido.cliente_nit }}<br>{% endif %}
+                    <strong>Celular:</strong> {{ pedido.cliente_telefono }}<br>
+                    <strong>Dirección:</strong> {{ pedido.cliente_direccion }}
+                    {% if pedido.cliente_ciudad %}<br><strong>Ciudad:</strong> {{ pedido.cliente_ciudad }}{% endif %}
+                {% endif %}
+            </td>
+        </tr>
+    </table>
 
     <table class="tabla-productos">
         <thead>
             <tr>
                 <th style="text-align: left; width: 55%;">Producto</th>
-                <th style="text-align: center; width: 15%;">Cant. / Peso</th>
+                <th style="text-align: center; width: 15%;">Cant.</th>
                 <th style="text-align: right; width: 30%;">Subtotal</th>
             </tr>
         </thead>
@@ -162,79 +147,62 @@
             <tr>
                 <td style="text-align: left;">
                     <strong>{{ item.producto.nombre }}</strong>
-                    {% if item.producto.referencia %}
-                    <br>
-                    <small style="color:#555555;font-size:10px;">
-                        Ref: {{ item.producto.referencia }}
-                    </small>
-                    {% endif %}
-                    
                     {% if item.variante %}
-                    <br>
-                    <small style="color:#555555;font-size:11px;">
-                        {% if item.variante.color %}
-                        Color: {{ item.variante.color }}
-                        {% endif %}
-                        {% if item.variante.talla %}
-                        <br>Talla: {{ item.variante.talla }}
-                        {% endif %}
-                    </small>
+                        <br><span style="font-size: 11px; color:#555555;">Color: {{ item.variante.color }}{% if item.variante.talla %} | Talla: {{ item.variante.talla }}{% endif %}</span>
+                    {% endif %}
+                    {% if item.total_gramos and item.total_gramos > 0 %}
+                        <br><span style="font-size: 11px; color:#555555;">Peso: {{ item.total_gramos|floatformat:2 }} g</span>
                     {% endif %}
                 </td>
-                
-                <td style="text-align:center;">
-                {% if item.total_gramos and item.total_gramos > 0 %}
-                    {{ item.total_gramos|floatformat:2 }} g
-                {% else %}
-                    {{ item.cantidad }} u
-                {% endif %}
-                </td>
-                
+                <td style="text-align: center;">{{ item.cantidad }} u</td>
                 <td style="text-align: right;">${{ item.subtotal|floatformat:0 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" style="text-align: center; padding: 15px;">No hay productos registrados.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <table class="tabla-totales">
+    <table class="desglose-table">
         <tr>
-            <td style="text-align: left; color: #555555;">Subtotal:</td>
+            <td style="text-align: left; color: #555555;">Subtotal</td>
             <td style="text-align: right; font-weight: bold;">${{ subtotal|floatformat:"0" }}</td>
         </tr>
+        {% if pedido.porcentaje_descuento > 0 %}
+        <tr>
+            <td style="text-align: left; color: #555555;">Descuento ({{ pedido.porcentaje_descuento }}%)</td>
+            <td style="text-align: right; color: #C0392B;">-${{ descuento_total|floatformat:"0" }}</td>
+        </tr>
+        {% endif %}
         {% if iva_total > 0 %}
         <tr>
-            <td style="text-align: left; color: #555555;">IVA:</td>
+            <td style="text-align: left; color: #555555;">IVA</td>
             <td style="text-align: right;">+${{ iva_total|floatformat:"0" }}</td>
         </tr>
         {% endif %}
+        {% if retefuente_total > 0 %}
         <tr>
-            <td style="text-align: left; color: #555555; border-bottom: 1px solid #E5E7EB; padding-bottom: 4px;">Envío:</td>
-            <td style="text-align: right; border-bottom: 1px solid #E5E7EB; padding-bottom: 4px;">
-                {% if pedido.tipo_envio == "recogida" %}
-                    Recoge en tienda
-                {% elif pedido.costo_envio %}
-                    ${{ pedido.costo_envio|floatformat:"0" }}
-                {% else %}
-                    Valor definido por el vendedor según destino.
-                {% endif %}
-            </td>
+            <td style="text-align: left; color: #555555;">Retefuente</td>
+            <td style="text-align: right; color: #C0392B;">-${{ retefuente_total|floatformat:"0" }}</td>
         </tr>
+        {% endif %}
         <tr>
-            <td style="text-align: left; font-weight: bold; padding-top: 6px;">TOTAL:</td>
-            <td class="total-box">${{ total_final|floatformat:"0" }} COP</td>
+            <td style="text-align: left; color: #555555; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">Envío</td>
+            <td style="text-align: right; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">
+                {% if envio > 0 %}${{ envio|floatformat:"0" }}{% else %}Recoge en tienda o gratis{% endif %}
+            </td>
         </tr>
     </table>
 
-    {% if qr_pago_url %}
-    <div style="text-align:center;margin-top:25px;">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={{ qr_pago_url }}">
+    <div class="total-box" style="color: {{ color_primario|default:'#111111' }};">
+        TOTAL A PAGAR: ${{ total_final|floatformat:"0" }} COP
     </div>
-    {% endif %}
 
-    <div class="pdf-footer">
+    <div style="text-align: center; font-size: 11px; color: #777777; margin-top: 45px; border-top: 1px solid #E5E7EB; padding-top: 15px;">
         <strong>Gracias por comprar en {{ empresa_nombre }}</strong><br>
-        Documento generado automáticamente por <strong>JoyasApp®</strong><br>
-        {% if empresa_telefono %}Contacto: {{ empresa_telefono }}{% endif %}
+        Documento generado automáticamente por <strong>JoyasApp®</strong>
     </div>
 
 </body>

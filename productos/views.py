@@ -2017,45 +2017,42 @@ def detalle_pedido(request, pedido_id):
 
 def pedido_pdf(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
-    items = pedido.items.all()
+    items = pedido.items.select_related('producto', 'variante').all()
+    
+    # 🛡️ Obtención segura del perfil idéntica a la pública
+    usuario_pedido = pedido.usuario
 
-    # Obtención segura del perfil idéntica a la pública
     try:
-        if pedido.usuario:
-            perfil = Perfil.objects.get(user=pedido.usuario)
-            empresa_nombre = perfil.nombre_tienda or "Mi Joyería"
-            empresa_nit = perfil.nit or "Sin NIT"
-            empresa_telefono = perfil.whatsapp or "Sin teléfono"
-            empresa_direccion = perfil.direccion or "Sin dirección"
-            empresa_email = perfil.email_empresa or "Sin correo"
-            color_primario = perfil.color_primario or "#000000"
-            color_secundario = perfil.color_secundario or "#333333"
-            activa = perfil.activa
-        else:
-            raise Perfil.DoesNotExist
+        perfil = Perfil.objects.get(user=usuario_pedido)
     except Perfil.DoesNotExist:
-        empresa_nombre = "Mi Joyería General"
-        empresa_nit = "Sin NIT"
-        empresa_telefono = "-"
-        empresa_direccion = "-"
-        empresa_email = "-"
-        color_primario = "#000000"
-        color_secundario = "#333333"
-        activa = True
+        perfil = None
 
-    if not activa:
-        return HttpResponse("Cuenta inactiva", status=403)
+    empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
+    empresa_nit = perfil.nit if perfil else ""
+    empresa_telefono = perfil.whatsapp if perfil else ""
+    empresa_direccion = perfil.direccion if perfil else ""
+    empresa_email = perfil.email_empresa if perfil else ""
+    
+    # El logo en el PDF se fuerza a None o vacío para evitar bloqueos de red en Render
+    empresa_logo = ""
 
-    # 🛡️ FIX MATEMÁTICO: Forzar Decimal('0') para evitar errores de tipo en la suma
+    color_primario = perfil.color_primario if perfil else "#000000"
+    color_secundario = perfil.color_secundario if perfil else "#333333"
+
+    # 🛡️ PROTECCIÓN DE CÁLCULOS MATEMÁTICOS IDÉNTICA A LA WEB (Previene el 'NotImplementedType')
     subtotal = sum(Decimal(str(item.subtotal or 0)) for item in items)
     iva_total = sum(Decimal(str(item.iva or 0)) for item in items)
-    descuento_total = sum(Decimal(str(item.descuento or 0)) for item in items)
+    
+    porcentaje_desc = getattr(pedido, 'porcentaje_descuento', 0) or 0
+    descuento_total = subtotal * (Decimal(str(porcentaje_desc)) / Decimal('100')) if porcentaje_desc else Decimal('0')
+    
     retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
     envio = Decimal(str(pedido.costo_envio or 0))
     
-    # Respaldo seguro por si pedido.total llega a ser None
-    total_final = Decimal(str(pedido.total or 0))
+    # Calculado paso a paso de forma segura
+    total_final = subtotal + iva_total + envio - descuento_total - retefuente_total
 
+    # Formateo seguro de fecha
     if hasattr(pedido, 'fecha') and pedido.fecha:
         fecha_str = pedido.fecha.strftime('%Y-%m-%d')
     elif hasattr(pedido, 'fecha_creacion') and pedido.fecha_creacion:
@@ -2063,20 +2060,25 @@ def pedido_pdf(request, pedido_id):
     else:
         fecha_str = "S/F"
 
+    # Contexto unificado y parejo para el template del PDF
     context = {
         'pedido': pedido,
         'items': items,
-        'cliente': getattr(pedido, 'cliente', None),
 
-        # Unificación absoluta de variables de empresa
+        'cliente_nombre': pedido.cliente_nombre,
+        'cliente_email': pedido.cliente_email,
+        'cliente_telefono': pedido.cliente_telefono,
+        'cliente_direccion': pedido.cliente_direccion,
+        'cliente_ciudad': pedido.cliente_ciudad,
+        'cliente_nit': pedido.cliente_nit,
+
         'empresa_nombre': empresa_nombre,
         'empresa_nit': empresa_nit,
         'empresa_telefono': empresa_telefono,
         'empresa_direccion': empresa_direccion,
         'empresa_email': empresa_email,
+        'empresa_logo': empresa_logo,
 
-        # 🚀 FIX CLAVE: Cambiamos 'logo_path' por 'empresa_logo' y lo forzamos a None para testear sin imágenes
-        'empresa_logo': None, 
         'color_primario': color_primario,
         'color_secundario': color_secundario,
 
@@ -2084,7 +2086,7 @@ def pedido_pdf(request, pedido_id):
         'iva_total': iva_total,
         'descuento_total': descuento_total,
         'retefuente_total': retefuente_total,
-        'costo_envio': envio, # Sincronizado con el HTML del PDF que pide 'costo_envio'
+        'envio': envio,
         'total_final': total_final,
         'fecha_str': fecha_str,
     }
@@ -2096,46 +2098,16 @@ def pedido_pdf(request, pedido_id):
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="pedido_{pedido.numero_orden}.pdf"'
 
-        # Generación segura
+        # Renderizado de xhtml2pdf
         pdf = pisa.CreatePDF(html, dest=response)
         if pdf.err:
-            print(f"❌ ERROR CRÍTICO EN XHTML2PDF: {pdf.err}")
+            print(f"❌ ERROR EN XHTML2PDF: {pdf.err}")
             return HttpResponse(f"Error generando PDF: {pdf.err}", status=500)
 
         return response
-        
     except Exception as e:
-        # Esto atrapará cualquier otro fallo oculto y lo mandará directo a los logs de Render
-        print("====== 🚨 ERROR CRÍTICO EN LOGICA PDF ======")
-        print(str(e))
-        import traceback
-        traceback.print_exc()
-        return HttpResponse(f"Error interno del servidor al procesar PDF: {str(e)}", status=500)
-
-@login_required
-def gastos(request):
-
-    gastos = Gasto.objects.filter(usuario=request.user).order_by('-fecha')
-
-    form = GastoForm(request.POST or None)
-
-    if request.method == 'POST':
-        if form.is_valid():
-            gasto = form.save(commit=False)
-            gasto.usuario = request.user
-            gasto.save()
-            return redirect('gastos')
-
-    # 🔥 TOTAL GASTOS
-    total_gastos = gastos.aggregate(total=Sum('monto'))['total'] or 0
-
-    context = {
-        'form': form,
-        'gastos': gastos,
-        'total_gastos': total_gastos  # 👈 AQUÍ
-    }
-
-    return render(request, 'gastos.html', context)
+        print(f"❌ EXCEPCIÓN EN RENDERIZADO PDF: {str(e)}")
+        return HttpResponse(f"Error interno: {str(e)}", status=500)
 
 @login_required
 def lista_gastos(request):
