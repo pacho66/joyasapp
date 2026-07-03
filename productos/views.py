@@ -2011,15 +2011,29 @@ def pagar_con_mercadopago(request, token):
             preference_data["notification_url"] = url_webhook
 
         preference_response = sdk.preference().create(preference_data)
-        preference = preference_response["response"]
+        # 🚨 LOG DE CONTROL: Imprimimos la respuesta completa en Render para ver qué dice Mercado Pago
+        print("====== RESPUESTA COMPLETA DE MERCADO PAGO ======")
+        print(preference_response)
+        print("================================================")
         
+        preference = preference_response.get("response")
+        
+        if not preference or not preference.get("init_point"):
+            # Si Mercado Pago no nos da un link, le mostramos el error real devuelto por ellos
+            mensaje_error = preference_response.get("message", "Las credenciales no son válidas o la cuenta requiere homologación en Mercado Pago.")
+            return HttpResponse(
+                f"<div style='font-family:sans-serif; padding:20px; text-align:center; margin-top:50px;'>"
+                f"   <h2 style='color:#DC2626;'>Mercado Pago: Rechazo de Solicitud</h2>"
+                f"   <p style='color:#4B5563;'>La pasarela respondió pero no generó el punto de inicio.</p>"
+                f"   <p style='color:#9CA3AF; font-size:14px;'><b>Detalle técnico:</b> {mensaje_error}</p>"
+                f"   <a href='/factura/{pedido.token_publico}/' style='display:inline-block; margin-top:20px; padding:10px 20px; background:#1D4ED8; color:white; text-decoration:none; border-radius:5px;'>Volver al Pedido</a>"
+                f"</div>",
+                status=200
+            )
+        
+        # Si todo está perfecto, redirige con total seguridad
         return redirect(preference.get("init_point"))
-
-    except Exception as e:
-        import traceback
-        print(f"💥 Error crítico detallado en Mercado Pago: {traceback.format_exc()}")
-        return HttpResponse(f"Error interno al inicializar el pago: {str(e)}", status=200)
-
+        
 @csrf_exempt
 def webhook_mercadopago(request, profile_uuid):
     """Recibe el UUID directamente en la URL, consulta el pago y procesa el flujo automático."""
