@@ -2010,18 +2010,19 @@ def pagar_con_mercadopago(request, token):
         if "localhost" not in url_webhook and "127.0.0.1" not in url_webhook:
             preference_data["notification_url"] = url_webhook
 
+        # 1. Hacemos la petición a Mercado Pago
         preference_response = sdk.preference().create(preference_data)
         
-        # 2. 🚨 LOG DE CONTROL: Imprimimos la respuesta completa en Render para ver qué dice Mercado Pago
+        # 2. 🚨 LOG DE CONTROL: Imprimimos la respuesta completa en Render
         print("====== RESPUESTA COMPLETA DE MERCADO PAGO ======")
         print(preference_response)
         print("================================================")
 
-        # 3. Extraemos la respuesta usando .get() de forma segura para evitar caídas
+        # 3. Extraemos la respuesta usando .get() de forma segura
         preference = preference_response.get("response") if preference_response else None
         
+        # 4. Validamos si Mercado Pago nos devolvió el punto de inicio de pago
         if not preference or not preference.get("init_point"):
-            # Si Mercado Pago no nos da un link, le mostramos el error real devuelto por ellos
             mensaje_error = preference_response.get("message", "Las credenciales no son válidas o la cuenta requiere homologación en Mercado Pago.")
             return HttpResponse(
                 f"<div style='font-family:sans-serif; padding:20px; text-align:center; margin-top:50px;'>"
@@ -2033,7 +2034,7 @@ def pagar_con_mercadopago(request, token):
                 status=200
             )
         
-        # Si todo está perfecto, redirige con total seguridad
+        # 5. Redirección segura si todo sale bien
         return redirect(preference.get("init_point"))
         
 @csrf_exempt
