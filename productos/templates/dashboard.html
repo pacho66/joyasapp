@@ -431,135 +431,158 @@ tr:last-child td {
 }
 </style>
 
-<div class="container-dashboard">
+<div class="container-dashboard max-w-7xl mx-auto p-4 md:p-6 space-y-6 bg-slate-50 min-h-screen">
 
-    <!-- MENU DASHBOARD -->
-    <div class="menu-dashboard">
-        <div class="menu-dashboard-toggle" onclick="toggleMenuDash()">
-            ☰ Opciones Dashboard
+    <!-- 1. BARRA SUPERIOR & CENTRO DE NOTIFICACIONES PREMIUM -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <!-- Menú desplegable adaptado -->
+        <div class="menu-dashboard w-full md:w-auto">
+            <div class="menu-dashboard-toggle font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition cursor-pointer" onclick="toggleMenuDash()">
+                ☰ Menú de Navegación
+            </div>
+            <div id="menu-dash-lista" class="menu-dashboard-links mt-2">
+                <a href="{% url 'dashboard' %}">📊 Inicio</a>
+                <a href="{% url 'estadisticas' %}">📈 Estadísticas</a>
+                <a href="{% url 'ganancias' %}">💰 Ganancias</a>
+                <a href="{% url 'inventario' %}">📦 Inventario</a>
+                <a href="{% url 'lista_gastos' %}">📊 Gastos</a>
+                <a href="{% url 'configurar_negocio' %}">⚙️ Configurar</a>
+            </div>
         </div>
-        <div id="menu-dash-lista" class="menu-dashboard-links">
-            <a href="{% url 'dashboard' %}">📊 Inicio</a>
-            <a href="{% url 'estadisticas' %}">📈 Estadísticas</a>
-            <a href="{% url 'ganancias' %}">💰 Ganancias</a>
-            <a href="{% url 'inventario' %}">📦 Inventario</a>
-            <a href="{% url 'lista_gastos' %}">📊 Gastos</a>
-            <a href="{% url 'configurar_negocio' %}">⚙️ Configurar</a>
-        </div>
-    </div>
 
-    <!-- ENCABEZADO -->
-    <div class="header-flex">
-        <div>
-            <h1 class="titulo-seccion">📊 Dashboard</h1>
-            <div class="sub">Control total de tu negocio</div>
-            
+        <!-- Alerta de Morosos & Acciones Integradas -->
+        <div class="flex items-center gap-4 ml-auto">
             {% if morosos_count > 0 %}
-            <a href="{% url 'dashboard' %}?tipo=morosos" style="text-decoration:none;">
-                <div class="alerta-morosos">
-                    ⚠️ {{ morosos_count }} clientes en mora — Ver cartera
+            <a href="{% url 'dashboard' %}?tipo=morosos" class="no-underline">
+                <div class="bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium px-4 py-2 rounded-xl animate-pulse flex items-center gap-2">
+                    ⚠️ {{ morosos_count }} en mora
                 </div>
             </a>
             {% endif %}
-        </div>
-
-        <div class="header-actions">
-            <a href="{% url 'lista_gastos' %}" class="btn btn-rojo">
+            
+            <a href="{% url 'lista_gastos' %}" class="btn btn-rojo shadow-sm text-sm py-2 px-4 rounded-xl">
                 📊 Ver gastos
             </a>
         </div>
     </div>
 
-    <!-- BOTONES DE ACCIÓN RÁPIDA -->
-    <div class="botones-panel">
-        <a href="{% url 'modificar_banner' %}" class="btn btn-gris">🖼️ Banner</a>
-        <a href="{% url 'estadisticas' %}" class="btn btn-azul">📈 Estadísticas</a>
-        <a href="{% url 'ganancias' %}" class="btn btn-verde">💰 Ganancias</a>
-        <a href="{% url 'inventario' %}" class="btn btn-naranja">📦 Inventario</a>
-        <a href="{% url 'whatsapp_segmento' %}?tipo=vip" class="btn btn-morado">📲 WA VIP</a>
-        <a href="{% url 'configurar_negocio' %}" class="btn btn-gris">⚙️ Ajustes</a>
-        <a href="{% url 'crear_producto' %}" class="btn btn-verde">➕ Producto</a>
-        <a href="{% url 'crear_categoria' %}" class="btn btn-azul">📂 Categoría</a>
-        <a href="{% url 'mis_productos' %}" class="btn btn-azul">📦 Mis Productos</a>
+    <!-- 2. BANNER INTELIGENTE PREMIUM (Súper Admin y Nuevos) -->
+    <section class="bg-gradient-to-r from-slate-900 via-slate-800 to-amber-950 text-white rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+                <span class="text-xs font-bold uppercase tracking-widest text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full">
+                    {% if user.is_superuser %}Panel Súper Admin{% else %}Mi Joyería Presidencial{% endif %}
+                </span>
+                <h1 class="text-2xl md:text-4xl font-extrabold tracking-tight mt-2 text-white">
+                    ¡Hola, {{ user.first_name|default:user.username }}!
+                </h1>
+                <p class="text-slate-300 text-sm md:text-base mt-1">
+                    Control total y métricas en tiempo real de tu negocio de joyería.
+                </p>
+            </div>
+            
+            <!-- Bloque de datos rápidos integrados en el banner -->
+            <div class="grid grid-cols-2 gap-4 bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10">
+                <div>
+                    <p class="text-xs text-slate-400 font-medium">Pedidos Hoy</p>
+                    <p class="text-xl font-bold text-amber-400">{{ pedidos_hoy|default:"0" }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400 font-medium">Utilidad Real</p>
+                    <p class="text-xl font-bold text-emerald-400">${{ utilidad|floatformat:0 }}</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. BOTONES DE ACCIÓN RÁPIDA ESTILIZADOS -->
+    <div class="botones-panel bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-2">
+        <a href="{% url 'modificar_banner' %}" class="btn btn-gris text-xs md:text-sm">🖼️ Banner</a>
+        <a href="{% url 'estadisticas' %}" class="btn btn-azul text-xs md:text-sm">📈 Estadísticas</a>
+        <a href="{% url 'ganancias' %}" class="btn btn-verde text-xs md:text-sm">💰 Ganancias</a>
+        <a href="{% url 'inventario' %}" class="btn btn-naranja text-xs md:text-sm">📦 Inventario</a>
+        <a href="{% url 'whatsapp_segmento' %}?tipo=vip" class="btn btn-morado text-xs md:text-sm">📲 WA VIP</a>
+        <a href="{% url 'configurar_negocio' %}" class="btn btn-gris text-xs md:text-sm">⚙️ Ajustes</a>
+        <a href="{% url 'crear_producto' %}" class="btn btn-verde text-xs md:text-sm">➕ Producto</a>
+        <a href="{% url 'crear_categoria' %}" class="btn btn-azul text-xs md:text-sm">📂 Categoría</a>
+        <a href="{% url 'mis_productos' %}" class="btn btn-azul text-xs md:text-sm">📦 Mis Productos</a>
     </div>
 
-    <!-- ========================= -->
-    <!-- 📊 MÉTRICAS (KPIs)        -->
-    <!-- ========================= -->
-    <div class="grid-metricas">
-        <div class="card-kpi" style="border-left: 4px solid var(--verde);">
-            <h4>💰 Ventas Hoy</h4>
-            <h2>${{ total_hoy|floatformat:0 }}</h2>
+    <!-- 4. CUADRÍCULA DE TARJETAS (KPIs) ACTUALIZADA -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-emerald-500">
+            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">💰 Ventas Hoy</h4>
+            <h2 class="text-2xl font-bold text-slate-900 mt-2">${{ total_hoy|floatformat:0 }}</h2>
         </div>
-        <div class="card-kpi">
-            <h4>💰 Ventas Ayer</h4>
-            <h2>${{ total_ayer|floatformat:0 }}</h2>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">🗓️ Ventas Ayer</h4>
+            <h2 class="text-2xl font-bold text-slate-900 mt-2">${{ total_ayer|floatformat:0 }}</h2>
         </div>
-        <div class="card-kpi">
-            <h4>💰 Total General</h4>
-            <h2>${{ total_general|floatformat:0 }}</h2>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">📊 Total General</h4>
+            <h2 class="text-2xl font-bold text-slate-900 mt-2">${{ total_general|floatformat:0 }}</h2>
         </div>
-        <div class="card-kpi">
-            <h4>📦 Pedidos Hoy</h4>
-            <h2>{{ pedidos_hoy }}</h2>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">📦 Pedidos Totales</h4>
+            <h2 class="text-2xl font-bold text-slate-900 mt-2">{{ total_pedidos }}</h2>
         </div>
-        <div class="card-kpi">
-            <h4>📦 Pedidos Totales</h4>
-            <h2>{{ total_pedidos }}</h2>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">👥 Clientes Totales</h4>
+            <h2 class="text-2xl font-bold text-slate-900 mt-2">{{ total_clientes }}</h2>
         </div>
-        <div class="card-kpi">
-            <h4>👥 Clientes</h4>
-            <h2>{{ total_clientes }}</h2>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-violet-500">
+            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">💎 Clientes VIP</h4>
+            <h2 class="text-2xl font-bold text-slate-900 mt-2">{{ clientes_vip }}</h2>
         </div>
-        <div class="card-kpi" style="border-left: 4px solid var(--morado);">
-            <h4>💎 Clientes VIP</h4>
-            <h2>{{ clientes_vip }}</h2>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">💵 Ticket Promedio</h4>
+            <h2 class="text-2xl font-bold text-slate-900 mt-2">${{ ticket_promedio|floatformat:0 }}</h2>
         </div>
-        <div class="card-kpi">
-            <h4>💵 Ticket Promedio</h4>
-            <h2>${{ ticket_promedio|floatformat:0 }}</h2>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-amber-500">
+            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">📈 Margen Promedio</h4>
+            <h2 class="text-2xl font-bold text-slate-900 mt-2">{{ margen|floatformat:1 }}%</h2>
         </div>
     </div>
 
-    <!-- ========================= -->
-    <!-- PANEL PRINCIPAL (SECCIONES) -->
-    <!-- ========================= -->
+    <!-- 5. ESTRUCTURA DE PANELES Y GRÁFICAS (Mantenemos tus clases originales para no romper CSS) -->
     <div class="main-dashboard-layout">
 
         <!-- GRÁFICA VENTAS -->
-        <div class="seccion-card">
+        <div class="seccion-card bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h3>📊 Ventas últimos días</h3>
             <div class="canvas-container">
                 <canvas id="graficaVentas"></canvas>
             </div>
         </div>
 
-        <!-- FINANZAS PRO -->
-        <div class="seccion-card">
+        <!-- FINANZAS PRO ACTUALIZADO -->
+        <div class="seccion-card bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h3>💰 Finanzas del negocio</h3>
-            <div class="grid-finanzas">
+            <div class="grid-finanzas" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
                 <div class="fin-card ingreso">
-                    <h4>Ingresos</h4>
+                    <h4>Ingresos Totales</h4>
                     <h2>${{ total_ingresos|floatformat:0 }}</h2>
                 </div>
                 <div class="fin-card costo">
-                    <h4>Costos</h4>
+                    <h4>Costos Fábrica</h4>
                     <h2>${{ total_costos|floatformat:0 }}</h2>
                 </div>
                 <div class="fin-card gasto">
-                    <h4>Gastos</h4>
+                    <h4>Gastos Adicionales</h4>
                     <h2>${{ total_gastos|floatformat:0 }}</h2>
                 </div>
-                <div class="fin-card utilidad">
-                    <h4>Utilidad</h4>
-                    <h2>${{ utilidad|floatformat:0 }}</h2>
-                    <small>{{ margen|floatformat:1 }}% margen</small>
+                <div class="fin-card utilidad" style="grid-column: span 2; background: #f5f3ff; border-color: #ddd6fe; color: #6d28d9;">
+                    <h4>Utilidad Real Bruta</h4>
+                    <h2 class="text-xl font-bold">${{ utilidad|floatformat:0 }}</h2>
+                    <small class="text-xs opacity-75">Dinero Neto Disponible</small>
                 </div>
             </div>
         </div>
 
         <!-- GRÁFICA FINANZAS -->
-        <div class="seccion-card full-width">
+        <div class="seccion-card full-width bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h3>📊 Flujo financiero</h3>
             <div class="canvas-container" style="height: 260px;">
                 <canvas id="graficaFinanzas"></canvas>
@@ -567,7 +590,7 @@ tr:last-child td {
         </div>
 
         <!-- FILTROS Y CLIENTES -->
-        <div class="seccion-card full-width">
+        <div class="seccion-card full-width bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h3>👥 Gestión de Clientes</h3>
             
             <div class="filtros-container">
@@ -623,7 +646,7 @@ tr:last-child td {
         </div>
 
         <!-- PEDIDOS RECIENTES -->
-        <div class="seccion-card full-width">
+        <div class="seccion-card full-width bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h3>📦 Pedidos Recientes</h3>
             <div class="table-wrap">
                 <table>
@@ -668,20 +691,17 @@ tr:last-child td {
     </div>
 </div>
 
+<!-- MANDAMOS EL RECURSO DE CHART.JS -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-// Función nativa para el menú responsive
 function toggleMenuDash() {
     const menu = document.getElementById('menu-dash-lista');
     menu.classList.toggle('show');
 }
 
 document.addEventListener("DOMContentLoaded", function(){
-
-    // =========================
-    // 📊 GRÁFICA VENTAS
-    // =========================
+    // El script lee exactamente las mismas variables tuyas sin romperse
     const ctx = document.getElementById('graficaVentas');
     if(ctx){
         new Chart(ctx, {
@@ -710,9 +730,6 @@ document.addEventListener("DOMContentLoaded", function(){
         });
     }
 
-    // =========================
-    // 💰 GRÁFICA FINANZAS
-    // =========================
     const ctx2 = document.getElementById('graficaFinanzas');
     if(ctx2){
         new Chart(ctx2, {
@@ -744,5 +761,4 @@ document.addEventListener("DOMContentLoaded", function(){
     }
 });
 </script>
-
 {% endblock %}

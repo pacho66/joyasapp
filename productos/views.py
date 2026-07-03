@@ -676,7 +676,7 @@ def editar_producto(request, id):
 def dashboard(request):
     usuario = request.user
 
-    # ✅ Crear o obtener perfil automáticamente
+    # ✅ Crear u obtener perfil automáticamente
     perfil, creado = Perfil.objects.get_or_create(
         user=usuario,
         defaults={
@@ -703,40 +703,38 @@ def dashboard(request):
     # ==========================
     # 📊 GRÁFICAS (ÚLTIMOS 7 DÍAS)
     # ==========================
-
     ventas_por_dia = (
         pedidos
         .annotate(fecha_dia=TruncDate('fecha'))
         .values('fecha_dia')
         .annotate(total=Sum('total'))
         .order_by('fecha_dia')
-)
+    )
 
     # preparar datos para JS
     fechas = [v['fecha_dia'].strftime('%d/%m') for v in ventas_por_dia]
     totales = [float(v['total']) for v in ventas_por_dia]
 
     cliente_id = request.GET.get('cliente')
-
     if cliente_id:
         pedidos = pedidos.filter(cliente_id=cliente_id)
 
     clientes = Cliente.objects.filter(usuario=usuario)
     productos = Producto.objects.filter(usuario=usuario)
 
-    hoy = timezone.now().date()
-
+    # ==========================
+    # 🔴 CARTERA Y MOROSOS (SaaS Fijo)
+    # ==========================
     clientes_morosos = Cliente.objects.filter(
-    usuario=request.user,
-    pedidos__tipo_pago='credito',
-    pedidos__saldo_pendiente__gt=0,
-    pedidos__fecha_limite__lt=hoy
+        usuario=usuario,
+        pedidos__tipo_pago='credito',
+        pedidos_saldo_pendiente_gt=0,
+        pedidos_fecha_limite_lt=hoy
     ).distinct()
 
     morosos_count = clientes_morosos.count()
-
     morosos_total = clientes_morosos.aggregate(
-    total=Sum('pedidos__saldo_pendiente')
+        total=Sum('pedidos__saldo_pendiente')
     )['total'] or 0
 
     # ==========================
@@ -746,195 +744,117 @@ def dashboard(request):
 
     if tipo == 'vip':
         clientes_filtrados = clientes.filter(total_compras__gte=500000)
-
     elif tipo == 'nuevos':
         clientes_filtrados = clientes.filter(fecha_creacion__date=hoy)
-
     elif tipo == 'dormidos':
-        clientes_filtrados = clientes.filter(
-            ultima_compra__lt=hace_30
-        ).distinct()
-
+        clientes_filtrados = clientes.filter(ultima_compra__lt=hace_30).distinct()
     elif tipo == 'morosos':
         clientes_filtrados = clientes.filter(
-        pedidos__tipo_pago='credito',
-        pedidos__saldo_pendiente__gt=0,
-        pedidos__fecha_limite__lt=hoy
-    ).distinct()
+            pedidos__tipo_pago='credito',
+            pedidos_saldo_pendiente_gt=0,
+            pedidos_fecha_limite_lt=hoy
+        ).distinct()
 
-    # ==========================
-    # MENSAJES
-    # ==========================
     mensajes = {
-    'vip': "💎 Clientes VIP",
-    'nuevos': "✨ Clientes nuevos",
-    'dormidos': "😴 Clientes inactivos",
-    'morosos': "🔴 Clientes en mora"
-}
-
+        'vip': "💎 Clientes VIP",
+        'nuevos': "✨ Clientes nuevos",
+        'dormidos': "😴 Clientes inactivos",
+        'morosos': "🔴 Clientes en mora"
+    }
     mensaje = mensajes.get(tipo, "📊 Panel General")
 
     # ==========================
-    # VENTAS
+    # VENTAS Y ENVIOS
     # ==========================
-    total_hoy = pedidos.filter(
-        fecha__date=hoy
-    ).aggregate(total=Sum('total'))['total'] or 0
-
-    total_ayer = pedidos.filter(
-        fecha__date=ayer
-    ).aggregate(total=Sum('total'))['total'] or 0
-
-    total_general = pedidos.aggregate(
-        total=Sum('total')
-    )['total'] or 0
-
+    total_hoy = pedidos.filter(fecha__date=hoy).aggregate(total=Sum('total'))['total'] or 0
+    total_ayer = pedidos.filter(fecha__date=ayer).aggregate(total=Sum('total'))['total'] or 0
+    total_general = pedidos.aggregate(total=Sum('total'))['total'] or 0
+    
     ganancias_mes = pedidos.filter(
         fecha__month=hoy.month,
         fecha__year=hoy.year
     ).aggregate(total=Sum('total'))['total'] or 0
 
     # ==========================
-    # PEDIDOS
+    # 💰 FINANZAS AVANZADAS (Costos, Envíos e Ingresos)
+    # ==========================
+    total_ingresos = total_general
+    
+    # Rastrear costos operativos de producción agregados
+    total_costos_material = pedidos.aggregate(total=Sum('costo_material'))['total'] or 0
+    total_costo_mano_obra = pedidos.aggregate(total=Sum('costo_mano_obra'))['total'] or 0
+    total_costos = total_costos_material + total_costo_mano_obra
+    
+    # Gastos fijos/adicionales registrados en la tabla de Gastos
+    total_gastos = Gasto.objects.filter(usuario=usuario).aggregate(total=Sum('monto'))['total'] or 0
+
+    # Utilidad real restando costos operativos de joyería y gastos fijos
+    utilidad = total_ingresos - total_costos - total_gastos
+    
+    # Margen de beneficio porcentual
+    margen = (utilidad / total_ingresos * 100) if total_ingresos > 0 else 0
+
+    # ==========================
+    # PEDIDOS E INVENTARIO
     # ==========================
     pedidos_hoy = pedidos.filter(fecha__date=hoy).count()
     total_pedidos = pedidos.count()
     pedidos_recientes = pedidos.order_by('-fecha')[:5]
+    pedidos_pendientes = pedidos.filter(estado='pendiente').count()
+    pedidos_pagados = pedidos.filter(estado='pagado').count()
 
-    pedidos_pendientes = pedidos.filter(
-        estado='pendiente'
-    ).count()
-
-    pedidos_pagados = pedidos.filter(
-        estado='pagado'
-    ).count()
-
-    # ==========================
-    # CLIENTES
-    # ==========================
     total_clientes = clientes.count()
+    clientes_vip = clientes.filter(total_compras__gte=500000).count()
+    clientes_nuevos = clientes.filter(fecha_creacion__date=hoy).count()
+    clientes_dormidos = clientes.filter(ultima_compra__lt=hace_30).distinct().count()
 
-    clientes_vip = clientes.filter(
-        total_compras__gte=500000
-    ).count()
-
-    clientes_nuevos = clientes.filter(
-        fecha_creacion__date=hoy
-    ).count()
-
-    clientes_dormidos = clientes.filter(
-        ultima_compra__lt=hace_30
-    ).distinct().count()
-
-    # ==========================
-    # INVENTARIO
-    # ==========================
     total_productos = productos.count()
+    productos_sin_stock = productos.filter(stock=0).count()
+    productos_bajo_stock = productos.filter(stock_gt=0, stock_lte=5).count()
 
-    productos_sin_stock = productos.filter(
-        stock=0
-    ).count()
-
-    productos_bajo_stock = productos.filter(
-        stock__gt=0,
-        stock__lte=5
-    ).count()
-
-    # ==========================
-    # MÉTRICAS
-    # ==========================
-    ticket_promedio = (
-        total_general / total_pedidos
-        if total_pedidos > 0 else 0
-    )
-
+    ticket_promedio = total_general / total_pedidos if total_pedidos > 0 else 0
     crecimiento = total_hoy - total_ayer
-
-    # ==========================
-    # 💰 FINANZAS
-    # ==========================
-
-    # INGRESOS 
-    total_ingresos = total_general
-
-    # GASTOS (multiusuario 🔥)
-    total_gastos = Gasto.objects.filter(
-        usuario=usuario
-    ).aggregate(total=Sum('monto'))['total'] or 0
-
-    # UTILIDAD
-    utilidad = total_ingresos - total_gastos
 
     # ==========================
     # CONTEXT
     # ==========================
     context = {
+        'mensaje': mensaje,
+        'tipo': tipo,
+        'today': hoy,
+        'perfil': perfil,
+        'total_hoy': total_hoy,
+        'total_ayer': total_ayer,
+        'total_general': total_general,
+        'ganancias_mes': ganancias_mes,
+        'crecimiento': crecimiento,
+        'fechas': fechas,
+        'totales': totales,
+        
+        # Sincronización Financiera
+        'total_ingresos': total_ingresos,
+        'total_costos': total_costos,
+        'total_gastos': total_gastos,
+        'utilidad': utilidad,
+        'margen': margen,
 
-    # ==========================
-    # 📊 GENERAL
-    # ==========================
-    'mensaje': mensaje,
-    'tipo': tipo,
-    'today': hoy,
-
-    'perfil': perfil,
-
-    # ==========================
-    # 💰 VENTAS
-    # ==========================
-    'total_hoy': total_hoy,
-    'total_ayer': total_ayer,
-    'total_general': total_general,
-    'ganancias_mes': ganancias_mes,
-    'crecimiento': crecimiento,
-
-    # ==========================
-    # 📊 GRÁFICAS
-    # ==========================
-    'fechas': fechas,
-    'totales': totales,
-
-    # ==========================
-    # 💸 FINANZAS
-    # ==========================
-    'total_ingresos': total_ingresos,
-    'total_gastos': total_gastos,
-    'utilidad': utilidad,
-
-    # ==========================
-    # 📦 PEDIDOS
-    # ==========================
-    'pedidos_hoy': pedidos_hoy,
-    'total_pedidos': total_pedidos,
-    'pedidos_recientes': pedidos_recientes,
-    'pedidos_pendientes': pedidos_pendientes,
-    'pedidos_pagados': pedidos_pagados,
-
-    # ==========================
-    # 👥 CLIENTES
-    # ==========================
-    'total_clientes': total_clientes,
-    'clientes_vip': clientes_vip,
-    'clientes_nuevos': clientes_nuevos,
-    'clientes_dormidos': clientes_dormidos,
-    'clientes_filtrados': clientes_filtrados,
-
-    # 💳 CRÉDITO
-    'morosos_count': morosos_count,
-    'morosos_total': morosos_total,
-
-    # ==========================
-    # 📦 INVENTARIO
-    # ==========================
-    'total_productos': total_productos,
-    'productos_sin_stock': productos_sin_stock,
-    'productos_bajo_stock': productos_bajo_stock,
-
-    # ==========================
-    # 📈 MÉTRICAS
-    # ==========================
-    'ticket_promedio': ticket_promedio,
-}
+        'pedidos_hoy': pedidos_hoy,
+        'total_pedidos': total_pedidos,
+        'pedidos_recientes': pedidos_recientes,
+        'pedidos_pendientes': pedidos_pendientes,
+        'pedidos_pagados': pedidos_pagados,
+        'total_clientes': total_clientes,
+        'clientes_vip': clientes_vip,
+        'clientes_nuevos': clientes_nuevos,
+        'clientes_dormidos': clientes_dormidos,
+        'clientes_filtrados': clientes_filtrados,
+        'morosos_count': morosos_count,
+        'morosos_total': morosos_total,
+        'total_productos': total_productos,
+        'productos_sin_stock': productos_sin_stock,
+        'productos_bajo_stock': productos_bajo_stock,
+        'ticket_promedio': ticket_promedio,
+    }
 
     return render(request, 'dashboard.html', context)
 
