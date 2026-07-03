@@ -54,6 +54,9 @@ class Perfil(models.Model):
 
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
+    # 🔒 Identificador único y seguro para el Webhook del SaaS
+    webhook_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, verbose_name="Webhook UUID")
+
     # 💳 PASARELAS DE PAGO INDEPENDIENTES (SAAS)
     wompi_public_key = models.CharField(max_length=255, blank=True, null=True, verbose_name="Wompi Public Key")
     mercadopago_access_token = models.CharField(max_length=255, blank=True, null=True, verbose_name="Mercado Pago Access Token")
@@ -377,6 +380,10 @@ class Pedido(models.Model):
     saldo_pendiente = models.DecimalField(max_digits=12,decimal_places=2,default=0)
     fecha_limite = models.DateField(null=True,blank=True)
     fecha_pago = models.DateField(null=True, blank=True)
+
+    # 🔍 Auditoría y Soporte de Transacciones
+    mercadopago_payment_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="ID Pago Mercado Pago")
+    wompi_transaction_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="ID Transacción Wompi")
 
     # 🔹 IMPUESTOS Y DESCUENTOS
     aplica_iva = models.BooleanField(default=False)  # 👈 ESTE AGREGAS

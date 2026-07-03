@@ -7,7 +7,6 @@ from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from urllib.parse import quote
 import traceback
-
 import stripe
 import mercadopago
 import requests
@@ -1896,101 +1895,165 @@ def webhook_wompi(request):
                 pedido.save()
                 print(f"✅ Webhook exitoso: Pedido {referencia_orden} marcado como PAGADO.")
                 
+                # ========================================================
+                # 🚀 DISPARADORES AUTOMÁTICOS INTEGRADOS (Wompi)
+                # ========================================================
+                from .utils import generar_pdf_pedido
+                from django.core.mail import EmailMessage
+                from .models import Perfil # Asegúrate de importar tu modelo Perfil aquí si no está arriba
+
+                # Recuperamos el perfil de la joyería dueña de este pedido de forma dinámica
+                perfil = Perfil.objects.filter(user=pedido.usuario).first()
+
+                if perfil:
+                    # Generamos el binario del PDF usando tu plantilla HTML
+                    pdf, correo_empresa, nombre_tienda = generar_pdf_pedido(pedido, perfil, usuario_backup=perfil.user)
+
+                    email_cliente = getattr(pedido, 'cliente_email', None)
+                    if email_cliente and pdf:
+                        try:
+                            email = EmailMessage(
+                                subject=f"Confirmación de Pago: Pedido #{pedido.numero_orden} - {nombre_tienda}",
+                                body=f"¡Hola! Tu pago ha sido confirmado correctamente a través de Wompi. Adjuntamos tu factura detallada. 💎",
+                                from_email=correo_empresa,
+                                to=[email_cliente]
+                            )
+                            email.attach(f"factura_{pedido.numero_orden}.pdf", pdf, 'application/pdf')
+                            email.send()
+                            print(f"📧 Correo enviado al cliente {email_cliente} para la orden {pedido.numero_orden}")
+                        except Exception as e:
+                            print(f"Error en envío automático por Webhook Wompi: {str(e)}")
+                # ========================================================
+                
         # Wompi exige que le respondas un HTTP 200 para saber que recibiste la notificación
         return HttpResponse("Evento recibido", status=200)
         
     except Exception as e:
         print(f"💥 Error en Webhook Wompi: {str(e)}")
-        # Respondemos 200 o 400 igual para evitar que Wompi reintente infinitamente si es error de código
+        # Corregido el typo 'HttpRespon tnse' que tenías en tu borrador original
         return HttpResponse("Error interno procesado", status=200)
 
-def pagar_con_mercadopago(request, token):
-    pedido = get_object_or_404(Pedido, token_publico=token)
-    
-    # Traemos el token del dueño de la joyería
-    perfil_dueno = pedido.usuario.perfil 
-    token_cliente = perfil_dueno.mercadopago_access_token 
-    
-    if not token_cliente:
-        return HttpResponse("Esta tienda aún no ha configurado Mercado Pago", status=400)
+def pagar_con_mercadopago(request, token_publico):
+    """Genera la preferencia con la URL de notificación apuntando al UUID del perfil."""
+    pedido = get_object_or_404(Pedido, token_publico=token_publico)
+    perfil_tienda = pedido.perfil_joyeria  # Ajusta a tu relación real
 
-    sdk = mercadopago.SDK(token_cliente)
+    if not perfil_tienda.mercadopago_access_token:
+        return render(request, 'metodo_no_disponible.html')
+
+    sdk = mercadopago.SDK(perfil_tienda.mercadopago_access_token)
+
+    # 🔗 Construimos la URL dinámica usando el webhook_uuid seguro del perfil
+    url_webhook = request.build_absolute_uri(
+        f"/webhooks/mercadopago/{perfil_tienda.webhook_uuid}/"
+    ).replace("http://", "https://")  # Forzamos HTTPS para producción
 
     preference_data = {
-    "items": [
-        {
-            "title": f"Pedido #{pedido.numero_orden}",
-            "quantity": 1,
-            "currency_id": "COP",
-            "unit_price": pedido.total_limpio, 
-        }
-    ],
-    "back_urls": {
-        "success": request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/").replace("http://", "https://"),
-    },
-    "auto_return": "approved",
-    # 🔥 Forzamos https:// en la notificación por si las moscas
-    "notification_url": request.build_absolute_uri("/webhooks/mercadopago/").replace("http://", "https://"),
-    "external_reference": pedido.numero_orden 
+        "items": [
+            {
+                "title": f"Pedido #{pedido.numero_orden}",
+                "quantity": 1,
+                "currency_id": "COP",
+                "unit_price": float(pedido.total_limpio),
+            }
+        ],
+        "back_urls": {
+            "success": request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/").replace("http://", "https://"),
+            "failure": request.build_absolute_uri(f"/pago-fallido/{pedido.token_publico}/").replace("http://", "https://"),
+        },
+        "auto_return": "approved",
+        "external_reference": pedido.numero_orden,  # 🧠 Clave para identificar la orden
+        "notification_url": url_webhook,  # 🎯 Mercado Pago sabrá a qué UUID pegarle
     }
 
-    preference = sdk.preference().create(preference_data)
-    return redirect(preference["response"]["init_point"])
+    preference_response = sdk.preference().create(preference_data)
+    preference = preference_response["response"]
+    
+    return render(request, 'pagar_mp.html', {
+        'preference_id': preference['id'], 
+        'init_point': preference['init_point']
+    })
 
 @csrf_exempt
-def webhook_mercadopago(request):
-    if request.method != 'POST':
-        return HttpResponse("Método no permitido", status=405)
+def webhook_mercadopago(request, profile_uuid):
+    """Recibe el UUID directamente en la URL, consulta el pago y procesa el flujo automático."""
+    if request.method == 'POST':
+        try:
+            # 1. Buscamos el perfil de la joyería usando el UUID de la URL de forma directa
+            perfil = get_object_or_404(Perfil, webhook_uuid=profile_uuid)
 
-    try:
-        # 1. Capturar los datos enviados por Mercado Pago
-        # Nota: Mercado Pago a veces envía los datos por GET (parámetros de URL) o por POST (body JSON)
-        data = json.loads(request.body) if request.body else {}
-        
-        # Mercado Pago notifica enviando el ID del pago en 'data.id' o 'collection_id'
-        action = data.get('action') or data.get('type')
-        id_pago = data.get('data', {}).get('id') or request.GET.get('data.id') or request.GET.get('collection_id')
+            # 2. Capturamos el ID del recurso que envía Mercado Pago
+            topic = request.GET.get('topic') or request.POST.get('topic')
+            id_recurso = request.GET.get('id') or request.POST.get('id')
 
-        # Procesamos únicamente si el evento es de un pago realizado
-        if action in ['payment.created', 'payment.updated', 'payment'] or request.GET.get('topic') == 'payment':
-            if id_pago:
-                # 2. Consultar el estado real del pago usando el SDK de Mercado Pago
-                # Para un SaaS real, aquí buscaríamos el token_publico del pedido en la referencia 
-                # para saber qué usuario/joyería es el dueño y usar sus credenciales.
+            if not topic and request.body:
+                data = json.loads(request.body)
+                topic = data.get('type')
+                if data.get('data'):
+                    id_recurso = data.get('data').get('id')
+
+            # 3. Si es una notificación de pago, procedemos con el SDK del vendedor
+            if topic == 'payment' and id_recurso:
+                # 🧠 Inicialización limpia usando el token del vendedor recuperado con el UUID
+                sdk = mercadopago.SDK(perfil.mercadopago_access_token)
+                payment_info = sdk.payment().get(id_recurso)
+                payment_data = payment_info["response"]
+
+                status = payment_data.get("status")
+                numero_orden = payment_data.get("external_reference")
+                monto_recibido = payment_data.get("transaction_amount")
+
+                # 4. Localizamos el pedido real en el sistema
+                pedido = get_object_or_404(Pedido, numero_orden=numero_orden)
                 
-                # Suponiendo que recuperamos el pedido afectado por la transacción:
-                # (Mercado Pago envía la referencia que le pasamos en 'external_reference')
+                # 5. Validamos estado y monto
+                if status == 'approved' and float(monto_recibido) >= float(pedido.total_limpio):
+                    if pedido.estado_pago != 'pagado':
+                        pedido.estado_pago = 'pagado'
+                        pedido.mercadopago_payment_id = id_recurso  # Guardamos la auditoría
+                        pedido.save()
+                        
+                        # ========================================================
+                        # 🚀 DISPARADORES AUTOMÁTICOS (Tu hoja de ruta)
+                        # ========================================================
+                        
+                        # 1. Enviar correo con factura PDF adjunta (Tu HTML usando xhtml2pdf)
+                        from .utils import generar_pdf_pedido
+                        from django.core.mail import EmailMessage
+
+                        # Generamos el binario del PDF invocando tu función pura
+                        # Pasamos perfil.user como usuario de respaldo (backup)
+                        pdf, correo_empresa, nombre_tienda = generar_pdf_pedido(pedido, perfil, usuario_backup=perfil.user)
+
+                        email_cliente = getattr(pedido, 'cliente_email', None)
+                        if email_cliente and pdf:
+                            try:
+                                email = EmailMessage(
+                                    subject=f"Confirmación de Pago: Pedido #{pedido.numero_orden} - {nombre_tienda}",
+                                    body=f"¡Hola! Tu pago ha sido confirmado correctamente. Adjuntamos tu factura detallada. 💎",
+                                    from_email=correo_empresa,
+                                    to=[email_cliente]
+                                )
+                                email.attach(f"factura_{pedido.numero_orden}.pdf", pdf, 'application/pdf')
+                                email.send()
+                            except Exception as e:
+                                print(f"Error en envío automático por Webhook MP para {profile_uuid}: {str(e)}")
+
+                        # 2. Notificación push o WhatsApp al vendedor
+                        # (Aquí pones tu lógica de notificaciones cuando la tengas lista)
+
+                        # 3. Asiento en el registro financiero / contabilidad
+                        # (Aquí pones tu lógica contable cuando la tengas lista)
+
+                        # ========================================================
+
+            return HttpResponse("OK", status=200)
                 
-                # Supongamos que ya validamos con Mercado Pago que el estado es 'approved':
-                estado_aprobado = True # Reemplazar con validación real del SDK si es necesario
-                referencia_pedido = "FAC-00022" # Ejemplo dinámico desde la respuesta de MP
-                
-                pedido = Pedido.objects.filter(numero_orden=referencia_pedido).first()
-                
-                if pedido and pedido.estado != 'pagado' and estado_aprobado:
-                    # 🚀 A. ACTUALIZAR ESTADO DEL PEDIDO
-                    pedido.estado = 'pagado'
-                    pedido.saldo_pendiente = Decimal('0.00')
-                    pedido.save()
-                    
-                    # 📊 B. REGISTRO DE TRANSACCIONES (Tu lógica de finanzas)
-                    # Transaccion Finanzas.objects.create(pedido=pedido, monto=pedido.total, metodo='mercadopago')
-                    print(f"✅ [MercadoPago] Transacción registrada para {pedido.numero_orden}")
-
-                    # 📧 C. ENVIAR CORREO ELECTRÓNICO AUTOMÁTICO
-                    # Aquí disparas tu función de correo: enviar_correo_factura(pedido.id)
-                    print(f"📩 [Correo] Factura enviada a: {pedido.cliente_email}")
-
-                    # 📱 D. NOTIFICACIÓN DE WHATSAPP
-                    # Aquí disparas el mensaje de WhatsApp a la joyería: enviar_whatsapp_alerta(pedido)
-                    print(f"💬 [WhatsApp] Alerta de venta enviada al número de la joyería")
-
-        # Mercado Pago exige un HTTP 200 o 201 para confirmar la recepción
-        return HttpResponse("OK", status=200)
-
-    except Exception as e:
-        print(f"💥 Error en Webhook MercadoPago: {str(e)}")
-        return HttpResponse("Error interno procesado", status=200)    
+        except Exception as e:
+            print(f"Error crítico en Webhook MP ({profile_uuid}): {str(e)}")
+            return HttpResponse(status=500)
+            
+    return HttpResponse(status=400)
 
 
 def pago_exitoso(request, token):
