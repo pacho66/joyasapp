@@ -1934,7 +1934,7 @@ def webhook_wompi(request):
         # Corregido el typo 'HttpRespon tnse' que tenías en tu borrador original
         return HttpResponse("Error interno procesado", status=200)
 
-def pagar_con_mercadopago(request, token): # 👈 Cambiado 'token_publico' por 'token' para alinearse con urls.py
+def pagar_con_mercadopago(request, token):
     """Genera la preferencia de Mercado Pago de forma 100% aislada y segura contra nulos."""
     try:
         pedido = get_object_or_404(Pedido, token_publico=token)
@@ -1944,12 +1944,22 @@ def pagar_con_mercadopago(request, token): # 👈 Cambiado 'token_publico' por '
         except Perfil.DoesNotExist:
             return HttpResponse("La joyería no tiene un perfil configurado.", status=400)
 
-        if not perfil_tienda.mercadopago_access_token:
-            return HttpResponse("Esta tienda no tiene configurada una pasarela de Mercado Pago.", status=400)
+        # 🛡️ VALIDACIÓN ULTRA ESTRICTA ANTI-NONETYPE
+        token_mp = getattr(perfil_tienda, 'mercadopago_access_token', None)
+        
+        if not token_mp or str(token_mp).strip() in ["", "None"]:
+            # Si no hay credenciales, en vez de romper, informamos con estilo
+            return HttpResponse(
+                "<h3>Módulo de Pago en Configuración</h3>"
+                "<p>Esta joyería aún no ha enlazado sus credenciales de Mercado Pago. "
+                "Por favor, contacta al vendedor para procesar tu pago por otro medio.</p>", 
+                status=400
+            )
 
-        sdk = mercadopago.SDK(perfil_tienda.mercadopago_access_token)
+        # Inicialización segura garantizada porque token_mp ya no es None
+        sdk = mercadopago.SDK(str(token_mp).strip())
 
-        # URLs limpias utilizando la variable 'token'
+        # URLs limpias
         ruta_relativa = f"/webhooks/mercadopago/{perfil_tienda.webhook_uuid}/"
         url_webhook = request.build_absolute_uri(ruta_relativa).replace("http://", "https://")
         url_success = request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/").replace("http://", "https://")
