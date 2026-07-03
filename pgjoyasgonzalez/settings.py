@@ -65,7 +65,8 @@ INSTALLED_APPS = [
     'cloudinary',
     'cloudinary_storage',
     'tienda',
-    'productos.apps.ProductosConfig',  
+    'productos.apps.ProductosConfig',
+    'django.contrib.humanize',   
 ]
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
