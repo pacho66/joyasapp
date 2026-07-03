@@ -41,6 +41,7 @@ from productos.services.envios import calcular_envio
 from .models import ProductoVariante, Pedido, PedidoItem, Perfil, Abono, Gasto
 from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm, ProductoForm
 from .utils import generar_link_whatsapp, generar_numero_orden 
+from .utils import generar_link_whatsapp, generar_numero_orden, generar_pdf_pedido
 
 def safe_int(valor, default=1):
     try:
