@@ -1934,10 +1934,10 @@ def webhook_wompi(request):
         # Corregido el typo 'HttpRespon tnse' que tenías en tu borrador original
         return HttpResponse("Error interno procesado", status=200)
 
-def pagar_con_mercadopago(request, token_publico):
+def pagar_con_mercadopago(request, token): # 👈 Cambiado 'token_publico' por 'token' para alinearse con urls.py
     """Genera la preferencia de Mercado Pago de forma 100% aislada y segura contra nulos."""
     try:
-        pedido = get_object_or_404(Pedido, token_publico=token_publico)
+        pedido = get_object_or_404(Pedido, token_publico=token)
         
         try:
             perfil_tienda = Perfil.objects.get(user=pedido.usuario)
@@ -1949,13 +1949,12 @@ def pagar_con_mercadopago(request, token_publico):
 
         sdk = mercadopago.SDK(perfil_tienda.mercadopago_access_token)
 
-        # URLs limpias
+        # URLs limpias utilizando la variable 'token'
         ruta_relativa = f"/webhooks/mercadopago/{perfil_tienda.webhook_uuid}/"
         url_webhook = request.build_absolute_uri(ruta_relativa).replace("http://", "https://")
         url_success = request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/").replace("http://", "https://")
         url_failure = request.build_absolute_uri(f"/pago-fallido/{pedido.token_publico}/").replace("http://", "https://")
 
-        # 🛡️ Escudo de montos: si total_limpio no existe, calculamos el total final o usamos pedido.total
         monto_total = getattr(pedido, 'total_limpio', None) or getattr(pedido, 'total', 0)
         monto_total = float(monto_total)
 

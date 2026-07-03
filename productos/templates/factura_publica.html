@@ -225,7 +225,7 @@
     </div>
 
     {% if pedido.estado != 'pagado' %}
-        <a href="{% url 'pagar_wompi' pedido.id %}" class="btn btn-pagar">💳 Pagar con Wompi</a>
+        <a href="{% url 'pagar_wompi' pedido.token_publico %}" class="btn btn-pagar">💳 Pagar con Wompi</a>
         <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}" class="btn btn-mercadopago">🔵 Pagar con Mercado Pago</a>
     {% endif %}
     <a href="{{ whatsapp_url }}" class="btn btn-whatsapp" target="_blank">📲 Enviar por WhatsApp</a>
@@ -233,7 +233,7 @@
     {% if qr_pago_url %}
     <div class="qr-seccion">
         <p style="margin: 0 0 10px 0; font-size: 12px; color: #555555;">Escanea para abrir este pedido</p>
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={{ qr_pago_url }}" alt="QR de Pago">
+         <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={% url 'confirmar_pago_publico' pedido.token_publico %}" alt="QR de Pago">
     </div>
     {% endif %}
 
