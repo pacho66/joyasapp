@@ -1934,11 +1934,10 @@ def webhook_wompi(request):
         return HttpResponse("Error interno procesado", status=200)
 
 def pagar_con_mercadopago(request, token_publico):
-    """Genera la preferencia con la URL de notificación apuntando al UUID del perfil."""
+    """Genera la preferencia de Mercado Pago de forma 100% aislada y segura contra nulos."""
     try:
         pedido = get_object_or_404(Pedido, token_publico=token_publico)
         
-        # 🛡️ Obtención idéntica a tu vista de factura pública que ya funciona
         try:
             perfil_tienda = Perfil.objects.get(user=pedido.usuario)
         except Perfil.DoesNotExist:
@@ -1949,17 +1948,15 @@ def pagar_con_mercadopago(request, token_publico):
 
         sdk = mercadopago.SDK(perfil_tienda.mercadopago_access_token)
 
-        # 🔗 Construimos la URL del webhook de forma limpia en dos pasos para evitar errores de sintaxis
+        # URLs limpias
         ruta_relativa = f"/webhooks/mercadopago/{perfil_tienda.webhook_uuid}/"
-        url_raw = request.build_absolute_uri(ruta_relativa)
-        url_webhook = url_raw.replace("http://", "https://")
-
-        # Construcción limpia de las URLs de retorno
+        url_webhook = request.build_absolute_uri(ruta_relativa).replace("http://", "https://")
         url_success = request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/").replace("http://", "https://")
         url_failure = request.build_absolute_uri(f"/pago-fallido/{pedido.token_publico}/").replace("http://", "https://")
 
-        # 💰 El monto total exacto que viene de tu base de datos
-        monto_total = float(getattr(pedido, 'total_limpio', getattr(pedido, 'total', 0)))
+        # 🛡️ Escudo de montos: si total_limpio no existe, calculamos el total final o usamos pedido.total
+        monto_total = getattr(pedido, 'total_limpio', None) or getattr(pedido, 'total', 0)
+        monto_total = float(monto_total)
 
         preference_data = {
             "items": [
@@ -1978,20 +1975,17 @@ def pagar_con_mercadopago(request, token_publico):
             "external_reference": pedido.numero_orden,
         }
 
-        # 🛡️ Solo inyectamos la url de notificación si no estamos en entorno de desarrollo local
         if "localhost" not in url_webhook and "127.0.0.1" not in url_webhook:
             preference_data["notification_url"] = url_webhook
 
-        # Crear la preferencia en la API de Mercado Pago
         preference_response = sdk.preference().create(preference_data)
         preference = preference_response["response"]
         
-        # Redirección directa al checkout oficial de Mercado Pago
         return redirect(preference.get("init_point"))
 
     except Exception as e:
         print(f"💥 Error crítico en pagar_con_mercadopago: {str(e)}")
-        return HttpResponse("Error interno al inicializar la pasarela de pago.", status=500)
+        return HttpResponse(f"Error interno al inicializar el pago: {str(e)}", status=500)
 
 @csrf_exempt
 def webhook_mercadopago(request, profile_uuid):
@@ -2566,7 +2560,7 @@ def factura_publica(request, token):
     pedido = get_object_or_404(Pedido, token_publico=token)
     items = pedido.items.select_related('producto', 'variante').all()
     
-    # 🛡️ PROTECCIÓN CRÍTICA: Obtención segura del perfil para evitar Error 500
+    # 🛡️ PROTECCIÓN CRÍTICA: Obtención segura del perfil
     usuario_pedido = pedido.usuario
     try:
         perfil = Perfil.objects.get(user=usuario_pedido)
@@ -2579,7 +2573,6 @@ def factura_publica(request, token):
     empresa_direccion = getattr(perfil, 'direccion', getattr(perfil, 'ciudad', '')) or ""
     empresa_email = perfil.email_empresa if perfil else ""
     
-    # Obtención segura del logo de la empresa
     empresa_logo = ""
     if perfil and hasattr(perfil, 'logo') and perfil.logo:
         try:
@@ -2598,7 +2591,7 @@ def factura_publica(request, token):
     descuento_total = subtotal * (Decimal(str(porcentaje_desc)) / Decimal('100')) if porcentaje_desc else Decimal('0')
     
     retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
-    envio = Decimal(str(pedido.costo_envio or 0))
+    envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
     total_final = subtotal + iva_total + envio - descuento_total - retefuente_total
 
     # Motor de estados
@@ -2617,7 +2610,7 @@ def factura_publica(request, token):
     whatsapp_url = f"https://wa.me/{whatsapp_num}?text={urllib.parse.quote(mensaje)}"
     qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(whatsapp_url)}"
 
-    # Control de fechas
+    # Control de fechas seguro para evitar 'NoneType' object has no attribute 'strftime'
     if getattr(pedido, 'fecha', None):
         fecha_str = pedido.fecha.strftime('%Y-%m-%d')
     elif getattr(pedido, 'fecha_creacion', None):
@@ -2625,15 +2618,23 @@ def factura_publica(request, token):
     else:
         fecha_str = timezone.now().strftime('%Y-%m-%d')
 
+    # Extraemos de forma segura los datos del cliente, soportando si vienen por relación externa
+    c_nombre = getattr(pedido, 'cliente_nombre', None) or (pedido.cliente.nombre if getattr(pedido, 'cliente', None) else 'Consumidor Final')
+    c_email = getattr(pedido, 'cliente_email', None) or (pedido.cliente.email if getattr(pedido, 'cliente', None) else '')
+    c_telefono = getattr(pedido, 'cliente_telefono', None) or (pedido.cliente.telefono if getattr(pedido, 'cliente', None) else '')
+    c_direccion = getattr(pedido, 'cliente_direccion', None) or (pedido.cliente.direccion if getattr(pedido, 'cliente', None) else '')
+    c_ciudad = getattr(pedido, 'cliente_ciudad', None) or (pedido.cliente.ciudad if getattr(pedido, 'cliente', None) else '')
+    c_nit = getattr(pedido, 'cliente_nit', None) or (pedido.cliente.nit if getattr(pedido, 'cliente', None) else '')
+
     context = {
         'pedido': pedido,
         'items': items,
-        'cliente_nombre': getattr(pedido, 'cliente_nombre', 'Consumidor Final'),
-        'cliente_email': getattr(pedido, 'cliente_email', ''),
-        'cliente_telefono': getattr(pedido, 'cliente_telefono', ''),
-        'cliente_direccion': getattr(pedido, 'cliente_direccion', ''),
-        'cliente_ciudad': getattr(pedido, 'cliente_ciudad', ''),
-        'cliente_nit': getattr(pedido, 'cliente_nit', ''),
+        'cliente_nombre': c_nombre,
+        'cliente_email': c_email,
+        'cliente_telefono': c_telefono,
+        'cliente_direccion': c_direccion,
+        'cliente_ciudad': c_ciudad,
+        'cliente_nit': c_nit,
         'empresa_nombre': empresa_nombre,
         'empresa_nit': empresa_nit,
         'empresa_telefono': empresa_telefono,
@@ -2655,6 +2656,9 @@ def factura_publica(request, token):
     }
     
     return render(request, 'factura_publica.html', context)
+
+
+
 @login_required
 def generar_factura(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
