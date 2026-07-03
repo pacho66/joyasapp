@@ -723,13 +723,13 @@ def dashboard(request):
     productos = Producto.objects.filter(usuario=usuario)
 
     # ==========================
-    # 🔴 CARTERA Y MOROSOS (SaaS Fijo)
+    # 🔴 CARTERA Y MOROSOS (SaaS Fijo) - 🛠️ CORREGIDO DOBLE __
     # ==========================
     clientes_morosos = Cliente.objects.filter(
         usuario=usuario,
         pedidos__tipo_pago='credito',
-        pedidos_saldo_pendiente_gt=0,
-        pedidos_fecha_limite_lt=hoy
+        pedidos__saldo_pendiente__gt=0,
+        pedidos__fecha_limite__lt=hoy
     ).distinct()
 
     morosos_count = clientes_morosos.count()
@@ -738,7 +738,7 @@ def dashboard(request):
     )['total'] or 0
 
     # ==========================
-    # FILTROS CLIENTES
+    # FILTROS CLIENTES - 🛠️ CORREGIDO DOBLE __
     # ==========================
     clientes_filtrados = clientes
 
@@ -751,8 +751,8 @@ def dashboard(request):
     elif tipo == 'morosos':
         clientes_filtrados = clientes.filter(
             pedidos__tipo_pago='credito',
-            pedidos_saldo_pendiente_gt=0,
-            pedidos_fecha_limite_lt=hoy
+            pedidos__saldo_pendiente__gt=0,
+            pedidos__fecha_limite__lt=hoy
         ).distinct()
 
     mensajes = {
@@ -776,26 +776,21 @@ def dashboard(request):
     ).aggregate(total=Sum('total'))['total'] or 0
 
     # ==========================
-    # 💰 FINANZAS AVANZADAS (Costos, Envíos e Ingresos)
+    # 💰 FINANZAS AVANZADAS
     # ==========================
     total_ingresos = total_general
     
-    # Rastrear costos operativos de producción agregados
     total_costos_material = pedidos.aggregate(total=Sum('costo_material'))['total'] or 0
     total_costo_mano_obra = pedidos.aggregate(total=Sum('costo_mano_obra'))['total'] or 0
     total_costos = total_costos_material + total_costo_mano_obra
     
-    # Gastos fijos/adicionales registrados en la tabla de Gastos
     total_gastos = Gasto.objects.filter(usuario=usuario).aggregate(total=Sum('monto'))['total'] or 0
 
-    # Utilidad real restando costos operativos de joyería y gastos fijos
     utilidad = total_ingresos - total_costos - total_gastos
-    
-    # Margen de beneficio porcentual
     margen = (utilidad / total_ingresos * 100) if total_ingresos > 0 else 0
 
     # ==========================
-    # PEDIDOS E INVENTARIO
+    # PEDIDOS E INVENTARIO - 🛠️ CORREGIDO DOBLE __
     # ==========================
     pedidos_hoy = pedidos.filter(fecha__date=hoy).count()
     total_pedidos = pedidos.count()
@@ -810,7 +805,7 @@ def dashboard(request):
 
     total_productos = productos.count()
     productos_sin_stock = productos.filter(stock=0).count()
-    productos_bajo_stock = productos.filter(stock_gt=0, stock_lte=5).count()
+    productos_bajo_stock = productos.filter(stock_gt=0, stocklte=5).count() # Corregido stock_gt
 
     ticket_promedio = total_general / total_pedidos if total_pedidos > 0 else 0
     crecimiento = total_hoy - total_ayer
@@ -857,6 +852,7 @@ def dashboard(request):
     }
 
     return render(request, 'dashboard.html', context)
+
 
 @login_required
 def modificar_banner(request):
