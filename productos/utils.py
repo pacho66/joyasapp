@@ -13,79 +13,96 @@ from xhtml2pdf import pisa
 
 def generar_pdf_pedido(pedido, perfil, usuario_backup=None):
     """
-    1. ESTA FUNCIÓN SE ENCARGA SÓLO DE LEER TU 'pedido_pdf.html' 
-       Y TRANSFORMARLO EN UN ARCHIVO PDF (BINARIO).
+    Versión blindada con soporte de campos nulos (Fecha creación: None).
     """
-    items = pedido.items.select_related('producto', 'variante').all()
-    
-    # Datos de la joyería (Escudo anti error 500)
-    empresa_nombre = getattr(perfil, 'nombre_tienda', 'Mi Joyería') or "Mi Joyería"
-    empresa_nit = getattr(perfil, 'nit', '') or ""
-    empresa_telefono = getattr(perfil, 'whatsapp', '') or ""
-    empresa_direccion = getattr(perfil, 'ciudad', '') or "" 
-    email_user = usuario_backup.email if usuario_backup else 'correo@empresa.com'
-    empresa_email = getattr(perfil, 'email_empresa', None) or email_user or 'correo@empresa.com'
-    
-    color_primario = getattr(perfil, 'color_primario', '#111111') or '#111111'
-    empresa_logo = getattr(perfil, 'logo_url', None) 
-    
-    # Cálculos matemáticos de los totales
-    subtotal = Decimal('0')
-    iva_total = Decimal('0')
-    descuento_total = Decimal('0')
-    retefuente_total = Decimal('0')
-    
-    for item in items:
-        subtotal += Decimal(str(item.subtotal or 0))
-        iva_total += Decimal(str(item.iva or 0))
-        descuento_total += Decimal(str(item.descuento_total or item.descuento or 0))
-        retefuente_total += Decimal(str(item.retefuente or 0))
+    try:
+        items = pedido.items.select_related('producto', 'variante').all()
         
-    envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
-    total_final = Decimal(str(getattr(pedido, 'total', 0) or 0))
-    
-    fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d') if pedido.fecha_creacion else ''
+        # Datos de la joyería seguros
+        empresa_nombre = getattr(perfil, 'nombre_tienda', 'Mi Joyería') or "Mi Joyería"
+        empresa_nit = getattr(perfil, 'nit', '') or ""
+        empresa_telefono = getattr(perfil, 'whatsapp', '') or ""
+        empresa_direccion = getattr(perfil, 'ciudad', '') or "" 
+        email_user = usuario_backup.email if usuario_backup else 'correo@empresa.com'
+        empresa_email = getattr(perfil, 'email_empresa', None) or email_user or 'correo@empresa.com'
+        
+        color_primario = getattr(perfil, 'color_primario', '#111111') or '#111111'
+        empresa_logo = getattr(perfil, 'logo_url', None) 
+        
+        # Totales seguros usando conversión limpia
+        subtotal = Decimal('0')
+        iva_total = Decimal('0')
+        descuento_total = Decimal('0')
+        retefuente_total = Decimal('0')
+        
+        for item in items:
+            subtotal += Decimal(str(getattr(item, 'subtotal', 0) or 0))
+            iva_total += Decimal(str(getattr(item, 'iva', 0) or 0))
+            descuento_total += Decimal(str(getattr(item, 'descuento_total', getattr(item, 'descuento', 0)) or 0))
+            retefuente_total += Decimal(str(getattr(item, 'retefuente', 0) or 0))
+            
+        envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
+        total_final = Decimal(str(getattr(pedido, 'total', 0) or 0))
+        
+        # 🛡️ Control estricto del "Fecha creación: None" detectado en tus logs de Render
+        if getattr(pedido, 'fecha_creacion', None):
+            try:
+                fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d')
+            except Exception:
+                fecha_str = str(pedido.fecha_creacion)[:10]
+        elif getattr(pedido, 'fecha', None):
+            try:
+                fecha_str = pedido.fecha.strftime('%Y-%m-%d')
+            except Exception:
+                fecha_str = str(pedido.fecha)[:10]
+        else:
+            from django.utils import timezone
+            fecha_str = timezone.now().strftime('%Y-%m-%d')
 
-    # Aquí armamos el diccionario con los mismos nombres que usas en tu HTML
-    contexto = {
-        'pedido': pedido,
-        'items': items,
-        'fecha_str': fecha_str,
-        'empresa_nombre': empresa_nombre,
-        'empresa_nit': empresa_nit,
-        'empresa_direccion': empresa_direccion,
-        'empresa_telefono': empresa_telefono,
-        'empresa_email': empresa_email,
-        'empresa_logo': empresa_logo,
-        'color_primario': color_primario,
-        'cliente_nombre': getattr(pedido, 'cliente_nombre', '') or '',
-        'cliente_nit': getattr(pedido, 'cliente_nit', '') or '',
-        'cliente_direccion': getattr(pedido, 'cliente_direccion', '') or '',
-        'cliente_ciudad': getattr(pedido, 'cliente_ciudad', '') or '',
-        'cliente_telefono': getattr(pedido, 'cliente_telefono', '') or '',
-        'subtotal': subtotal,
-        'descuento_total': descuento_total,
-        'iva_total': iva_total,
-        'retefuente_total': retefuente_total,
-        'envio': envio,
-        'total_final': total_final,
-    }
+        contexto = {
+            'pedido': pedido,
+            'items': items,
+            'fecha_str': fecha_str,
+            'empresa_nombre': empresa_nombre,
+            'empresa_nit': empresa_nit,
+            'empresa_direccion': empresa_direccion,
+            'empresa_telefono': empresa_telefono,
+            'empresa_email': empresa_email,
+            'empresa_logo': empresa_logo,
+            'color_primario': color_primario,
+            
+            # Mapeo de clientes seguro
+            'cliente_nombre': getattr(pedido, 'cliente_nombre', getattr(pedido, 'nombre_cliente', 'Consumidor Final')),
+            'cliente_nit': getattr(pedido, 'cliente_nit', getattr(pedido, 'nit_cliente', '')),
+            'cliente_direccion': getattr(pedido, 'cliente_direccion', getattr(pedido, 'direccion_entrega', '')),
+            'cliente_ciudad': getattr(pedido, 'cliente_ciudad', getattr(pedido, 'ciudad_destino', '')),
+            'cliente_telefono': getattr(pedido, 'cliente_telefono', getattr(pedido, 'telefono_contacto', '')),
+            
+            'subtotal': subtotal,
+            'descuento_total': descuento_total,
+            'iva_total': iva_total,
+            'retefuente_total': retefuente_total,
+            'envio': envio,
+            'total_final': total_final,
+        }
 
-    # Carga tu archivo HTML, le inyecta los datos y xhtml2pdf hace la magia
-    template = get_template('pedido_pdf.html')  
-    html = template.render(contexto)
-    result = BytesIO()
-    
-    pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), result)
-    
-    if not pdf.err:
-        pdf_binario = result.getvalue()
+        template = get_template('pedido_pdf.html')  
+        html = template.render(contexto)
+        result = BytesIO()
+        
+        pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), result)
+        
+        if not pdf.err:
+            pdf_binario = result.getvalue()
+            result.close()
+            return pdf_binario, empresa_email, empresa_nombre
+            
         result.close()
-        return pdf_binario, empresa_email, empresa_nombre
-        
-    result.close()
-    return None, empresa_email, empresa_nombre
+        return None, empresa_email, empresa_nombre
 
+    except Exception as e:
+        print(f"💥 Error controlado en generar_pdf_pedido: {str(e)}")
+        return None, 'correo@empresa.com', 'Mi Joyería'
 
 @login_required
 def generar_factura(request, pedido_id):
