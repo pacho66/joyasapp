@@ -1933,46 +1933,56 @@ def webhook_wompi(request):
         # Corregido el typo 'HttpRespon tnse' que tenías en tu borrador original
         return HttpResponse("Error interno procesado", status=200)
 
-def pagar_con_mercadopago(request, token_publico):
-    """Genera la preferencia con la URL de notificación apuntando al UUID del perfil."""
-    pedido = get_object_or_404(Pedido, token_publico=token_publico)
-    perfil_tienda = pedido.perfil_joyeria  # Ajusta a tu relación real
+def pagar_mercadopago(request, token_publico):
+    """Vista que genera la preferencia de Mercado Pago usando el token público."""
+    try:
+        pedido = get_object_or_404(Pedido, token_publico=token_publico)
+        perfil_tienda = get_object_or_404(Perfil, user=pedido.usuario)
+        
+        # Validar que la joyería tenga configurado su token de Mercado Pago
+        if not perfil_tienda.mercadopago_access_token:
+            return HttpResponse("Esta tienda no tiene configurada una pasarela de Mercado Pago.", status=400)
+            
+        sdk = mercadopago.SDK(perfil_tienda.mercadopago_access_token)
+        
+        # Construimos la URL del Webhook multi-inquilino que definimos ayer
+        url_webhook = request.build_absolute_uri(f"/webhooks/mercadopago/{perfil_tienda.webhook_uuid}/")
+        
+        # Calculamos el valor final de forma limpia para pasárselo a Mercado Pago
+        # Si tienes el campo 'total_limpio' o 'total' en el modelo usa ese.
+        monto_total = float(getattr(pedido, 'total', getattr(pedido, 'total_limpio', 0)))
 
-    if not perfil_tienda.mercadopago_access_token:
-        return render(request, 'metodo_no_disponible.html')
+        preference_data = {
+            "items": [
+                {
+                    "title": f"Pedido #{pedido.numero_orden} - {perfil_tienda.nombre_tienda}",
+                    "quantity": 1,
+                    "currency_id": "COP",
+                    "unit_price": monto_total,
+                }
+            ],
+            "back_urls": {
+                "success": request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/"),
+                "failure": request.build_absolute_uri(f"/pago-fallido/{pedido.token_publico}/"),
+            },
+            "auto_return": "approved",
+            "external_reference": pedido.numero_orden,
+        }
 
-    sdk = mercadopago.SDK(perfil_tienda.mercadopago_access_token)
+        # 🛡️ Escudo de red local (para que no rompa en localhost)
+        if "localhost" not in url_webhook and "127.0.0.1" not in url_webhook:
+            preference_data["notification_url"] = url_webhook.replace("http://", "https://")
 
-    # 🔗 Construimos la URL dinámica usando el webhook_uuid seguro del perfil
-    url_webhook = request.build_absolute_uri(
-        f"/webhooks/mercadopago/{perfil_tienda.webhook_uuid}/"
-    ).replace("http://", "https://")  # Forzamos HTTPS para producción
+        preference_response = sdk.preference().create(preference_data)
+        preference = preference_response["response"]
+        
+        # Redirigir al checkout de Mercado Pago (puedes usar init_point o sandbox_init_point)
+        return redirect(preference.get("init_point"))
 
-    preference_data = {
-        "items": [
-            {
-                "title": f"Pedido #{pedido.numero_orden}",
-                "quantity": 1,
-                "currency_id": "COP",
-                "unit_price": float(pedido.total_limpio),
-            }
-        ],
-        "back_urls": {
-            "success": request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/").replace("http://", "https://"),
-            "failure": request.build_absolute_uri(f"/pago-fallido/{pedido.token_publico}/").replace("http://", "https://"),
-        },
-        "auto_return": "approved",
-        "external_reference": pedido.numero_orden,  # 🧠 Clave para identificar la orden
-        "notification_url": url_webhook,  # 🎯 Mercado Pago sabrá a qué UUID pegarle
-    }
+    except Exception as e:
+        print(f"💥 Error crítico en pagar_mercadopago: {str(e)}")
+        return HttpResponse("Error interno al procesar el pago con Mercado Pago.", status=500)
 
-    preference_response = sdk.preference().create(preference_data)
-    preference = preference_response["response"]
-    
-    return render(request, 'pagar_mp.html', {
-        'preference_id': preference['id'], 
-        'init_point': preference['init_point']
-    })
 
 @csrf_exempt
 def webhook_mercadopago(request, profile_uuid):
@@ -2539,6 +2549,7 @@ def cartera_clientes(request):
         'morosos_total': morosos_total,
         'morosos_count': morosos_count
 })
+
 def factura_publica(request, token):
     """
     Vista que renderiza el recibo público para el cliente mediante el token UUID.
@@ -2548,7 +2559,6 @@ def factura_publica(request, token):
     
     # 🛡️ PROTECCIÓN CRÍTICA: Obtención segura del perfil para evitar Error 500
     usuario_pedido = pedido.usuario
-
     try:
         perfil = Perfil.objects.get(user=usuario_pedido)
     except Perfil.DoesNotExist:
@@ -2557,10 +2567,10 @@ def factura_publica(request, token):
     empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
     empresa_nit = perfil.nit if perfil else ""
     empresa_telefono = perfil.whatsapp if perfil else ""
-    empresa_direccion = perfil.direccion if perfil else ""
+    empresa_direccion = getattr(perfil, 'direccion', getattr(perfil, 'ciudad', '')) or ""
     empresa_email = perfil.email_empresa if perfil else ""
     
-    # Obtención segura del logo de la empresa para evitar cortocircuitos si no hay archivo
+    # Obtención segura del logo de la empresa
     empresa_logo = ""
     if perfil and hasattr(perfil, 'logo') and perfil.logo:
         try:
@@ -2582,9 +2592,7 @@ def factura_publica(request, token):
     envio = Decimal(str(pedido.costo_envio or 0))
     total_final = subtotal + iva_total + envio - descuento_total - retefuente_total
 
-    # =========================================================
-    # 🟢 CORRECCIÓN DEL MOTOR DE ESTADOS
-    # =========================================================
+    # Motor de estados
     if pedido.estado == "pendiente":
         estado = "pendiente"
     elif pedido.saldo_pendiente is not None and pedido.saldo_pendiente <= 0:
@@ -2594,67 +2602,50 @@ def factura_publica(request, token):
     else:
         estado = pedido.estado
 
-    # =========================================================
-    # 💬 INTEGRACIÓN DE WHATSAPP Y QR
-    # =========================================================
+    # Integración de WhatsApp
     mensaje = f"Hola! Adjunto el comprobante de pago del pedido #{pedido.numero_orden} por valor de ${total_final:,.0f}".replace(",", ".")
     whatsapp_num = empresa_telefono if empresa_telefono != "-" else ""
     whatsapp_url = f"https://wa.me/{whatsapp_num}?text={urllib.parse.quote(mensaje)}"
     qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(whatsapp_url)}"
 
-    # 1. SOLUCIÓN AL AMARILLO: Declaramos fecha_str antes de usarla en el contexto
-    if hasattr(pedido, 'fecha') and pedido.fecha:
+    # Control de fechas
+    if getattr(pedido, 'fecha', None):
         fecha_str = pedido.fecha.strftime('%Y-%m-%d')
-    elif hasattr(pedido, 'fecha_creacion') and pedido.fecha_creacion:
+    elif getattr(pedido, 'fecha_creacion', None):
         fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d')
     else:
-        fecha_str = "S/F"
+        fecha_str = timezone.now().strftime('%Y-%m-%d')
 
-    # 2. UNIFICACIÓN DE CONTEXTO: Cambiamos el nombre a 'context' y añadimos los datos web
     context = {
         'pedido': pedido,
         'items': items,
-
-        # Datos del Cliente desglosados
-        'cliente_nombre': pedido.cliente_nombre,
-        'cliente_email': pedido.cliente_email,
-        'cliente_telefono': pedido.cliente_telefono,
-        'cliente_direccion': pedido.cliente_direccion,
-        'cliente_ciudad': pedido.cliente_ciudad,
-        'cliente_nit': pedido.cliente_nit,
-
-        # Perfil SaaS del Joyero
+        'cliente_nombre': getattr(pedido, 'cliente_nombre', 'Consumidor Final'),
+        'cliente_email': getattr(pedido, 'cliente_email', ''),
+        'cliente_telefono': getattr(pedido, 'cliente_telefono', ''),
+        'cliente_direccion': getattr(pedido, 'cliente_direccion', ''),
+        'cliente_ciudad': getattr(pedido, 'cliente_ciudad', ''),
+        'cliente_nit': getattr(pedido, 'cliente_nit', ''),
         'empresa_nombre': empresa_nombre,
         'empresa_nit': empresa_nit,
         'empresa_telefono': empresa_telefono,
         'empresa_direccion': empresa_direccion,
         'empresa_email': empresa_email,
         'empresa_logo': empresa_logo,
-
-        # Identidad de marca blanca segura (necesaria para la web)
         'color_primario': color_primario,
         'color_secundario': color_secundario,
-
-        # Fecha formateada que ya no dará error
         'fecha_str': fecha_str,
-
-        # Variables de totales exactas
         'subtotal': subtotal,
         'iva_total': iva_total,
         'total_final': total_final,
         'descuento_total': descuento_total,
         'retefuente_total': retefuente_total,
-    
-        # Sincronización de variables clave de JoyasApp 🛠️
         'costo_envio': envio,   
         'qr_pago_url': qr_url,  
         'whatsapp_url': whatsapp_url,
         'estado': estado,
     }
     
-    # 3. SOLUCIÓN AL RETURN: Ahora 'context' coincide perfectamente con el diccionario de arriba
     return render(request, 'factura_publica.html', context)
-    
 @login_required
 def generar_factura(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
