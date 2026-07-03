@@ -1933,56 +1933,65 @@ def webhook_wompi(request):
         # Corregido el typo 'HttpRespon tnse' que tenías en tu borrador original
         return HttpResponse("Error interno procesado", status=200)
 
-def pagar_mercadopago(request, token_publico):
-    """Vista que genera la preferencia de Mercado Pago usando el token público."""
+def pagar_con_mercadopago(request, token_publico):
+    """Genera la preferencia con la URL de notificación apuntando al UUID del perfil."""
     try:
         pedido = get_object_or_404(Pedido, token_publico=token_publico)
-        perfil_tienda = get_object_or_404(Perfil, user=pedido.usuario)
         
-        # Validar que la joyería tenga configurado su token de Mercado Pago
+        # 🛡️ Obtención idéntica a tu vista de factura pública que ya funciona
+        try:
+            perfil_tienda = Perfil.objects.get(user=pedido.usuario)
+        except Perfil.DoesNotExist:
+            return HttpResponse("La joyería no tiene un perfil configurado.", status=400)
+
         if not perfil_tienda.mercadopago_access_token:
             return HttpResponse("Esta tienda no tiene configurada una pasarela de Mercado Pago.", status=400)
-            
+
         sdk = mercadopago.SDK(perfil_tienda.mercadopago_access_token)
-        
-        # Construimos la URL del Webhook multi-inquilino que definimos ayer
-        url_webhook = request.build_absolute_uri(f"/webhooks/mercadopago/{perfil_tienda.webhook_uuid}/")
-        
-        # Calculamos el valor final de forma limpia para pasárselo a Mercado Pago
-        # Si tienes el campo 'total_limpio' o 'total' en el modelo usa ese.
-        monto_total = float(getattr(pedido, 'total', getattr(pedido, 'total_limpio', 0)))
+
+        # 🔗 Construimos la URL del webhook de forma limpia en dos pasos para evitar errores de sintaxis
+        ruta_relativa = f"/webhooks/mercadopago/{perfil_tienda.webhook_uuid}/"
+        url_raw = request.build_absolute_uri(ruta_relativa)
+        url_webhook = url_raw.replace("http://", "https://")
+
+        # Construcción limpia de las URLs de retorno
+        url_success = request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/").replace("http://", "https://")
+        url_failure = request.build_absolute_uri(f"/pago-fallido/{pedido.token_publico}/").replace("http://", "https://")
+
+        # 💰 El monto total exacto que viene de tu base de datos
+        monto_total = float(getattr(pedido, 'total_limpio', getattr(pedido, 'total', 0)))
 
         preference_data = {
             "items": [
                 {
-                    "title": f"Pedido #{pedido.numero_orden} - {perfil_tienda.nombre_tienda}",
+                    "title": f"Pedido #{pedido.numero_orden}",
                     "quantity": 1,
                     "currency_id": "COP",
                     "unit_price": monto_total,
                 }
             ],
             "back_urls": {
-                "success": request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/"),
-                "failure": request.build_absolute_uri(f"/pago-fallido/{pedido.token_publico}/"),
+                "success": url_success,
+                "failure": url_failure,
             },
             "auto_return": "approved",
             "external_reference": pedido.numero_orden,
         }
 
-        # 🛡️ Escudo de red local (para que no rompa en localhost)
+        # 🛡️ Solo inyectamos la url de notificación si no estamos en entorno de desarrollo local
         if "localhost" not in url_webhook and "127.0.0.1" not in url_webhook:
-            preference_data["notification_url"] = url_webhook.replace("http://", "https://")
+            preference_data["notification_url"] = url_webhook
 
+        # Crear la preferencia en la API de Mercado Pago
         preference_response = sdk.preference().create(preference_data)
         preference = preference_response["response"]
         
-        # Redirigir al checkout de Mercado Pago (puedes usar init_point o sandbox_init_point)
+        # Redirección directa al checkout oficial de Mercado Pago
         return redirect(preference.get("init_point"))
 
     except Exception as e:
-        print(f"💥 Error crítico en pagar_mercadopago: {str(e)}")
-        return HttpResponse("Error interno al procesar el pago con Mercado Pago.", status=500)
-
+        print(f"💥 Error crítico en pagar_con_mercadopago: {str(e)}")
+        return HttpResponse("Error interno al inicializar la pasarela de pago.", status=500)
 
 @csrf_exempt
 def webhook_mercadopago(request, profile_uuid):
