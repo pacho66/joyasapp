@@ -2011,12 +2011,14 @@ def pagar_con_mercadopago(request, token):
             preference_data["notification_url"] = url_webhook
 
         preference_response = sdk.preference().create(preference_data)
-        # 🚨 LOG DE CONTROL: Imprimimos la respuesta completa en Render para ver qué dice Mercado Pago
+        
+        # 2. 🚨 LOG DE CONTROL: Imprimimos la respuesta completa en Render para ver qué dice Mercado Pago
         print("====== RESPUESTA COMPLETA DE MERCADO PAGO ======")
         print(preference_response)
         print("================================================")
-        
-        preference = preference_response.get("response")
+
+        # 3. Extraemos la respuesta usando .get() de forma segura para evitar caídas
+        preference = preference_response.get("response") if preference_response else None
         
         if not preference or not preference.get("init_point"):
             # Si Mercado Pago no nos da un link, le mostramos el error real devuelto por ellos
