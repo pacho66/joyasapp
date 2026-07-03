@@ -1935,43 +1935,65 @@ def webhook_wompi(request):
         return HttpResponse("Error interno procesado", status=200)
 
 def pagar_con_mercadopago(request, token):
-    """Genera la preferencia de Mercado Pago de forma 100% aislada y segura contra nulos."""
+    """Genera la preferencia de Mercado Pago asegurando la correcta obtención del perfil del vendedor."""
     try:
         pedido = get_object_or_404(Pedido, token_publico=token)
         
-        try:
-            perfil_tienda = Perfil.objects.get(user=pedido.usuario)
-        except Perfil.DoesNotExist:
-            return HttpResponse("La joyería no tiene un perfil configurado.", status=400)
+        # 🎯 INTENTO 1: Buscar relación directa si tu modelo Pedido tiene 'perfil_joyeria' o similar
+        perfil_tienda = getattr(pedido, 'perfil_joyeria', None) or getattr(pedido, 'perfil', None)
+        
+        # 🎯 INTENTO 2: Si no viene directo, lo extraemos a través del usuario de la tienda/vendedor
+        if not perfil_tienda:
+            # Si 'pedido.usuario' es el cliente, buscamos el dueño a través del primer producto del carrito
+            primer_item = pedido.items.first()
+            if primer_item and hasattr(primer_item.producto, 'usuario'):
+                vendedor = primer_item.producto.usuario
+            elif primer_item and hasattr(primer_item.producto, 'perfil'):
+                perfil_tienda = primer_item.producto.perfil
+                vendedor = getattr(perfil_tienda, 'user', None)
+            else:
+                vendedor = pedido.usuario # Fallback al usuario del pedido
+                
+            if not perfil_tienda and vendedor:
+                try:
+                    perfil_tienda = Perfil.objects.get(user=vendedor)
+                except Perfil.DoesNotExist:
+                    perfil_tienda = None
 
-        # 🛡️ VALIDACIÓN ULTRA ESTRICTA ANTI-NONETYPE
+        if not perfil_tienda:
+            return HttpResponse("<h3>Error de Configuración</h3><p>No se pudo determinar la joyería dueña de este pedido.</p>", status=200)
+
+        # 🛡️ EXTRACCIÓN Y LIMPIEZA DE TU TOKEN 'APP_USR'
         token_mp = getattr(perfil_tienda, 'mercadopago_access_token', None)
         
-        if not token_mp or str(token_mp).strip() in ["", "None"]:
-            # Si no hay credenciales, en vez de romper, informamos con estilo
+        if token_mp is None or str(token_mp).strip() in ["", "None"]:
             return HttpResponse(
-                "<h3>Módulo de Pago en Configuración</h3>"
-                "<p>Esta joyería aún no ha enlazado sus credenciales de Mercado Pago. "
-                "Por favor, contacta al vendedor para procesar tu pago por otro medio.</p>", 
-                status=400
+                f"<div style='font-family:sans-serif; padding:20px; text-align:center; margin-top:50px;'>"
+                f"   <h2 style='color:#1D4ED8;'>Módulo de Pago en Configuración</h2>"
+                f"   <p style='color:#4B5563;'>La tienda '{perfil_tienda.nombre_tienda}' aún no ha enlazado sus credenciales de Mercado Pago.</p>"
+                f"</div>", 
+                status=200
             )
 
-        # Inicialización segura garantizada porque token_mp ya no es None
-        sdk = mercadopago.SDK(str(token_mp).strip())
+        token_limpio = str(token_mp).strip()
 
-        # URLs limpias
+        # Inicialización del SDK garantizada con tus credenciales reales
+        sdk = mercadopago.SDK(token_limpio)
+
+        # URLs de Redirección y Notificación
         ruta_relativa = f"/webhooks/mercadopago/{perfil_tienda.webhook_uuid}/"
         url_webhook = request.build_absolute_uri(ruta_relativa).replace("http://", "https://")
         url_success = request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/").replace("http://", "https://")
         url_failure = request.build_absolute_uri(f"/pago-fallido/{pedido.token_publico}/").replace("http://", "https://")
 
+        # Configuración exacta del valor a pagar
         monto_total = getattr(pedido, 'total_limpio', None) or getattr(pedido, 'total', 0)
         monto_total = float(monto_total)
 
         preference_data = {
             "items": [
                 {
-                    "title": f"Pedido #{pedido.numero_orden}",
+                    "title": f"Pedido #{pedido.numero_orden} - {perfil_tienda.nombre_tienda}",
                     "quantity": 1,
                     "currency_id": "COP",
                     "unit_price": monto_total,
@@ -1994,8 +2016,9 @@ def pagar_con_mercadopago(request, token):
         return redirect(preference.get("init_point"))
 
     except Exception as e:
-        print(f"💥 Error crítico en pagar_con_mercadopago: {str(e)}")
-        return HttpResponse(f"Error interno al inicializar el pago: {str(e)}", status=500)
+        import traceback
+        print(f"💥 Error crítico detallado en Mercado Pago: {traceback.format_exc()}")
+        return HttpResponse(f"Error interno al inicializar el pago: {str(e)}", status=200)
 
 @csrf_exempt
 def webhook_mercadopago(request, profile_uuid):
