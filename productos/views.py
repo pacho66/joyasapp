@@ -1944,7 +1944,6 @@ def pagar_con_mercadopago(request, token):
         
         # 🎯 INTENTO 2: Si no viene directo, lo extraemos a través del usuario de la tienda/vendedor
         if not perfil_tienda:
-            # Si 'pedido.usuario' es el cliente, buscamos el dueño a través del primer producto del carrito
             primer_item = pedido.items.first()
             if primer_item and hasattr(primer_item.producto, 'usuario'):
                 vendedor = primer_item.producto.usuario
@@ -1952,7 +1951,7 @@ def pagar_con_mercadopago(request, token):
                 perfil_tienda = primer_item.producto.perfil
                 vendedor = getattr(perfil_tienda, 'user', None)
             else:
-                vendedor = pedido.usuario # Fallback al usuario del pedido
+                vendedor = pedido.usuario 
                 
             if not perfil_tienda and vendedor:
                 try:
@@ -1977,7 +1976,7 @@ def pagar_con_mercadopago(request, token):
 
         token_limpio = str(token_mp).strip()
 
-        # Inicialización del SDK garantizada con tus credenciales reales
+        # Inicialización del SDK con credenciales reales
         sdk = mercadopago.SDK(token_limpio)
 
         # URLs de Redirección y Notificación
@@ -2036,6 +2035,12 @@ def pagar_con_mercadopago(request, token):
         
         # 5. Redirección segura si todo sale bien
         return redirect(preference.get("init_point"))
+
+    except Exception as e:
+        import traceback
+        print(f"💥 Error crítico detallado en Mercado Pago: {traceback.format_exc()}")
+        return HttpResponse(f"Error interno al inicializar el pago: {str(e)}", status=200)
+
         
 @csrf_exempt
 def webhook_mercadopago(request, profile_uuid):
