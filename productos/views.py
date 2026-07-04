@@ -227,8 +227,9 @@ def iniciar_sesion(request):
                 request,
                 'Usuario o contraseña incorrectos'
             )
+    perfil = Perfil.objects.first()        
 
-    return render(request, 'login.html')
+    return render(request, 'login.html', {'perfil': perfil})
 
 @login_required
 def cerrar_sesion(request):
