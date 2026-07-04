@@ -884,6 +884,8 @@ def modificar_banner(request):
         
         # 🚀 Guardamos el título corto del banner
         perfil.banner_titulo = request.POST.get('titulo')
+
+        perfil.estilo_color = request.POST.get('estilo_color')
         
         # 🚀 Capturamos el archivo de imagen si seleccionaste uno nuevo
         if request.FILES.get('banner_imagen'):
