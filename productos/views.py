@@ -790,19 +790,24 @@ def dashboard(request):
     ).aggregate(total=Sum('total'))['total'] or 0
 
     # ==========================
-    # 💰 FINANZAS AVANZADAS
+    # 💰 FINANZAS AVANZADAS (BLINDADO ANTI-ERROR 500)
     # ==========================
-    total_ingresos = total_general
+    total_ingresos = total_general or 0
     
     total_costos_material = pedidos.aggregate(total=Sum('costo_material'))['total'] or 0
     total_costo_mano_obra = pedidos.aggregate(total=Sum('costo_mano_obra'))['total'] or 0
-    total_costos = total_costos_material + total_costo_mano_obra
+    total_costos = float(total_costos_material or 0) + float(total_costo_mano_obra or 0)
     
-    total_gastos = Gasto.objects.filter(usuario=usuario).aggregate(total=Sum('monto'))['total'] or 0
+    # Intentamos traer los gastos; si la tabla sigue rota, evitamos el Error 500 asignando 0
+    try:
+        total_gastos = Gasto.objects.filter(usuario=usuario).aggregate(total=Sum('monto'))['total'] or 0
+        total_gastos = float(total_gastos)
+    except Exception:
+        total_gastos = 0.0
 
-    utilidad = total_ingresos - total_costos - total_gastos
-    margen = (utilidad / total_ingresos * 100) if total_ingresos > 0 else 0
-
+    utilidad = float(total_ingresos) - total_costos - total_gastos
+    margen = (utilidad / float(total_ingresos) * 100) if total_ingresos > 0 else 0
+    
     # ==========================
     # PEDIDOS E INVENTARIO
     # ==========================
