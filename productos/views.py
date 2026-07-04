@@ -742,8 +742,8 @@ def dashboard(request):
     clientes_morosos = Cliente.objects.filter(
         usuario=usuario,
         pedidos__tipo_pago='credito',
-        pedidos_saldo_pendiente_gt=0,
-        pedidos_fecha_limite_lt=hoy
+        pedidos__saldo_pendiente__gt=0,
+        pedidos__fecha_limite__lt=hoy
     ).distinct()
 
     morosos_count = clientes_morosos.count()
@@ -765,8 +765,8 @@ def dashboard(request):
     elif tipo == 'morosos':
         clientes_filtrados = clientes.filter(
             pedidos__tipo_pago='credito',
-            pedidos_saldo_pendiente_gt=0,
-            pedidos_fecha_limite_lt=hoy
+            pedidos__saldo_pendiente__gt=0,
+            pedidos__fecha_limite__lt=hoy
         ).distinct()
 
     mensajes = {
@@ -824,7 +824,7 @@ def dashboard(request):
 
     total_productos = productos.count()
     productos_sin_stock = productos.filter(stock=0).count()
-    productos_bajo_stock = productos.filter(stock_gt=0, stock_lte=5).count()
+    productos_bajo_stock = productos.filter(stock__gt=0, stock__lte=5).count()
 
     ticket_promedio = total_general / total_pedidos if total_pedidos > 0 else 0
     crecimiento = total_hoy - total_ayer
