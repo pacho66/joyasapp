@@ -876,12 +876,25 @@ def modificar_banner(request):
     perfil = request.user.perfil
 
     if request.method == 'POST':
-        texto = request.POST.get('banner_texto')
-        perfil.banner_texto = texto
+        # 🚀 Guardamos el texto largo del banner
+        perfil.banner_texto = request.POST.get('banner_texto')
+        
+        # 🚀 Guardamos el nombre dinámico de la tienda (Para quitar el PG Joyas fijo)
+        perfil.nombre_tienda = request.POST.get('nombre_tienda')
+        
+        # 🚀 Guardamos el título corto del banner
+        perfil.banner_titulo = request.POST.get('titulo')
+        
+        # 🚀 Capturamos el archivo de imagen si seleccionaste uno nuevo
+        if request.FILES.get('banner_imagen'):
+            perfil.banner = request.FILES.get('banner_imagen')
+            
         perfil.save()
-        return redirect('dashboard')
+        
+        # Te redirigimos a la misma página para que veas los cambios de una vez
+        return redirect('modificar_banner')
 
-    return render(request, 'modificar_banner.html', {'perfil': perfil})
+    return render(request, 'productos/modificar_banner.html', {'perfil': perfil})
 
 @login_required
 def estadisticas(request):
