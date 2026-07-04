@@ -894,7 +894,7 @@ def modificar_banner(request):
         # Te redirigimos a la misma página para que veas los cambios de una vez
         return redirect('modificar_banner')
 
-    return render(request, 'productos/modificar_banner.html', {'perfil': perfil})
+    return render(request, 'modificar_banner.html', {'perfil': perfil})
 
 @login_required
 def estadisticas(request):
