@@ -308,6 +308,7 @@ nav ul li a:hover {
     </div>
     {% endif %}
 
+    <!-- 🎨 AQUÍ SE PINTAN LOS COLORES Y EL ESPACIADO PARA QUE NO QUEDE APILADO -->
     <div class="banner-container position-relative w-100 py-5 px-3 d-flex flex-column align-items-center justify-content-center text-center" 
          style="min-height: 220px; gap: 12px; overflow: hidden;
          {% if perfil.estilo_color == 'dorado' %} background: linear-gradient(to right, #f59e0b, #d97706);
@@ -317,21 +318,21 @@ nav ul li a:hover {
          {% elif perfil.estilo_color == 'rojo' %} background: linear-gradient(to right, #e11d48, #be123c);
          {% else %} background: #e67e22; {% endif %}">
         
+        <!-- Si hay imagen de fondo, la renderiza por detrás con una ligera opacidad para que se lean los textos -->
         {% if perfil.banner %}
             <img src="{{ perfil.banner.url }}" class="banner-img position-absolute top-0 start-0 w-100 h-100" alt="Banner Principal" style="object-fit: cover; z-index: 1; opacity: 0.4;">
         {% else %}
             <img src="{% static 'img/banner.jpg' %}" class="banner-img position-absolute top-0 start-0 w-100 h-100" alt="Banner Default" style="object-fit: cover; z-index: 1; opacity: 0.25;">
         {% endif %}
 
-        <!-- Tu contenedor original con z-index alto para quedar arriba -->
-        <div class="banner-text position-relative text-white" style="z-index: 2;">
-            <h2>{{ perfil.banner_titulo|default:"PG Joyas" }}</h2>
-            {% if perfil.banner_texto %}
-                <p>{{ perfil.banner_texto }}</p>
-            {% endif %}
+        <!-- Contenedor frontal para textos y botón -->
+        <div class="position-relative text-white" style="z-index: 2;">
+            <h2 class="fw-bold mb-1 text-uppercase" style="letter-spacing: 1px; font-size: 1.6rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">
+                {{ perfil.banner_titulo|default:"PG Joyas" }}
+            </h2>
             
-            <!-- Botón estático, seguro y funcional sin depender de variables extras -->
-            <a href="/catalogo/" class="btn btn-light fw-bold rounded-pill px-4 py-2 mt-2 shadow-sm" style="color: #111; font-size: 0.85rem; display: inline-block;">
+            <!-- Botón estático directo al catálogo público -->
+            <a href="/catalogo/" class="btn btn-light fw-bold rounded-pill px-4 py-2 mt-2 shadow-sm" style="color: #111; font-size: 0.85rem; display: inline-block; text-decoration: none;">
                 Comprar ahora
             </a>
         </div>
