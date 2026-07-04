@@ -1,26 +1,155 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<div class="container mt-4" style="max-width:600px;">
+<div class="container my-4" style="max-width: 1100px;">
+    <div class="row g-4">
+        
+        <!-- COLUMNA IZQUIERDA: FORMULARIO DE CONFIGURACIÓN -->
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm border-0 p-4" style="border-radius: 20px; background-color: #ffffff;">
+                <div class="mb-4">
+                    <span class="badge bg-dark text-uppercase px-3 py-2 rounded-pill small" style="letter-spacing: 1px;">Marketing Visual</span>
+                    <h2 class="fw-black text-dark mt-2 mb-1">📣 Centro de Promociones</h2>
+                    <p class="text-muted small">Configura la vitrina principal de tu joyería para el celular.</p>
+                </div>
 
-    <h2>🖼️ Modificar Banner</h2>
-    <p class="text-muted">Personaliza el mensaje que verán tus clientes</p>
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <!-- Título e Ícono -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <label class="form-label small fw-bold text-uppercase text-secondary">Ícono</label>
+                            <select id="input_icono" name="icono" class="form-select p-2" style="border-radius: 10px; font-size: 0.9rem;">
+                                <option value="💎" {% if perfil.banner_icono == "💎" %}selected{% endif %}>💎 Diamante</option>
+                                <option value="✨" {% if perfil.banner_icono == "✨" %}selected{% endif %}>✨ Destello</option>
+                                <option value="🎁" {% if perfil.banner_icono == "🎁" %}selected{% endif %}>🎁 Regalo</option>
+                                <option value="🔥" {% if perfil.banner_icono == "🔥" %}selected{% endif %}>🔥 Tendencia</option>
+                                <option value="⭐" {% if perfil.banner_icono == "⭐" %}selected{% endif %}>⭐ Estrella</option>
+                                <option value="🚚" {% if perfil.banner_icono == "🚚" %}selected{% endif %}>🚚 Envío</option>
+                            </select>
+                        </div>
+                        <div class="col-8">
+                            <label class="form-label small fw-bold text-uppercase text-secondary">Título del Banner</label>
+                            <input type="text" id="input_titulo" name="titulo" value="{{ perfil.banner_titulo|default:'¡Nueva Colección!' }}" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Ej: Nueva Colección Oro 18K">
+                        </div>
+                    </div>
 
-    <form method="POST">
-        {% csrf_token %}
+                    <!-- Mensaje Promocional -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Mensaje Corto</label>
+                        <textarea id="input_mensaje" name="banner_texto" rows="2" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Describe la oferta...">{{ perfil.banner_texto|trim }}</textarea>
+                    </div>
 
-        <div class="mb-3">
-            <label>Texto del banner</label>
-            <textarea name="banner_texto" class="form-control" rows="3">
-{{ perfil.banner_texto }}
-            </textarea>
+                    <!-- Estilo de Color (Manejado con gradientes CSS nativos) -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Estilo Visual</label>
+                        <select id="input_color" name="estilo_color" class="form-select p-2" style="border-radius: 10px; font-size: 0.9rem;">
+                            <option value="linear-gradient(to right, #f59e0b, #d97706); color: white;">🟡 Dorado Premium</option>
+                            <option value="linear-gradient(to right, #1e293b, #0f172a); color: white;">⚫ Negro Elegante</option>
+                            <option value="linear-gradient(to right, #2563eb, #1d4ed8); color: white;">🔵 Azul Corporativo</option>
+                            <option value="linear-gradient(to right, #059669, #047857); color: white;">🟢 Verde Financiero</option>
+                            <option value="linear-gradient(to right, #e11d48, #be123c); color: white;">🔴 Rojo Oferta</option>
+                        </select>
+                    </div>
+
+                    <!-- Programación Automática -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-uppercase text-secondary">Fecha Inicio</label>
+                            <input type="date" name="fecha_inicio" value="{{ perfil.fecha_inicio|date:'Y-m-d' }}" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-uppercase text-secondary">Fecha Fin</label>
+                            <input type="date" name="fecha_fin" value="{{ perfil.fecha_fin|date:'Y-m-d' }}" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;">
+                        </div>
+                    </div>
+
+                    <!-- Botón de Acción (CTA) -->
+                    <div class="p-3 bg-light rounded-3 border mb-4">
+                        <div class="form-check mb-2">
+                            <input type="checkbox" id="input_mostrar_boton" name="mostrar_boton" class="form-check-input" {% if perfil.mostrar_boton %}checked{% endif %}>
+                            <label class="form-check-label small fw-bold text-uppercase text-secondary" for="input_mostrar_boton">
+                                Incluir Botón de Acción
+                            </label>
+                        </div>
+                        <div id="wrapper_boton" class="row g-2 d-none">
+                            <div class="col-6">
+                                <input type="text" id="input_boton_texto" name="boton_texto" value="{{ perfil.boton_texto|default:'Comprar ahora' }}" class="form-control p-2" style="border-radius: 8px; font-size: 0.85rem;" placeholder="Texto botón">
+                            </div>
+                            <div class="col-6">
+                                <input type="text" id="input_boton_enlace" name="boton_enlace" value="{{ perfil.boton_enlace|default:'/catalogo/' }}" class="form-control p-2" style="border-radius: 8px; font-size: 0.85rem;" placeholder="Enlace (/categoria/oro)">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark w-100 py-2.5 fw-bold" style="border-radius: 12px; font-size: 1rem;">
+                        🚀 Publicar Campaña
+                    </button>
+                </form>
+            </div>
         </div>
 
-        <button type="submit" class="btn btn-dark w-100">
-            Guardar cambios
-        </button>
-    </form>
+        <!-- COLUMNA DERECHA: VISTA PREVIA EN TIEMPO REAL -->
+        <div class="col-12 col-lg-6">
+            <div class="p-4 border border-2 border-dashed rounded-4 text-center bg-light h-100 d-flex flex-column justify-content-center" style="border-radius: 20px; min-height: 250px;">
+                <span class="text-uppercase small text-muted d-block mb-3 font-monospace" style="letter-spacing: 1px;">👁️ Vista Previa en Vivo (Mobile)</span>
+                
+                <!-- Tarjeta del Banner Dinámico -->
+                <div id="preview_banner" class="p-4 shadow-sm text-center d-flex flex-column align-items-center justify-content-center mx-auto w-100" style="max-width: 450px; border-radius: 15px; transition: all 0.3s ease;">
+                    <div class="d-flex align-items-center justify-content-center mb-1">
+                        <span id="preview_icono" class="fs-4 me-2">💎</span>
+                        <h3 id="preview_titulo" class="h5 fw-bold mb-0 text-white">¡Nueva Colección!</h3>
+                    </div>
+                    <p id="preview_mensaje" class="small mb-2 text-white-50">Escribe en los campos para ver cómo queda.</p>
+                    
+                    <a id="preview_boton" href="#" class="btn btn-light btn-sm fw-bold rounded-pill px-3 py-1 shadow-sm d-none" style="font-size: 0.75rem; color: #111;">
+                        Comprar ahora
+                    </a>
+                </div>
+            </div>
+        </div>
 
+    </div>
 </div>
+
+<!-- JAVASCRIPT SEGURO PARA EL RENDER EN VIVO -->
+<script>
+    function actualizarPreview() {
+        // Actualizar textos
+        document.getElementById('preview_titulo').innerText = document.getElementById('input_titulo').value || '¡Nueva Colección!';
+        document.getElementById('preview_mensaje').innerText = document.getElementById('input_mensaje').value || 'Completa los campos...';
+        document.getElementById('preview_icono').innerText = document.getElementById('input_icono').value;
+        
+        // Aplicar estilos de fondo dinámicos directos
+        const banner = document.getElementById('preview_banner');
+        banner.style.background = document.getElementById('input_color').value.split(';')[0];
+        
+        // Controlar visibilidad del botón de acción
+        const mostrarBoton = document.getElementById('input_mostrar_boton').checked;
+        const wrapperBoton = document.getElementById('wrapper_boton');
+        const btnPreview = document.getElementById('preview_boton');
+        
+        if (mostrarBoton) {
+            wrapperBoton.classList.remove('d-none');
+            btnPreview.classList.remove('d-none');
+            btnPreview.innerText = document.getElementById('input_boton_texto').value || 'Comprar ahora';
+        } else {
+            wrapperBoton.classList.add('d-none');
+            btnPreview.classList.add('d-none');
+        }
+    }
+
+    // Escuchas de eventos
+    document.getElementById('input_titulo').addEventListener('input', actualizarPreview);
+    document.getElementById('input_mensaje').addEventListener('input', actualizarPreview);
+    document.getElementById('input_icono').addEventListener('change', actualizarPreview);
+    document.getElementById('input_color').addEventListener('change', actualizarPreview);
+    document.getElementById('input_mostrar_boton').addEventListener('change', actualizarPreview);
+    document.getElementById('input_boton_texto').addEventListener('input', actualizarPreview);
+    
+    // Lanzar al cargar la página
+    document.addEventListener("DOMContentLoaded", actualizarPreview);
+</script>
 
 {% endblock %}

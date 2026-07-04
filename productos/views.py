@@ -672,18 +672,33 @@ def editar_producto(request, id):
         }
     )
 
+# 🏢 FUNCIÓN AUXILIAR PROTEGIDA (Inyección automática)
+def _asegurar_gastos_basicos(usuario):
+    """Verifica si el usuario no tiene gastos e inyecta la base inicial."""
+    if not Gasto.objects.filter(usuario=usuario).exists():
+        Gasto.objects.bulk_create([
+            # NOTA: Si no has agregado el campo 'categoria' en tu modelo Gasto, 
+            # retira el parámetro categoria="..." de aquí abajo para evitar un Error 500.
+            Gasto(usuario=usuario, nombre="Arriendo Taller/Oficina", monto=600000, categoria="fijo"),
+            Gasto(usuario=usuario, nombre="Servicios Públicos (Luz/Internet)", monto=150000, categoria="fijo"),
+            Gasto(usuario=usuario, nombre="Mantenimiento de Herramientas y Pulido", monto=80000, categoria="operativo"),
+        ])
+
 @login_required(login_url='/login/')
 def dashboard(request):
     usuario = request.user
 
-    # ✅ Crear u obtener perfil automáticamente
+    # ✅ CAMBIO DE NOMBRE: Crear u obtener perfil automáticamente con la nueva marca
     perfil, creado = Perfil.objects.get_or_create(
         user=usuario,
         defaults={
-            'nombre_tienda': 'PG Joyas González',
+            'nombre_tienda': 'JoyasApp', # ← Nombre oficial de tu SaaS actualizado
             'plan': 'gratis'
         }
     )
+
+    # 🛡️ Protección de Gastos Activa
+    _asegurar_gastos_basicos(usuario)
 
     # 🔒 Validar plan
     if perfil.plan_vence and perfil.plan_vence < timezone.localdate():
@@ -711,7 +726,6 @@ def dashboard(request):
         .order_by('fecha_dia')
     )
 
-    # preparar datos para JS
     fechas = [v['fecha_dia'].strftime('%d/%m') for v in ventas_por_dia]
     totales = [float(v['total']) for v in ventas_por_dia]
 
@@ -723,13 +737,13 @@ def dashboard(request):
     productos = Producto.objects.filter(usuario=usuario)
 
     # ==========================
-    # 🔴 CARTERA Y MOROSOS (SaaS Fijo) - 🛠️ CORREGIDO DOBLE __
+    # 🔴 CARTERA Y MOROSOS
     # ==========================
     clientes_morosos = Cliente.objects.filter(
         usuario=usuario,
         pedidos__tipo_pago='credito',
-        pedidos__saldo_pendiente__gt=0,
-        pedidos__fecha_limite__lt=hoy
+        pedidos_saldo_pendiente_gt=0,
+        pedidos_fecha_limite_lt=hoy
     ).distinct()
 
     morosos_count = clientes_morosos.count()
@@ -738,7 +752,7 @@ def dashboard(request):
     )['total'] or 0
 
     # ==========================
-    # FILTROS CLIENTES - 🛠️ CORREGIDO DOBLE __
+    # FILTROS CLIENTES
     # ==========================
     clientes_filtrados = clientes
 
@@ -751,8 +765,8 @@ def dashboard(request):
     elif tipo == 'morosos':
         clientes_filtrados = clientes.filter(
             pedidos__tipo_pago='credito',
-            pedidos__saldo_pendiente__gt=0,
-            pedidos__fecha_limite__lt=hoy
+            pedidos_saldo_pendiente_gt=0,
+            pedidos_fecha_limite_lt=hoy
         ).distinct()
 
     mensajes = {
@@ -790,7 +804,7 @@ def dashboard(request):
     margen = (utilidad / total_ingresos * 100) if total_ingresos > 0 else 0
 
     # ==========================
-    # PEDIDOS E INVENTARIO - 🛠️ CORREGIDO DOBLE __
+    # PEDIDOS E INVENTARIO
     # ==========================
     pedidos_hoy = pedidos.filter(fecha__date=hoy).count()
     total_pedidos = pedidos.count()
@@ -805,7 +819,7 @@ def dashboard(request):
 
     total_productos = productos.count()
     productos_sin_stock = productos.filter(stock=0).count()
-    productos_bajo_stock = productos.filter(stock__gt=0, stock__lte=5).count() # Corregido stock_gt
+    productos_bajo_stock = productos.filter(stock_gt=0, stock_lte=5).count()
 
     ticket_promedio = total_general / total_pedidos if total_pedidos > 0 else 0
     crecimiento = total_hoy - total_ayer
@@ -826,7 +840,6 @@ def dashboard(request):
         'fechas': fechas,
         'totales': totales,
         
-        # Sincronización Financiera
         'total_ingresos': total_ingresos,
         'total_costos': total_costos,
         'total_gastos': total_gastos,
@@ -852,7 +865,6 @@ def dashboard(request):
     }
 
     return render(request, 'dashboard.html', context)
-
 
 @login_required
 def modificar_banner(request):
@@ -2303,11 +2315,11 @@ def lista_gastos(request):
 
 @login_required
 def gastos(request):
-    from django.db.models import Sum
-    from .models import Gasto
-    from .forms import GastoForm # Cambia este import si tu formulario se llama distinto
+    # 🛡️ Protección 2: Inyecta si entra directo a la URL de gastos
+    _asegurar_gastos_basicos(request.user)
     
-    gastos = Gasto.objects.filter(usuario=request.user).order_by('-fecha')
+    # Tu lógica actual optimizada:
+    gastos_list = Gasto.objects.filter(usuario=request.user).order_by('-fecha')
     form = GastoForm(request.POST or None)
     
     if request.method == 'POST':
@@ -2317,11 +2329,11 @@ def gastos(request):
             gasto.save()
             return redirect('gastos')
             
-    total_gastos = gastos.aggregate(total=Sum('monto'))['total'] or 0
+    total_gastos = gastos_list.aggregate(total=Sum('monto'))['total'] or 0
     
     context = {
         'form': form,
-        'gastos': gastos,
+        'gastos': gastos_list,
         'total_gastos': total_gastos
     }
     return render(request, 'gastos.html', context)
