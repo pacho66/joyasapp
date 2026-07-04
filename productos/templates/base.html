@@ -302,15 +302,14 @@ nav ul li a:hover {
 </nav>
 
 {% if request.resolver_match.url_name == 'modificar_banner' or request.resolver_match.url_name == 'inicio' %}
-    
     {% if perfil.banner_texto %}
-        <div class="banner-top text-center py-2 fw-bold bg-warning text-dark" style="font-size: 0.85rem; z-index: 10; position: relative;">
-            {{ perfil.banner_texto }}
-        </div>
+    <div class="banner-top text-center py-2 fw-bold" style="background-color: #f59e0b; color: #000; font-size: 0.85rem;">
+        {{ perfil.banner_texto }}
+    </div>
     {% endif %}
 
-    <div class="banner-container position-relative w-100 py-5 px-3 d-flex flex-column align-items-center justify-content-center text-center text-white" 
-         style="min-height: 240px; gap: 15px; overflow: hidden;
+    <div class="banner-container position-relative w-100 py-5 px-3 d-flex flex-column align-items-center justify-content-center text-center" 
+         style="min-height: 220px; gap: 12px; overflow: hidden;
          {% if perfil.estilo_color == 'dorado' %} background: linear-gradient(to right, #f59e0b, #d97706);
          {% elif perfil.estilo_color == 'negro' %} background: linear-gradient(to right, #1e293b, #0f172a);
          {% elif perfil.estilo_color == 'azul' %} background: linear-gradient(to right, #2563eb, #1d4ed8);
@@ -319,30 +318,22 @@ nav ul li a:hover {
          {% else %} background: #e67e22; {% endif %}">
         
         {% if perfil.banner %}
-            <img src="{{ perfil.banner.url }}" class="position-absolute top-0 start-0 w-100 h-100" alt="Banner Principal" style="object-fit: cover; z-index: 1; opacity: 0.35;">
+            <img src="{{ perfil.banner.url }}" class="banner-img position-absolute top-0 start-0 w-100 h-100" alt="Banner Principal" style="object-fit: cover; z-index: 1; opacity: 0.4;">
         {% else %}
-            <img src="{% static 'img/banner.jpg' %}" class="position-absolute top-0 start-0 w-100 h-100" alt="Banner Default" style="object-fit: cover; z-index: 1; opacity: 0.2;">
+            <img src="{% static 'img/banner.jpg' %}" class="banner-img position-absolute top-0 start-0 w-100 h-100" alt="Banner Default" style="object-fit: cover; z-index: 1; opacity: 0.25;">
         {% endif %}
 
-        <div class="position-relative w-100" style="z-index: 2; max-width: 550px;">
-            <div class="d-flex align-items-center justify-content-center mb-2">
-                <span class="fs-2 me-2">{{ perfil.banner_icono|default:"💎" }}</span>
-                <h2 class="fw-bold mb-0 text-uppercase" style="letter-spacing: 1px; font-size: 1.75rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
-                    {{ perfil.banner_titulo|default:"¡Nueva Colección!" }}
-                </h2>
-            </div>
-            
+        <!-- Tu contenedor original con z-index alto para quedar arriba -->
+        <div class="banner-text position-relative text-white" style="z-index: 2;">
+            <h2>{{ perfil.banner_titulo|default:"PG Joyas" }}</h2>
             {% if perfil.banner_texto %}
-                <p class="mb-3 fw-medium" style="font-size: 1.05rem; line-height: 1.4; text-shadow: 1px 1px 3px rgba(0,0,0,0.7); opacity: 0.95;">
-                    {{ perfil.banner_texto }}
-                </p>
+                <p>{{ perfil.banner_texto }}</p>
             {% endif %}
-
-            {% if perfil.mostrar_boton %}
-                <a href="{{ perfil.boton_enlace|default:'/catalogo/' }}" class="btn btn-light fw-bold rounded-pill px-4 py-2 mt-2 shadow-sm" style="color: #111; font-size: 0.9rem;">
-                    {{ perfil.boton_texto|default:"Comprar ahora" }}
-                </a>
-            {% endif %}
+            
+            <!-- Botón estático, seguro y funcional sin depender de variables extras -->
+            <a href="/catalogo/" class="btn btn-light fw-bold rounded-pill px-4 py-2 mt-2 shadow-sm" style="color: #111; font-size: 0.85rem; display: inline-block;">
+                Comprar ahora
+            </a>
         </div>
     </div>
 {% endif %}
