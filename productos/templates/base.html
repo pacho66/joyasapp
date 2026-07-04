@@ -301,7 +301,7 @@ nav ul li a:hover {
     </form>
 </nav>
 
-{% if request.resolver_match.url_name == 'inicio' %}
+{% if request.resolver_match.url_name == 'modificar_banner' or request.resolver_match.url_name == 'inicio' %}
     {% if perfil.banner_texto %}
     <div class="banner-top">
         {{ perfil.banner_texto }}
