@@ -879,7 +879,10 @@ def dashboard(request):
 
 @login_required
 def modificar_banner(request):
-    perfil = request.user.perfil
+    perfil = Perfil.objects.first() 
+
+    if not perfil:
+        perfil = Perfil.objects.create(nombre_tienda="Mi Joyería")
 
     if request.method == 'POST':
         # 🚀 Guardamos el texto largo del banner

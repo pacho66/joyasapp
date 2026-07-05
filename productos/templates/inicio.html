@@ -54,30 +54,61 @@
     box-shadow: 0 5px 15px rgba(37, 211, 102, 0.4);
 }
 
-/* --- Redes Sociales --- */
+/* --- Redes Sociales Modernas con Logos (¡INTEGRADO!) --- */
 .redes {
     display: flex;
     justify-content: center;
-    gap: 12px;
-    margin-bottom: 30px;
+    gap: 14px;
+    margin-bottom: 35px;
+    flex-wrap: wrap;
 }
 
-.redes a {
+.btn-red {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 22px;
+    border-radius: 50px; /* Estilo píldora elegante */
     text-decoration: none;
-    background: #f8f9fa;
-    padding: 10px 18px;
-    border-radius: 30px;
-    color: #333;
-    font-weight: 500;
+    font-weight: 600;
     font-size: 14px;
-    border: 1px solid #eaeaea;
+    color: #ffffff !important;
     transition: var(--transicion);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border: none;
 }
 
-.redes a:hover {
-    background: var(--color-primario);
-    color: white;
-    border-color: var(--color-primario);
+.btn-red:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    color: #ffffff !important;
+}
+
+/* Colores Corporativos de Marca */
+.instagram {
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+}
+
+.facebook {
+    background-color: #1877F2;
+}
+
+.tiktok {
+    background-color: #000000;
+    border: 1px solid #25f4ee; /* El toque de destello cian de TikTok */
+}
+
+/* Adaptación responsive inteligente para celulares muy pequeños */
+@media (max-width: 576px) {
+    .btn-red {
+        padding: 12px;
+        border-radius: 50%; /* Se transforman en círculos perfectos */
+        width: 46px;
+        height: 46px;
+    }
+    .btn-red span {
+        display: none !important; /* Esconde el texto para que quepan holgadamente lado a lado */
+    }
 }
 
 /* --- Buscador Unificado (Evita colapsos y apilamientos) --- */
@@ -303,17 +334,27 @@ h2 {
 
 <!-- ==================== CONTENIDO HTML ==================== -->
 
-<div class="redes">
+<!-- --- Enlaces de Redes Sociales Estilizados --- -->
+<div class="redes-modernas d-flex justify-content-center gap-3 mb-4">
     {% if perfil.instagram %}
-    <a href="https://instagram.com/{{ perfil.instagram }}" target="_blank">Instagram</a>
+    <a href="https://instagram.com/{{ perfil.instagram }}" target="_blank" class="btn-red instagram" aria-label="Instagram">
+        <i class="bi bi-instagram fs-5"></i>
+        <span class="ms-2 d-none d-sm-inline">Instagram</span>
+    </a>
     {% endif %}
 
     {% if perfil.facebook %}
-    <a href="{{ perfil.facebook }}" target="_blank">Facebook</a>
+    <a href="{{ perfil.facebook }}" target="_blank" class="btn-red facebook" aria-label="Facebook">
+        <i class="bi bi-facebook fs-5"></i>
+        <span class="ms-2 d-none d-sm-inline">Facebook</span>
+    </a>
     {% endif %}
 
     {% if perfil.tiktok %}
-    <a href="https://tiktok.com/@{{ perfil.tiktok }}" target="_blank">TikTok</a>
+    <a href="https://tiktok.com/@{{ perfil.tiktok }}" target="_blank" class="btn-red tiktok" aria-label="TikTok">
+        <i class="bi bi-tiktok fs-5"></i>
+        <span class="ms-2 d-none d-sm-inline">TikTok</span>
+    </a>
     {% endif %}
 </div>
 
