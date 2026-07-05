@@ -918,8 +918,8 @@ def modificar_banner(request):
         if fecha_fin: perfil.fecha_fin = fecha_fin
         
         # 🚀 Capturamos el archivo de imagen si seleccionaste uno nuevo
-        if request.FILES.get('banner_imagen'):
-            perfil.banner = request.FILES.get('banner_imagen')
+        if 'banner_imagen' in request.FILES:
+            perfil.banner_imagen = request.FILES['banner_imagen']
             
         perfil.save()
         
