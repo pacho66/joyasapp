@@ -887,6 +887,10 @@ def modificar_banner(request):
         
         # 🚀 Guardamos el nombre dinámico de la tienda
         perfil.nombre_tienda = request.POST.get('nombre_tienda')
+
+        perfil.instagram = request.POST.get('instagram', '').strip()
+        perfil.facebook = request.POST.get('facebook', '').strip()
+        perfil.tiktok = request.POST.get('tiktok', '').strip()
         
         # 🚀 Guardamos el título corto del banner
         perfil.banner_titulo = request.POST.get('titulo')
