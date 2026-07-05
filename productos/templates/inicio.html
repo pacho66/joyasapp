@@ -357,6 +357,92 @@ h2 {
     {% endif %}
 </div>
 
+<!-- ==================== BANNER DE CAMPAÑA DINÁMICO ==================== -->
+<div class="banner-campana {{ perfil.estilo_color|default:'dorado' }}">
+    <div class="banner-content">
+        <!-- Ícono dinámico guardado desde el administrador -->
+        <span class="banner-icon">{{ perfil.banner_icono|default:'💎' }}</span>
+        
+        <!-- Título dinámico -->
+        <h3 class="banner-title">{{ perfil.banner_titulo|default:'¡Nueva Colección!' }}</h3>
+        
+        <!-- Mensaje Corto -->
+        {% if perfil.banner_texto %}
+            <p class="banner-text">{{ perfil.banner_texto }}</p>
+        {% endif %}
+        
+        <!-- Botón de Acción (CTA) Condicional -->
+        {% if perfil.mostrar_boton %}
+            <a href="{{ perfil.boton_enlace|default:'/catalogo/' }}" class="btn-banner-cta">
+                {{ perfil.boton_texto|default:'Comprar ahora' }}
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Estilos internos rápidos para que el banner se aplique de inmediato -->
+<style>
+    .banner-campana {
+        padding: 24px 20px;
+        border-radius: 16px;
+        text-align: center;
+        margin-bottom: 25px;
+        color: #ffffff !important;
+        font-family: inherit;
+    }
+    .banner-icon {
+        font-size: 2rem;
+        display: block;
+        margin-bottom: 8px;
+    }
+    .banner-title {
+        font-weight: 800;
+        font-size: 1.4rem;
+        margin-bottom: 6px;
+        color: #ffffff;
+    }
+    .banner-text {
+        font-size: 0.95rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+    
+    /* Botón interno del banner si se activa */
+    .btn-banner-cta {
+        display: inline-block;
+        margin-top: 14px;
+        background: #ffffff;
+        color: #111111 !important;
+        padding: 8px 20px;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        text-decoration: none;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    /* --- Variaciones de Color que lee desde el Select de tu Admin --- */
+    .banner-campana.dorado {
+        background: linear-gradient(135deg, #ecd06f 0%, #b38938 100%);
+        box-shadow: 0 4px 15px rgba(179, 137, 56, 0.2);
+    }
+    .banner-campana.negro {
+        background: linear-gradient(135deg, #434343 0%, #000000 100%);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+    }
+    .banner-campana.azul {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    }
+    .banner-campana.verde {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+    .banner-campana.rojo {
+        background: linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%);
+    }
+</style>
+
 <div class="buscador">
     <form method="GET">
         <input type="text" name="q" placeholder="Buscar productos..." aria-label="Buscar productos">
