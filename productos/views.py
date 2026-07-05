@@ -33,13 +33,14 @@ import hashlib
 from django.views.decorators.csrf import csrf_exempt
 
 # 🏪 IMPORTACIONES DE LA APP PRODUCTOS
-from productos.models import Producto, Categoria, ProductoImagen, CarritoItem, Cliente
+from productos.models import Producto, Categoria, ProductoImagen, CarritoItem, Cliente, Perfil
 from productos.services.precios import calcular_precio_producto
 from productos.services.envios import calcular_envio
 
 # 📂 IMPORTACIONES DE LA APP ACTUAL (Pedidos/Ventas)
 from .models import ProductoVariante, Pedido, PedidoItem, Perfil, Abono, Gasto
 from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm, ProductoForm
+
 from .utils import generar_link_whatsapp, generar_numero_orden 
 from .utils import generar_link_whatsapp, generar_numero_orden, generar_pdf_pedido
 
@@ -237,8 +238,9 @@ def cerrar_sesion(request):
     return redirect('login')
         
 def inicio(request):
-
     if request.user.is_authenticated:
+        # Si está logueado, usamos su perfil amarrado
+        perfil = getattr(request.user, 'perfil', None)
         productos = Producto.objects.filter(usuario=request.user)
 
         destacados = Producto.objects.filter(
@@ -249,8 +251,9 @@ def inicio(request):
         categorias = Categoria.objects.filter(
             usuario=request.user
         ).order_by('nombre')
-
     else:
+        # SI ES PÚBLICO: Traemos el primer perfil configurado en la base de datos
+        perfil = Perfil.objects.first()
         productos = Producto.objects.all()
 
         destacados = Producto.objects.filter(
@@ -263,7 +266,9 @@ def inicio(request):
         'productos': productos,
         'destacados': destacados,
         'categorias': categorias,
+        'perfil': perfil,  # 🚀 ¡ESTA ERA LA LÍNEA CLAVE QUE FALTABA!
     })
+
 
 def buscar_productos(request):
     query = request.GET.get('q', '')
