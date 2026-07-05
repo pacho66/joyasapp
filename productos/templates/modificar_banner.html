@@ -2,6 +2,38 @@
 {% load static %}
 {% block content %}
 
+<style>
+    /* 1. Forzar espaciado elegante entre los bloques de tu formulario */
+    .mb-3, .mb-4 {
+        margin-bottom: 1.8rem !important;
+    }
+    
+    /* 2. Evita que el botón flotante de WhatsApp tape el botón de "Publicar" al final */
+    body {
+        padding-bottom: 100px !important;
+    }
+
+    /* 3. Optimización exclusiva para pantallas de celular */
+    @media (max-width: 768px) {
+        /* Le da aire interno a la tarjeta blanca */
+        .card {
+            padding: 20px 15px !important;
+        }
+        
+        /* Hace que campos compartidos (como Fecha Inicio/Fin o Ícono/Título) se pongan uno abajo del otro */
+        .row.g-2 {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 15px !important;
+        }
+        
+        /* Fuerza a que los campos ocupen el ancho completo en el celular sin aplastarse */
+        .col-4, .col-8, .col-6 {
+            width: 100% !important;
+        }
+    }
+</style>
+
 <div class="container my-4" style="max-width: 1100px;">
     <div class="row g-4">
         
