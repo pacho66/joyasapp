@@ -880,13 +880,30 @@ def modificar_banner(request):
         # 🚀 Guardamos el texto largo del banner
         perfil.banner_texto = request.POST.get('banner_texto')
         
-        # 🚀 Guardamos el nombre dinámico de la tienda (Para quitar el PG Joyas fijo)
+        # 🚀 Guardamos el nombre dinámico de la tienda
         perfil.nombre_tienda = request.POST.get('nombre_tienda')
         
         # 🚀 Guardamos el título corto del banner
         perfil.banner_titulo = request.POST.get('titulo')
 
+        # 🚀 Guardamos el estilo de color
         perfil.estilo_color = request.POST.get('estilo_color')
+        
+        # 🚀 NUEVO: Guardamos el icono seleccionado
+        perfil.banner_icono = request.POST.get('icono')
+
+        # 🚀 NUEVO: Manejo del Checkbox (si no se marca, no viene en el POST)
+        perfil.mostrar_boton = 'mostrar_boton' in request.POST
+        
+        # 🚀 NUEVO: Guardamos los textos y enlaces del botón de acción
+        perfil.boton_texto = request.POST.get('boton_texto')
+        perfil.boton_enlace = request.POST.get('boton_enlace')
+
+        # 🚀 Manejo de fechas de campaña por si las usas
+        fecha_inicio = request.POST.get('fecha_inicio')
+        fecha_fin = request.POST.get('fecha_fin')
+        if fecha_inicio: perfil.fecha_inicio = fecha_inicio
+        if fecha_fin: perfil.fecha_fin = fecha_fin
         
         # 🚀 Capturamos el archivo de imagen si seleccionaste uno nuevo
         if request.FILES.get('banner_imagen'):

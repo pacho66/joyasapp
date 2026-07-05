@@ -226,10 +226,7 @@
             <a href="{{ link_pdf }}" target="_blank" class="btn-joyas bj-pdf">📄 PDF</a>
             <a href="{{ link_publico }}" target="_blank" class="btn-joyas bj-publico">🌐 Pública</a>
             <a href="{{ whatsapp_url }}" target="_blank" class="btn-joyas bj-wp">📲 WhatsApp</a>
-    
-            # 🔥 CORREGIDO: Ahora usa pedido.token_publico igual que Mercado Pago
             <a href="{% url 'pagar_wompi' pedido.token_publico %}" class="btn-joyas bj-wompi">💳 Wompi</a>
-    
             <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}" class="btn-joyas bj-mp">🔵 M. Pago</a>
             <button onclick="window.print()" class="btn-joyas bj-print">🖨️ Imprimir</button>
         </div>
