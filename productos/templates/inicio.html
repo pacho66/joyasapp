@@ -54,60 +54,59 @@
     box-shadow: 0 5px 15px rgba(37, 211, 102, 0.4);
 }
 
-/* --- Redes Sociales Modernas con Logos (¡INTEGRADO!) --- */
-.redes {
-    display: flex;
-    justify-content: center;
-    gap: 14px;
-    margin-bottom: 35px;
-    flex-wrap: wrap;
+/* --- Redes Sociales Modernas (Estilo Apps Reales) --- */
+.redes-modernas {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 16px !important;       /* Espaciado perfecto entre logos */
+    margin-top: 15px;
+    margin-bottom: 30px !important;
 }
 
 .btn-red {
-    display: inline-flex;
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    padding: 10px 22px;
-    border-radius: 50px; /* Estilo píldora elegante */
+    width: 52px !important;       /* Tamaño fijo para que no se deformen */
+    height: 52px !important;      /* Cuadrado perfecto */
+    border-radius: 13px !important; /* Bordes redondeados idénticos a los logos de tu referencia */
     text-decoration: none;
-    font-weight: 600;
-    font-size: 14px;
     color: #ffffff !important;
     transition: var(--transicion);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    border: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    border: none !important;
+    padding: 0 !important;        /* Quita rellenos extraños de Bootstrap */
+}
+
+/* Tamaño del icono de Bootstrap dentro del botón */
+.btn-red i {
+    font-size: 24px !important;   /* Hace que el logo de la red resalte */
 }
 
 .btn-red:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    transform: scale(1.08) translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
     color: #ffffff !important;
 }
 
-/* Colores Corporativos de Marca */
+/* Colores Oficiales de Marca */
 .instagram {
-    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%) !important;
 }
 
 .facebook {
-    background-color: #1877F2;
+    background-color: #1877F2 !important;
 }
 
 .tiktok {
-    background-color: #000000;
-    border: 1px solid #25f4ee; /* El toque de destello cian de TikTok */
+    background-color: #000000 !important;
+    border: 1px solid #25f4ee !important; /* Brillo cian característico */
 }
 
-/* Adaptación responsive inteligente para celulares muy pequeños */
+/* Oculta de raíz el texto en móviles para mantener solo los logos limpios */
 @media (max-width: 576px) {
-    .btn-red {
-        padding: 12px;
-        border-radius: 50%; /* Se transforman en círculos perfectos */
-        width: 46px;
-        height: 46px;
-    }
     .btn-red span {
-        display: none !important; /* Esconde el texto para que quepan holgadamente lado a lado */
+        display: none !important;
     }
 }
 
