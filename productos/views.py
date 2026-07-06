@@ -919,8 +919,17 @@ def modificar_banner(request):
         
         # 🚀 Capturamos el archivo de imagen si seleccionaste uno nuevo
         if 'banner_imagen' in request.FILES:
-            perfil.banner_imagen = request.FILES['banner_imagen']
+            nueva_imagen = request.FILES['banner_imagen']
             
+            # ESCUDO ANTI-DUPLICADOS / FORZAR REEMPLAZO:
+            # Le modificamos el nombre internamente usando un timestamp para que Cloudinary
+            # siempre lo detecte como un archivo único y limpie el caché anterior.
+            import time
+            ext = nueva_imagen.name.split('.')[-1]
+            nueva_imagen.name = f"banner_{int(time.time())}.{ext}"
+            
+            perfil.banner_imagen = nueva_imagen
+        
         perfil.save()
         
         # Te redirigimos a la misma página para que veas los cambios de una vez
