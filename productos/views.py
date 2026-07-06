@@ -1072,8 +1072,16 @@ def configurar_negocio(request):
             perfil.mercadopago_access_token = form.cleaned_data.get('mercadopago_access_token', '').strip()
             perfil.costo_envio_estandar = form.cleaned_data.get('costo_envio_estandar') or Decimal('0.00')
 
-            # LOGO
-            if request.FILES.get('logo'):
+            # 🗑️ LÓGICA PARA ELIMINAR EL LOGO ACTUAL
+            # Si marcaron la casilla en el HTML, borramos el logo de Cloudinary y de la BD
+            eliminar_logo = request.POST.get('eliminar_logo')
+            if eliminar_logo and perfil.logo:
+                perfil.logo.delete(save=False) # Borra el archivo en la nube
+                perfil.logo = None # Limpia el campo en la base de datos
+
+            # LOGO NUEVO
+            # Solo se guarda si el usuario subió un archivo y NO marcó la casilla de eliminar al mismo tiempo
+            if request.FILES.get('logo') and not eliminar_logo:
                 perfil.logo = request.FILES['logo']
 
             # COLORES
@@ -1103,6 +1111,7 @@ def configurar_negocio(request):
         'form': form,
         'perfil': perfil 
     })
+
 
 @login_required
 def renovar_manual(request):
@@ -2698,8 +2707,6 @@ def factura_publica(request, token):
     }
     
     return render(request, 'factura_publica.html', context)
-
-
 
 @login_required
 def generar_factura(request, pedido_id):

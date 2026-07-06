@@ -46,6 +46,8 @@
             display: block;
             margin: 0 auto 15px;
             width: 120px;
+            max-height: 120px;
+            object-fit: contain;
         }
 
         .btn-login {
@@ -66,8 +68,10 @@
 
 <div class="login-box">
 
-    <!-- LOGO -->
-    <img src="{% static 'img/logo.jpg' %}" class="logo" alt="Logo">
+    <!-- LOGO 
+         🛡️ Si el archivo estático no se encuentra en Render, el "this.style.display='none'" 
+         evita que aparezca el icono de imagen rota que arruina la visual. -->
+    <img src="{% static 'img/logo.jpg' %}" class="logo" alt="Logo" onerror="this.style.display='none';">
 
     <h4 class="login-title">Bienvenido</h4>
     <p class="text-center text-muted">Ingresa a tu tienda</p>
@@ -81,21 +85,22 @@
         {% endfor %}
     {% endif %}
 
-    <form method="POST">
+    <!-- 🌟 Agregamos action="" para forzar al navegador a limpiar el hilo de peticiones antiguas -->
+    <form method="POST" action="">
         {% csrf_token %}
 
         <div class="mb-3">
-            <label>Usuario</label>
-            <input type="text" name="username" class="form-control form-control-lg" required>
+            <label class="form-label">Usuario</label>
+            <input type="text" name="username" class="form-control form-control-lg" required autocomplete="username">
         </div>
 
         <div class="mb-3 position-relative">
-            <label>Contraseña</label>
-            <input type="password" id="password" name="password" class="form-control form-control-lg" required>
+            <label class="form-label">Contraseña</label>
+            <input type="password" id="password" name="password" class="form-control form-control-lg" required autocomplete="current-password">
             <i class="bi bi-eye toggle-password" onclick="togglePassword()"></i>
         </div>
 
-        <button type="submit" class="btn btn-dark btn-login">
+        <button type="submit" class="btn btn-dark btn-login mt-2">
             Entrar
         </button>
     </form>

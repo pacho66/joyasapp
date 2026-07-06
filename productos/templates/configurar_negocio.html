@@ -165,9 +165,20 @@ textarea{
         border-radius:10px;
         border:1px solid #ddd;
         padding:5px;
-        background:white;">
+        background:white;
+        display:block;
+        margin-bottom:10px;">
+
+        <!-- 🗑️ La nueva casilla de eliminación rápida -->
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+            <input type="checkbox" name="eliminar_logo" id="checkEliminarLogo" style="width: auto; cursor: pointer;">
+            <label for="checkEliminarLogo" style="color: #dc3545; font-weight: bold; cursor: pointer; font-size: 14px;">
+                🗑️ Marcar para eliminar este logo
+            </label>
+        </div>
     </div>
     {% endif %}
+    
 
     <h3 class="sub-seccion-titulo">💳 Pasarelas de Pago</h3>
     
