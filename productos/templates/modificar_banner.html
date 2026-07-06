@@ -56,7 +56,7 @@
                         <input type="text" name="nombre_tienda" value="{{ perfil.nombre_tienda|default:'' }}" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Ej: PG Joyas o Platería González">
                     </div>
 
-                    <!-- 🌐 CONFIGURACIÓN DE REDES SOCIALES (Corregido y Cerrado) -->
+                    <!-- 🌐 CONFIGURACIÓN DE REDES SOCIALES -->
                     <div class="card p-3 bg-light rounded-3 border mb-4">
                         <span class="badge bg-secondary text-uppercase px-2 py-1 rounded-pill small mb-3 align-self-start" style="font-size: 0.7rem;">Enlaces Comerciales</span>
     
@@ -80,7 +80,7 @@
                                 <input type="text" name="tiktok" value="{{ perfil.tiktok|default:'' }}" class="form-control p-2" style="border-radius: 0 10px 10px 0; font-size: 0.9rem;" placeholder="ej: plateriagonzalez">
                             </div>
                         </div>
-                    </div> <!-- ✓ Aquí cierra correctamente la tarjeta de Redes Sociales -->
+                    </div>
 
                     <!-- Título e Ícono -->
                     <div class="row g-2 mb-3">
@@ -107,12 +107,18 @@
                         <textarea id="input_mensaje" name="banner_texto" rows="2" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Describe la oferta...">{{ perfil.banner_texto|default:'' }}</textarea>
                     </div>
 
-                    <!-- Subir Imagen de Fondo del Banner -->
+                    <!-- Subir Imagen de Fondo del Banner (CORREGIDO: Ya no rompe la maquetación) -->
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-uppercase text-secondary">Imagen de Fondo del Banner</label>
                         <input type="file" name="banner_imagen" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" accept="image/*">
+                        
                         {% if perfil.banner_imagen %}
-                            <div class="form-text text-success small mt-1">✓ Imagen actual guardada.</div>
+                            <div class="mt-2 p-2 border rounded bg-light d-flex align-items-center gap-2" style="max-width: 250px;">
+                                <img src="{{ perfil.banner_imagen.url }}" alt="Actual" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px;">
+                                <span class="text-success small fw-bold">✓ Imagen guardada</span>
+                            </div>
+                        {% else %}
+                            <div class="form-text text-muted small mt-1">Usando imagen por defecto de la tienda.</div>
                         {% endif %}
                     </div>
 
@@ -147,11 +153,14 @@
                                 Incluir Botón de Acción
                             </label>
                         </div>
-                        <div id="wrapper_boton" class="row g-2 d-none">
+    
+                        <div id="wrapper_boton" class="row g-2 {% if not perfil.mostrar_boton %}d-none{% endif %}">
                             <div class="col-6">
+                                <label class="form-label small text-muted mb-1">Texto del botón</label>
                                 <input type="text" id="input_boton_texto" name="boton_texto" value="{{ perfil.boton_texto|default:'Comprar ahora' }}" class="form-control p-2" style="border-radius: 8px; font-size: 0.85rem;" placeholder="Texto botón">
                             </div>
                             <div class="col-6">
+                                <label class="form-label small text-muted mb-1">Enlace de destino</label>
                                 <input type="text" id="input_boton_enlace" name="boton_enlace" value="{{ perfil.boton_enlace|default:'/catalogo/' }}" class="form-control p-2" style="border-radius: 8px; font-size: 0.85rem;" placeholder="Enlace (/categoria/oro)">
                             </div>
                         </div>
@@ -163,8 +172,23 @@
                 </form>
             </div>
         </div>
-        
-        <!-- (Columna Derecha de Vista Previa se mantiene intacta igual que antes) -->
+
+        <!-- COLUMNA DERECHA: VISTA PREVIA EN VIVO -->
+        <!-- (Aquí es donde van los cierres de las columnas principales de la Grid) -->
+        <div class="col-12 col-lg-6">
+            <!-- Nota: Cuando pegues la estructura de tu vista previa, asegúrate de que use las IDs correctas ('preview_banner', 'preview_titulo', 'preview_mensaje', 'preview_icono', 'preview_boton') -->
+            <div id="preview_banner" class="p-4 text-center rounded-3 position-relative overflow-hidden text-white" style="min-height: 250px; background: #000;">
+                <div class="position-relative" style="z-index: 2;">
+                    <span id="preview_icono" style="font-size: 2rem;">💎</span>
+                    <h3 id="preview_titulo" class="fw-bold mt-2">¡Nueva Colección!</h3>
+                    <p id="preview_mensaje" class="small text-white-50">Completa los campos...</p>
+                    <a id="preview_boton" href="#" class="btn btn-light btn-sm fw-bold px-4 py-2 mt-2 d-none" style="border-radius: 8px;">Comprar ahora</a>
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- Cierre de row g-4 -->
+</div> <!-- Cierre de container my-4 -->
 
 <!-- JAVASCRIPT SEGURO PARA EL RENDER EN VIVO -->
 <script>
@@ -174,16 +198,28 @@
         document.getElementById('preview_mensaje').innerText = document.getElementById('input_mensaje').value || 'Completa los campos...';
         document.getElementById('preview_icono').innerText = document.getElementById('input_icono').value;
         
-        // Aplicar estilos de fondo dinámicos directos
+        // Mapear el color seleccionado a un color o degradado real de CSS
+        const colorSeleccionado = document.getElementById('input_color').value;
         const banner = document.getElementById('preview_banner');
-        banner.style.background = document.getElementById('input_color').value.split(';')[0];
+        
+        if (colorSeleccionado === 'dorado') {
+            banner.style.background = "linear-gradient(135deg, #ecd06f 0%, #b38938 100%)";
+        } else if (colorSeleccionado === 'negro') {
+            banner.style.background = "linear-gradient(135deg, #2c2c2c 0%, #000000 100%)";
+        } else if (colorSeleccionado === 'azul') {
+            banner.style.background = "linear-gradient(135deg, #2b5876 0%, #4e4376 100%)";
+        } else if (colorSeleccionado === 'verde') {
+            banner.style.background = "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)";
+        } else if (colorSeleccionado === 'rojo') {
+            banner.style.background = "linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%)";
+        }
         
         // Controlar visibilidad del botón de acción
-        const mostrarBoton = document.getElementById('input_mostrar_boton').checked;
+        const checkboxBoton = document.getElementById('input_mostrar_boton');
         const wrapperBoton = document.getElementById('wrapper_boton');
         const btnPreview = document.getElementById('preview_boton');
         
-        if (mostrarBoton) {
+        if (checkboxBoton.checked) {
             wrapperBoton.classList.remove('d-none');
             btnPreview.classList.remove('d-none');
             btnPreview.innerText = document.getElementById('input_boton_texto').value || 'Comprar ahora';
@@ -193,7 +229,7 @@
         }
     }
 
-    // Escuchas de eventos
+    // Escuchas de eventos para actualizar en tiempo real
     document.getElementById('input_titulo').addEventListener('input', actualizarPreview);
     document.getElementById('input_mensaje').addEventListener('input', actualizarPreview);
     document.getElementById('input_icono').addEventListener('change', actualizarPreview);
