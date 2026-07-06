@@ -8,19 +8,18 @@ def categorias_menu(request):
     total_carrito = Decimal('0.00')
     perfil = None
 
-    # 2. Lógica de Categorías (Mantenemos tu bloque exacto)
+    # 2. Lógica de Categorías (CORREGIDA Y BLINDADA)
     if request.user.is_authenticated:
         categorias = Categoria.objects.filter(usuario=request.user)
-        # Traemos el perfil del comerciante logueado de forma segura
         if hasattr(request.user, 'perfil'):
             perfil = request.user.perfil
     else:
         categorias = Categoria.objects.none()
-        # Fallback para vista pública: intentamos cargar un perfil para no ocultar el botón
+        # 🎯 FALLBACK SEGURO: Importamos correctamente desde productos.models 
+        # para que la vista pública pinte los colores y botones del primer comercio.
         try:
-            from .models import Perfil
             perfil = Perfil.objects.first()
-        except:
+        except Exception:
             perfil = None
 
     # 3. RÉPLICA EXACTA DE TU LOGICA DE CARRITO (Sin alterar nada)
