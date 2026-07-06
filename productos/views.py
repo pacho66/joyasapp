@@ -879,10 +879,9 @@ def dashboard(request):
 
 @login_required
 def modificar_banner(request):
-    perfil = Perfil.objects.first() 
-
-    if not perfil:
-        perfil = Perfil.objects.create(nombre_tienda="Mi Joyería")
+    # 🎯 CORRECCIÓN CLAVE: Usamos tu related_name original para asegurar 
+    # que edites TU perfil y no el de alguien más o uno genérico.
+    perfil = request.user.perfil 
 
     if request.method == 'POST':
         # 🚀 Guardamos el texto largo del banner
@@ -911,7 +910,7 @@ def modificar_banner(request):
         perfil.boton_texto = request.POST.get('boton_texto')
         perfil.boton_enlace = request.POST.get('boton_enlace')
 
-        # 🚀 Manejo de fechas de campaña por si las usas
+        # 🚀 Manejo de fechas de campaña
         fecha_inicio = request.POST.get('fecha_inicio')
         fecha_fin = request.POST.get('fecha_fin')
         if fecha_inicio: perfil.fecha_inicio = fecha_inicio
@@ -922,8 +921,6 @@ def modificar_banner(request):
             nueva_imagen = request.FILES['banner_imagen']
             
             # ESCUDO ANTI-DUPLICADOS / FORZAR REEMPLAZO:
-            # Le modificamos el nombre internamente usando un timestamp para que Cloudinary
-            # siempre lo detecte como un archivo único y limpie el caché anterior.
             import time
             ext = nueva_imagen.name.split('.')[-1]
             nueva_imagen.name = f"banner_{int(time.time())}.{ext}"
@@ -932,7 +929,8 @@ def modificar_banner(request):
         
         perfil.save()
         
-        # Te redirigimos a la misma página para que veas los cambios de una vez
+        # Añadimos un mensaje para que sepas que guardó con éxito
+        messages.success(request, "¡Campaña y botones actualizados con éxito!")
         return redirect('modificar_banner')
 
     return render(request, 'modificar_banner.html', {'perfil': perfil})
