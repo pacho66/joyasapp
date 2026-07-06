@@ -281,14 +281,18 @@ nav ul li a:hover {
 </head>
 
 <body>
-
 <div class="header-logo">
     {% if perfil.logo %}
-        <img src="{% static 'img/logo.jpg' %}" alt="Logo">
+        <!-- 🌟 Cambiamos {% static ... %} por la URL real de Cloudinary -->
+        <img src="{{ perfil.logo.url }}" alt="Logo">
+    {% else %}
+        <!-- Opcional: Un logo por defecto si no hay nada subido -->
+        <img src="{% static 'img/logo_defecto.jpg' %}" alt="Logo">
     {% endif %}
     <div>{{ perfil.nombre_tienda|default:"joyasapp" }}</div>
 </div>
 
+    
 <nav>
     <div class="menu-toggle" onclick="toggleMenu()">
         ☰ Menú
