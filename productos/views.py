@@ -32,6 +32,7 @@ from xhtml2pdf import pisa
 import hashlib
 from django.views.decorators.csrf import csrf_exempt
 import openpyxl
+import time
 
 # 🏪 IMPORTACIONES DE LA APP PRODUCTOS
 from productos.models import Producto, Categoria, ProductoImagen, CarritoItem, Cliente, Perfil
@@ -950,36 +951,53 @@ def exportar_excel_dashboard(request):
     wb.save(response)
     return response
 
-@login_required
 def modificar_banner(request):
-    perfil = request.user.perfil 
+    # 🛡️ BLINDAJE 1: Controlar de forma segura que exista el perfil del usuario
+    perfil = getattr(request.user, 'perfil', None)
+    if not perfil:
+        messages.error(request, "No se encontró un perfil comercial configurado para este usuario.")
+        return redirect('inicio')
 
     if request.method == 'POST':
-        # 🚀 Guardamos en los campos reales de tu modelo
-        perfil.banner_texto = request.POST.get('banner_texto')
-        perfil.nombre_tienda = request.POST.get('nombre_tienda')
-        perfil.instagram = request.POST.get('instagram', '').strip()
-        perfil.facebook = request.POST.get('facebook', '').strip()
-        perfil.tiktok = request.POST.get('tiktok', '').strip()
-        
-        # 🎨 Para el color principal usamos el campo que ya tienes configurado
-        perfil.color_principal = request.POST.get('estilo_color', '#000000')
+        try:
+            # 🛡️ BLINDAJE 2: Recolección limpia con fallback seguro mediante cadenas vacías
+            perfil.banner_texto = request.POST.get('banner_texto', '').strip()
+            perfil.nombre_tienda = request.POST.get('nombre_tienda', '').strip()
+            perfil.instagram = request.POST.get('instagram', '').strip()
+            perfil.facebook = request.POST.get('facebook', '').strip()
+            perfil.tiktok = request.POST.get('tiktok', '').strip()
+            
+            # 🛡️ BLINDAJE 3: Control estricto de color (Si viene manipulado o vacío, fuerza el negro)
+            color_seleccionado = request.POST.get('estilo_color', '#000000')
+            if not color_seleccionado.startswith('#') or len(color_seleccionado) != 7:
+                perfil.color_principal = '#000000'
+            else:
+                perfil.color_principal = color_seleccionado
 
-        # 🚀 Capturamos el archivo usando el nombre real de tu campo: 'banner'
-        if 'banner' in request.FILES:
-            nueva_imagen = request.FILES['banner']
+            # 🛡️ BLINDAJE 4: ESCUDO ANTI-DUPLICADOS INTEGRADO Y SEGURO
+            if 'banner' in request.FILES:
+                nueva_imagen = request.FILES['banner']
+                
+                # Comprobación de seguridad: Evitar duplicados si coincide el nombre exacto
+                if perfil.banner and nueva_imagen.name == perfil.banner.name:
+                    pass  
+                else:
+                    # Sanear la extensión y forzar un nombre único basado en timestamp para reventar caché
+                    ext = nueva_imagen.name.split('.')[-1].lower()
+                    if ext in ['jpg', 'jpeg', 'png', 'webp']:
+                        nueva_imagen.name = f"banner_{int(time.time())}.{ext}"
+                        perfil.banner = nueva_imagen
             
-            # ESCUDO ANTI-DUPLICADOS / FORZAR REEMPLAZO:
-            import time
-            ext = nueva_imagen.name.split('.')[-1]
-            nueva_imagen.name = f"banner_{int(time.time())}.{ext}"
-            
-            perfil.banner = nueva_imagen
-        
-        perfil.save()
-        
-        messages.success(request, "¡Centro de promociones actualizado con éxito!")
-        return redirect('modificar_banner')
+            # 🛡️ BLINDAJE 5: Guardado seguro en base de datos
+            perfil.save()
+            messages.success(request, "¡Centro de promociones actualizado con éxito!")
+            return redirect('modificar_banner')
+
+        except Exception as e:
+            # 🛡️ EXCEPCIÓN TOTAL: Captura cualquier error interno y lo muestra en un mensaje de alerta de Django
+            # Evita la pantalla blanca de Error 500 y te dice exactamente qué falló en caliente
+            messages.error(request, f"Ocurrió un error inesperado al guardar los cambios: {str(e)}")
+            return redirect('modificar_banner')
 
     return render(request, 'modificar_banner.html', {'perfil': perfil})
 

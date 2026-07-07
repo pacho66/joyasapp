@@ -329,7 +329,7 @@ nav ul li a:hover {
     </form>
 </nav>
 
-{% if request.resolver_match.url_name == 'inicio' or request.resolver_match.url_name == 'home' %}
+{% if request.path == '/' %}
     <!-- 🎨 BANNER UNIFICADO SINCRO TOTAL (Solo se muestra en el Inicio público) -->
     <div class="banner-container position-relative w-100 py-5 px-3 d-flex flex-column align-items-center justify-content-center text-center" 
          style="min-height: 220px; gap: 12px; overflow: hidden; background-color: {{ perfil.color_principal|default:'#000000' }};">
