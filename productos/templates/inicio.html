@@ -332,32 +332,6 @@ h2 {
 }
 </style>
 
-<!-- 🎨 BANNER HERO UNIFICADO CON SINCRO REAL (BASE DE DATOS) -->
-<div class="banner-container position-relative w-100 py-5 px-3 d-flex flex-column align-items-center justify-content-center text-center shadow-sm" 
-     style="min-height: 240px; gap: 12px; overflow: hidden; border-radius: 0 0 20px 20px; background-color: {{ perfil.color_principal|default:'#000000' }};">
-    
-    <!-- Imagen de fondo vinculada al campo real 'banner' -->
-    {% if perfil.banner %}
-        <img src="{{ perfil.banner.url }}" class="position-absolute top-0 start-0 w-100 h-100" alt="Banner Principal" style="object-fit: cover; z-index: 1; opacity: 0.40;">
-    {% else %}
-        <img src="{% static 'img/banner.jpg' %}" class="position-absolute top-0 start-0 w-100 h-100" alt="Banner por Defecto" style="object-fit: cover; z-index: 1; opacity: 0.2;">
-    {% endif %}
-
-    <!-- Contenido del Mensaje Promocional -->
-    <div class="position-relative" style="z-index: 2; max-width: 600px; color: white;">
-        <span style="font-size: 2rem; display: block; margin-bottom: 5px;">💎</span>
-        <h1 class="fw-black text-uppercase mt-1 mb-2" style="letter-spacing: 1.5px; font-size: 1.7rem; text-shadow: 2px 2px 5px rgba(0,0,0,0.6); font-family: sans-serif;">
-            {{ perfil.nombre_tienda|default:"¡Bienvenidos!" }}
-        </h1>
-        
-        {% if perfil.banner_texto %}
-            <p class="lead mb-0" style="font-size: 1rem; line-height: 1.4; text-shadow: 1px 1px 4px rgba(0,0,0,0.6); opacity: 0.95;">
-                {{ perfil.banner_texto }}
-            </p>
-        {% endif %}
-    </div>
-</div>
-
 <!-- 🚚 TRES BENEFICIOS DE CONFIANZA DE LA TIENDA -->
 <div class="container my-4 text-center">
     <div class="row g-3 bg-white p-3 mx-1 rounded-4 shadow-sm border border-light" style="display: flex; border-radius: 16px; box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important; background-color: #fff; padding: 1rem; margin-left: .25rem; margin-right: .25rem;">
