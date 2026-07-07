@@ -952,58 +952,33 @@ def exportar_excel_dashboard(request):
 
 @login_required
 def modificar_banner(request):
-    # 🎯 CORRECCIÓN CLAVE: Usamos tu related_name original para asegurar 
-    # que edites TU perfil y no el de alguien más o uno genérico.
     perfil = request.user.perfil 
 
     if request.method == 'POST':
-        # 🚀 Guardamos el texto largo del banner
+        # 🚀 Guardamos en los campos reales de tu modelo
         perfil.banner_texto = request.POST.get('banner_texto')
-        
-        # 🚀 Guardamos el nombre dinámico de la tienda
         perfil.nombre_tienda = request.POST.get('nombre_tienda')
-
         perfil.instagram = request.POST.get('instagram', '').strip()
         perfil.facebook = request.POST.get('facebook', '').strip()
         perfil.tiktok = request.POST.get('tiktok', '').strip()
         
-        # 🚀 Guardamos el título corto del banner
-        perfil.banner_titulo = request.POST.get('titulo')
+        # 🎨 Para el color principal usamos el campo que ya tienes configurado
+        perfil.color_principal = request.POST.get('estilo_color', '#000000')
 
-        # 🚀 Guardamos el estilo de color
-        perfil.estilo_color = request.POST.get('estilo_color')
-        
-        # 🚀 NUEVO: Guardamos el icono seleccionado
-        perfil.banner_icono = request.POST.get('icono')
-
-        # 🚀 NUEVO: Manejo del Checkbox (si no se marca, no viene en el POST)
-        perfil.mostrar_boton = 'mostrar_boton' in request.POST
-        
-        # 🚀 NUEVO: Guardamos los textos y enlaces del botón de acción
-        perfil.boton_texto = request.POST.get('boton_texto')
-        perfil.boton_enlace = request.POST.get('boton_enlace')
-
-        # 🚀 Manejo de fechas de campaña
-        fecha_inicio = request.POST.get('fecha_inicio')
-        fecha_fin = request.POST.get('fecha_fin')
-        if fecha_inicio: perfil.fecha_inicio = fecha_inicio
-        if fecha_fin: perfil.fecha_fin = fecha_fin
-        
-        # 🚀 Capturamos el archivo de imagen si seleccionaste uno nuevo
-        if 'banner_imagen' in request.FILES:
-            nueva_imagen = request.FILES['banner_imagen']
+        # 🚀 Capturamos el archivo usando el nombre real de tu campo: 'banner'
+        if 'banner' in request.FILES:
+            nueva_imagen = request.FILES['banner']
             
             # ESCUDO ANTI-DUPLICADOS / FORZAR REEMPLAZO:
             import time
             ext = nueva_imagen.name.split('.')[-1]
             nueva_imagen.name = f"banner_{int(time.time())}.{ext}"
             
-            perfil.banner_imagen = nueva_imagen
+            perfil.banner = nueva_imagen
         
         perfil.save()
         
-        # Añadimos un mensaje para que sepas que guardó con éxito
-        messages.success(request, "¡Campaña y botones actualizados con éxito!")
+        messages.success(request, "¡Centro de promociones actualizado con éxito!")
         return redirect('modificar_banner')
 
     return render(request, 'modificar_banner.html', {'perfil': perfil})

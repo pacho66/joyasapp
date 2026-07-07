@@ -37,7 +37,7 @@
 <div class="container my-4" style="max-width: 1100px;">
     <div class="row g-4">
         
-        <!-- COLUMNA IZQUIERDA: FORMULARIO DE CONFIGURACIÓN -->
+        <!-- ==================== COLUMNA IZQUIERDA: FORMULARIO DE CONFIGURACIÓN ==================== -->
         <div class="col-12 col-lg-6">
             <div class="card shadow-sm border-0 p-4" style="border-radius: 20px; background-color: #ffffff;">
                 <div class="mb-4">
@@ -46,7 +46,7 @@
                     <p class="text-muted small">Configura la vitrina principal de tu joyería para el celular.</p>
                 </div>
 
-                <!-- Formulario con soporte para subida de imágenes -->
+                <!-- Formulario unificado con soporte para multipart/form-data -->
                 <form method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
                     
@@ -56,7 +56,7 @@
                         <input type="text" name="nombre_tienda" value="{{ perfil.nombre_tienda|default:'' }}" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Ej: PG Joyas o Platería González">
                     </div>
 
-                    <!-- 🌐 CONFIGURACIÓN DE REDES SOCIALES -->
+                    <!-- 🌐 CONFIGURACIÓN DE REDES SOCIALES (CAMPOS REALES) -->
                     <div class="card p-3 bg-light rounded-3 border mb-4">
                         <span class="badge bg-secondary text-uppercase px-2 py-1 rounded-pill small mb-3 align-self-start" style="font-size: 0.7rem;">Enlaces Comerciales</span>
     
@@ -82,39 +82,20 @@
                         </div>
                     </div>
 
-                    <!-- Título e Ícono -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-4">
-                            <label class="form-label small fw-bold text-uppercase text-secondary">Ícono</label>
-                            <select id="input_icono" name="icono" class="form-select p-2" style="border-radius: 10px; font-size: 0.9rem;">
-                                <option value="💎" {% if perfil.banner_icono == "💎" %}selected{% endif %}>💎 Diamante</option>
-                                <option value="✨" {% if perfil.banner_icono == "✨" %}selected{% endif %}>✨ Destello</option>
-                                <option value="🎁" {% if perfil.banner_icono == "🎁" %}selected{% endif %}>🎁 Regalo</option>
-                                <option value="🔥" {% if perfil.banner_icono == "🔥" %}selected{% endif %}>🔥 Tendencia</option>
-                                <option value="⭐" {% if perfil.banner_icono == "⭐" %}selected{% endif %}>⭐ Estrella</option>
-                                <option value="🚚" {% if perfil.banner_icono == "🚚" %}selected{% endif %}>🚚 Envío</option>
-                            </select>
-                        </div>
-                        <div class="col-8">
-                            <label class="form-label small fw-bold text-uppercase text-secondary">Título del Banner</label>
-                            <input type="text" id="input_titulo" name="titulo" value="{{ perfil.banner_titulo|default:'¡Nueva Colección!' }}" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Ej: Nueva Colección Oro 18K">
-                        </div>
-                    </div>
-
                     <!-- Mensaje Promocional -->
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-uppercase text-secondary">Mensaje Corto</label>
-                        <textarea id="input_mensaje" name="banner_texto" rows="2" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Describe la oferta...">{{ perfil.banner_texto|default:'' }}</textarea>
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Mensaje Corto del Banner</label>
+                        <textarea id="input_mensaje" name="banner_texto" rows="2" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Describe tu oferta o lema principal...">{{ perfil.banner_texto|default:'' }}</textarea>
                     </div>
 
-                    <!-- Subir Imagen de Fondo del Banner (CORREGIDO: Ya no rompe la maquetación) -->
+                    <!-- Subir Imagen de Fondo (Sincronizado con el campo real: banner) -->
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-uppercase text-secondary">Imagen de Fondo del Banner</label>
-                        <input type="file" name="banner_imagen" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" accept="image/*">
+                        <input type="file" name="banner" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" accept="image/*">
                         
-                        {% if perfil.banner_imagen %}
+                        {% if perfil.banner %}
                             <div class="mt-2 p-2 border rounded bg-light d-flex align-items-center gap-2" style="max-width: 250px;">
-                                <img src="{{ perfil.banner_imagen.url }}" alt="Actual" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px;">
+                                <img src="{{ perfil.banner.url }}" alt="Actual" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px;">
                                 <span class="text-success small fw-bold">✓ Imagen guardada</span>
                             </div>
                         {% else %}
@@ -122,68 +103,53 @@
                         {% endif %}
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-uppercase text-secondary">Estilo Visual</label>
+                    <!-- Estilo Visual (Mapeado directamente a: color_principal) -->
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Estilo Color Principal (Filtro Hero)</label>
                         <select id="input_color" name="estilo_color" class="form-select p-2" style="border-radius: 10px; font-size: 0.9rem;">
-                            <option value="dorado" {% if perfil.estilo_color == "dorado" %}selected{% endif %}>🟡 Dorado Premium</option>
-                            <option value="negro" {% if perfil.estilo_color == "negro" %}selected{% endif %}>⚫ Negro Elegante</option>
-                            <option value="azul" {% if perfil.estilo_color == "azul" %}selected{% endif %}>🔵 Azul Corporativo</option>
-                            <option value="verde" {% if perfil.estilo_color == "verde" %}selected{% endif %}>🟢 Verde Financiero</option>
-                            <option value="rojo" {% if perfil.estilo_color == "rojo" %}selected{% endif %}>🔴 Rojo Oferta</option>
+                            <option value="#000000" {% if perfil.color_principal == "#000000" %}selected{% endif %}>⚫ Negro Elegante</option>
+                            <option value="#b38938" {% if perfil.color_principal == "#b38938" %}selected{% endif %}>🟡 Dorado Premium</option>
+                            <option value="#2b5876" {% if perfil.color_principal == "#2b5876" %}selected{% endif %}>🔵 Azul Corporativo</option>
+                            <option value="#11998e" {% if perfil.color_principal == "#11998e" %}selected{% endif %}>🟢 Verde Esmeralda</option>
                         </select>
                     </div>
 
-                    <!-- Programación Automática -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-uppercase text-secondary">Fecha Inicio</label>
-                            <input type="date" name="fecha_inicio" value="{{ perfil.fecha_inicio|date:'Y-m-d' }}" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-uppercase text-secondary">Fecha Fin</label>
-                            <input type="date" name="fecha_fin" value="{{ perfil.fecha_fin|date:'Y-m-d' }}" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;">
-                        </div>
-                    </div>
-
-                    <!-- Botón de Acción (CTA) -->
-                    <div class="p-3 bg-light rounded-3 border mb-4">
-                        <div class="form-check mb-2">
-                            <input type="checkbox" id="input_mostrar_boton" name="mostrar_boton" class="form-check-input" {% if perfil.mostrar_boton %}checked{% endif %}>
-                            <label class="form-check-label small fw-bold text-uppercase text-secondary" for="input_mostrar_boton">
-                                Incluir Botón de Acción
-                            </label>
-                        </div>
-    
-                        <div id="wrapper_boton" class="row g-2 {% if not perfil.mostrar_boton %}d-none{% endif %}">
-                            <div class="col-6">
-                                <label class="form-label small text-muted mb-1">Texto del botón</label>
-                                <input type="text" id="input_boton_texto" name="boton_texto" value="{{ perfil.boton_texto|default:'Comprar ahora' }}" class="form-control p-2" style="border-radius: 8px; font-size: 0.85rem;" placeholder="Texto botón">
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label small text-muted mb-1">Enlace de destino</label>
-                                <input type="text" id="input_boton_enlace" name="boton_enlace" value="{{ perfil.boton_enlace|default:'/catalogo/' }}" class="form-control p-2" style="border-radius: 8px; font-size: 0.85rem;" placeholder="Enlace (/categoria/oro)">
-                            </div>
-                        </div>
-                    </div>
-
                     <button type="submit" class="btn btn-dark w-100 py-2.5 fw-bold" style="border-radius: 12px; font-size: 1rem;">
-                        🚀 Publicar Campaña
+                        🚀 Publicar Cambios
                     </button>
                 </form>
             </div>
         </div>
 
-        <!-- COLUMNA DERECHA: VISTA PREVIA EN VIVO -->
-        <!-- (Aquí es donde van los cierres de las columnas principales de la Grid) -->
+        <!-- ==================== COLUMNA DERECHA: VISTA PREVIA EN VIVO MAQUETADA ==================== -->
         <div class="col-12 col-lg-6">
-            <!-- Nota: Cuando pegues la estructura de tu vista previa, asegúrate de que use las IDs correctas ('preview_banner', 'preview_titulo', 'preview_mensaje', 'preview_icono', 'preview_boton') -->
-            <div id="preview_banner" class="p-4 text-center rounded-3 position-relative overflow-hidden text-white" style="min-height: 250px; background: #000;">
-                <div class="position-relative" style="z-index: 2;">
-                    <span id="preview_icono" style="font-size: 2rem;">💎</span>
-                    <h3 id="preview_titulo" class="fw-bold mt-2">¡Nueva Colección!</h3>
-                    <p id="preview_mensaje" class="small text-white-50">Completa los campos...</p>
-                    <a id="preview_boton" href="#" class="btn btn-light btn-sm fw-bold px-4 py-2 mt-2 d-none" style="border-radius: 8px;">Comprar ahora</a>
+            <div class="card shadow-sm border-0 p-4 sticky-top" style="border-radius: 20px; background-color: #ffffff; top: 20px;">
+                <div class="mb-3">
+                    <span class="badge bg-secondary text-uppercase px-3 py-1 rounded-pill small" style="font-size: 0.75rem;">Vista Previa Digital</span>
                 </div>
+                
+                <!-- Contenedor del Hero simulando el celular -->
+                <div id="preview_banner" class="p-4 text-center rounded-4 position-relative overflow-hidden text-white d-flex flex-column align-items-center justify-content-center shadow-sm" 
+                     style="min-height: 250px; background-color: {{ perfil.color_principal|default:'#000000' }}; transition: background 0.3s ease;">
+                    
+                    <!-- Imagen de fondo simulada -->
+                    {% if perfil.banner %}
+                        <img src="{{ perfil.banner.url }}" class="position-absolute top-0 start-0 w-100 h-100" alt="Fondo" style="object-fit: cover; z-index: 1; opacity: 0.4;">
+                    {% endif %}
+
+                    <!-- Contenido sobre la imagen -->
+                    <div class="position-relative" style="z-index: 2;">
+                        <span style="font-size: 2rem; display: block; margin-bottom: 5px;">💎</span>
+                        <h3 id="preview_titulo" class="fw-black text-uppercase" style="letter-spacing: 1px; font-size: 1.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">
+                            {{ perfil.nombre_tienda|default:"¡Bienvenidos!" }}
+                        </h3>
+                        <p id="preview_mensaje" class="small mb-0 px-2" style="text-shadow: 1px 1px 3px rgba(0,0,0,0.6); opacity: 0.9;">
+                            {{ perfil.banner_texto|default:"Tu mensaje publicitario se verá reflejado aquí en tiempo real." }}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="form-text text-center text-muted small mt-2">Así es exactamente como lucirá el Hero principal en tu tienda pública.</div>
             </div>
         </div>
 
