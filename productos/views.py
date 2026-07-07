@@ -33,6 +33,7 @@ import hashlib
 from django.views.decorators.csrf import csrf_exempt
 import openpyxl
 import time
+import logging
 
 # 🏪 IMPORTACIONES DE LA APP PRODUCTOS
 from productos.models import Producto, Categoria, ProductoImagen, CarritoItem, Cliente, Perfil
@@ -240,37 +241,46 @@ def cerrar_sesion(request):
     return redirect('login')
         
 def inicio(request):
-    if request.user.is_authenticated:
-        # Si está logueado, usamos su perfil amarrado
-        perfil = getattr(request.user, 'perfil', None)
-        productos = Producto.objects.filter(usuario=request.user)
+    try:
+        # 1. Obtener el perfil de forma segura
+        perfil = None
+        if request.user.is_authenticated:
+            perfil = getattr(request.user, 'perfil', None)
+        else:
+            perfil = Perfil.objects.first()
 
-        destacados = Producto.objects.filter(
-            usuario=request.user,
-            destacado=True
-        ).order_by('-id')[:8]
+        # 2. Consultas seguras excluyendo productos sin slug para evitar roturas en los enlaces {% url %}
+        # Nota: Si tu modelo no usa el campo 'activo', Django simplemente usará el filtro del slug.
+        if request.user.is_authenticated:
+            productos = Producto.objects.filter(usuario=request.user).exclude(slug='').exclude(slug__isnull=True)
+            destacados = Producto.objects.filter(usuario=request.user, destacado=True).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
+            categorias = Categoria.objects.filter(usuario=request.user).order_by('nombre')
+        else:
+            productos = Producto.objects.exclude(slug='').exclude(slug__isnull=True)
+            destacados = Producto.objects.filter(destacado=True).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
+            categorias = Categoria.objects.all().order_by('nombre')
 
-        categorias = Categoria.objects.filter(
-            usuario=request.user
-        ).order_by('nombre')
-    else:
-        # SI ES PÚBLICO: Traemos el primer perfil configurado en la base de datos
-        perfil = Perfil.objects.first()
-        productos = Producto.objects.all()
+        context = {
+            'perfil': perfil,
+            'productos': productos,
+            'destacados': destacados,
+            'categorias': categorias,
+        }
+        return render(request, 'inicio.html', context)
 
-        destacados = Producto.objects.filter(
-            destacado=True
-        ).order_by('-id')[:8]
-
-        categorias = Categoria.objects.all().order_by('nombre')
-
-    return render(request, 'inicio.html', {
-        'productos': productos,
-        'destacados': destacados,
-        'categorias': categorias,
-        'perfil': perfil,  # 🚀 ¡ESTA ERA LA LÍNEA CLAVE QUE FALTABA!
-    })
-
+    except Exception as e:
+        # Captura el error real en los logs de Render para que sepas exactamente qué columna falló
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error crítico en la vista inicio: {str(e)}")
+        
+        # 🛡️ FALLBACK ABSOLUTO: Se envían listas vacías para que el HTML renderice el mensaje {% empty %} sin morir
+        return render(request, 'inicio.html', {
+            'perfil': None, 
+            'productos': [], 
+            'destacados': [], 
+            'categorias': [],
+            'error': str(e)
+        })
 
 def buscar_productos(request):
     query = request.GET.get('q', '')
