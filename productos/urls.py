@@ -87,6 +87,7 @@ urlpatterns = [
     path('configuracion-negocio/', views.configurar_negocio, name='configurar_negocio'),
     path('ganancias/', views.ganancias, name='ganancias'),
     path('inventario/', views.inventario, name='inventario'),
+    path('dashboard/exportar-excel/', views.exportar_excel_dashboard, name='exportar_excel_dashboard'),
 
     # ===============================
     # 💸 GASTOS

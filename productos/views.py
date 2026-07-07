@@ -31,6 +31,7 @@ from reportlab.pdfgen import canvas
 from xhtml2pdf import pisa
 import hashlib
 from django.views.decorators.csrf import csrf_exempt
+import openpyxl
 
 # 🏪 IMPORTACIONES DE LA APP PRODUCTOS
 from productos.models import Producto, Categoria, ProductoImagen, CarritoItem, Cliente, Perfil
@@ -874,6 +875,80 @@ def dashboard(request):
     }
 
     return render(request, 'dashboard.html', context)
+
+@login_required
+def exportar_excel_dashboard(request):
+    # Traemos solo los pedidos del joyero que tiene la sesión iniciada
+    if request.user.is_superuser:
+        queryset = Pedido.objects.all()
+    else:
+        queryset = Pedido.objects.filter(usuario=request.user)
+
+    wb = openpyxl.Workbook()
+    ws_resumen = wb.active
+    ws_resumen.title = "Resumen"
+    ws_resumen.append(["Orden", "Fecha", "Cliente", "Subtotal", "IVA", "ReteFuente", "Descuento", "Total"])
+
+    ws_detalle = wb.create_sheet(title="Detalle")
+    ws_detalle.append(["Orden", "Producto", "Cantidad", "Gramos", "Precio Unitario", "Subtotal", "Descuento", "IVA", "Total"])
+
+    for pedido in queryset:
+        subtotal_pedido = Decimal('0')
+        iva_total = Decimal('0')
+        rete_total = Decimal('0')
+        descuento_total = Decimal('0')
+
+        for item in pedido.items.all():
+            cantidad = Decimal(item.cantidad)
+            precio = Decimal(item.precio)
+
+            gramos = ''
+            if item.producto.tipo_venta == 'gramo':
+                peso = item.producto.peso_producto or 1
+                gramos = cantidad * Decimal(peso)
+                base = gramos * precio
+            else:
+                base = cantidad * precio
+
+            subtotal = Decimal(item.subtotal or base)
+            descuento = Decimal(item.descuento or 0)
+            iva = Decimal(item.iva or 0)
+            rete = Decimal(item.retefuente or 0)
+            total = Decimal(item.total_final or 0)
+
+            subtotal_pedido += subtotal
+            iva_total += iva
+            rete_total += rete
+            descuento_total += descuento
+
+            ws_detalle.append([
+                pedido.numero_orden, item.producto.nombre, float(cantidad),
+                float(gramos) if gramos else '', float(precio), float(subtotal),
+                float(descuento), float(iva), float(total),
+            ])
+
+        ws_resumen.append([
+            pedido.numero_orden, pedido.fecha.strftime('%Y-%m-%d') if pedido.fecha else '',
+            pedido.cliente_nombre or '', float(subtotal_pedido), float(iva_total),
+            float(rete_total), float(descuento_total), float(pedido.total),
+        ])
+
+    for ws in [ws_resumen, ws_detalle]:
+        for col in ws.columns:
+            max_length = 0
+            col_letter = col[0].column_letter
+            for cell in col:
+                try:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                except:
+                    pass
+            ws.column_dimensions[col_letter].width = max_length + 2
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=ventas_contable.xlsx'
+    wb.save(response)
+    return response
 
 @login_required
 def modificar_banner(request):
