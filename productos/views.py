@@ -337,8 +337,6 @@ def crear_categoria(request):
         'crear_categoria.html'
     )
 
-
-
 def detalle_producto(request, id, slug):
     producto = get_object_or_404(
         Producto,
