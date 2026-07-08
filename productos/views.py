@@ -34,6 +34,7 @@ from django.views.decorators.csrf import csrf_exempt
 import openpyxl
 import time
 import logging
+from django.db.models import Sum, Avg, Count
 
 # 🏪 IMPORTACIONES DE LA APP PRODUCTOS
 from productos.models import Producto, Categoria, ProductoImagen, CarritoItem, Cliente, Perfil
@@ -688,17 +689,31 @@ def editar_producto(request, id):
         }
     )
 
-# 🏢 FUNCIÓN AUXILIAR PROTEGIDA (Inyección automática)
 def _asegurar_gastos_basicos(usuario):
-    """Verifica si el usuario no tiene gastos e inyecta la base inicial."""
+    """Verifica si el usuario no tiene gastos e inyecta la estructura base vacía para el SaaS."""
     if not Gasto.objects.filter(usuario=usuario).exists():
-        Gasto.objects.bulk_create([
-            # NOTA: Si no has agregado el campo 'categoria' en tu modelo Gasto, 
-            # retira el parámetro categoria="..." de aquí abajo para evitar un Error 500.
-            Gasto(usuario=usuario, nombre="Arriendo Taller/Oficina", monto=600000, categoria="fijo"),
-            Gasto(usuario=usuario, nombre="Servicios Públicos (Luz/Internet)", monto=150000, categoria="fijo"),
-            Gasto(usuario=usuario, nombre="Mantenimiento de Herramientas y Pulido", monto=80000, categoria="operativo"),
-        ])
+        # Validamos dinámicamente si existe el campo 'categoria' para no romper la base de datos
+        tiene_categoria = hasattr(Gasto, 'categoria')
+        
+        gastos_base = [
+            {"nombre": "Arriendo Taller/Oficina", "monto": 0, "categoria": "fijo"},
+            {"nombre": "Servicios Públicos (Luz/Internet)", "monto": 0, "categoria": "fijo"},
+            {"nombre": "Mantenimiento de Herramientas y Pulido", "monto": 0, "categoria": "operativo"},
+        ]
+        
+        nuevos_gastos = []
+        for g in gastos_base:
+            datos = {
+                "usuario": usuario,
+                "nombre": g["nombre"],
+                "monto": g["monto"]
+            }
+            if tiene_categoria:
+                datos["categoria"] = g["categoria"]
+                
+            nuevos_gastos.append(Gasto(**datos))
+            
+        Gasto.objects.bulk_create(nuevos_gastos)
 
 @login_required(login_url='/login/')
 def dashboard(request):
@@ -1111,20 +1126,15 @@ def modificar_banner(request):
 
 @login_required
 def estadisticas(request):
-
     pedidos = Pedido.objects.filter(usuario=request.user)
 
     # 🔹 HOY
     hoy = timezone.now().date()
-    ventas_hoy = pedidos.filter(fecha__date=hoy).aggregate(
-        total=Sum('total')
-    )['total'] or 0
+    ventas_hoy = pedidos.filter(fecha__date=hoy).aggregate(total=Sum('total'))['total'] or 0
 
     # 🔹 ÚLTIMOS 30 DÍAS
     hace_30 = hoy - timedelta(days=30)
-    ventas_mes = pedidos.filter(fecha__date__gte=hace_30).aggregate(
-        total=Sum('total')
-    )['total'] or 0
+    ventas_mes = pedidos.filter(fecha_date_gte=hace_30).aggregate(total=Sum('total'))['total'] or 0
 
     # 🔹 TOTAL PEDIDOS
     total_pedidos = pedidos.count()
@@ -1136,92 +1146,96 @@ def estadisticas(request):
         total=Sum('total')
     ).order_by('dia')
 
+    # 🔹 GASTOS (Se incluye en el contexto por si lo necesitas en el frontend)
     gastos = Gasto.objects.filter(usuario=request.user).annotate(
-    dia=TruncDate('fecha')
+        dia=TruncDate('fecha')
     ).values('dia').annotate(
-    total=Sum('monto')
+        total=Sum('monto')
     ).order_by('dia')
 
-    # 🔹 TOP PRODUCTOS (si ya lo tienes)
-    top_productos = PedidoItem.objects.values(
+    # 🔹 TOP PRODUCTOS 
+    top_productos = PedidoItem.objects.filter(
+        pedido__usuario=request.user
+    ).values(
         'producto__nombre'
     ).annotate(
         total_vendido=Sum('cantidad')
     ).order_by('-total_vendido')[:5]
 
-    # 🔹 MÉTODOS DE PAGO (si ya lo tienes)
+    # 🔹 MÉTODOS DE PAGO 
     metodos_pago = pedidos.values('tipo_pago').annotate(
         total=Sum('total')
     )
 
+    # 🛠️ CORRECCIÓN: Se usa 'cliente_nombre' que es el campo real de tu modelo Pedido
     top_clientes = pedidos.values(
-    'cliente__nombre'
+        'cliente_nombre'
     ).annotate(
-    total_compras=Sum('total')
+        total_compras=Sum('total')
     ).order_by('-total_compras')[:5]
-
 
     context = {
         'ventas_hoy': ventas_hoy,
         'ventas_mes': ventas_mes,
         'total_pedidos': total_pedidos,
         'ventas_por_dia': ventas_por_dia,
+        'gastos_por_dia': gastos,
         'top_productos': top_productos,
         'metodos_pago': metodos_pago,
         'top_clientes': top_clientes,
     }
+    return render(request, 'estadisticas.html', context)
 
-    return render(
-        request,
-        'estadisticas.html',
-        context
-    )
 
 # ==========================================
-# 💰 GANANCIAS
+# 💰 GANANCIAS CORREGIDO
 # ==========================================
 @login_required
 def ganancias(request):
     hoy = timezone.now().date()
+    hace_30 = hoy - timedelta(days=30)
+    
+    pedidos_usuario = Pedido.objects.filter(usuario=request.user)
 
-    ventas_hoy = Pedido.objects.filter(
-        usuario=request.user,
-        fecha__date=hoy
-    ).aggregate(total=Sum('total'))['total'] or 0
+    ventas_hoy = pedidos_usuario.filter(fecha__date=hoy).aggregate(total=Sum('total'))['total'] or 0
+    ventas_mes = pedidos_usuario.filter(fecha_date_gte=hace_30).aggregate(total=Sum('total'))['total'] or 0
+    ventas_total = pedidos_usuario.aggregate(total=Sum('total'))['total'] or 0
+    
+    # 🛠️ PARCHE AL CORTO: Cálculo del Ticket Promedio real
+    ticket_promedio = pedidos_usuario.aggregate(promedio=Avg('total'))['promedio'] or 0
 
-    ventas_total = Pedido.objects.filter(
-        usuario=request.user
-    ).aggregate(total=Sum('total'))['total'] or 0
-
-    pedidos = Pedido.objects.filter(
-        usuario=request.user
-    ).order_by('-fecha')[:20]
+    pedidos = pedidos_usuario.order_by('-fecha')[:20]
 
     context = {
         'ventas_hoy': ventas_hoy,
+        'ventas_mes': ventas_mes,  # 🚀 Inyectado para la tarjeta del HTML
         'ventas_total': ventas_total,
+        'ticket_promedio': ticket_promedio,  # 🚀 Inyectado para la tarjeta del HTML
         'pedidos': pedidos,
     }
-
     return render(request, 'ganancias.html', context)
 
 
 # ==========================================
-# 📦 INVENTARIO
+# 📦 INVENTARIO CORREGIDO
 # ==========================================
 @login_required
 def inventario(request):
-    productos = Producto.objects.filter(
-        usuario=request.user
-    ).order_by('nombre')
+    productos = Producto.objects.filter(usuario=request.user).order_by('nombre')
 
+    # 🛠️ PARCHE AL CORTO: Agrupaciones y conteos de stock reales demandados por el HTML
     total_productos = productos.count()
+    productos_stock = productos.filter(stock__gt=5).count()
+    stock_bajo = productos.filter(stock_gt=0, stock_lte=5).count()
+    agotados = productos.filter(stock=0).count()
 
     context = {
         'productos': productos,
         'total_productos': total_productos,
+        'productos_stock': productos_stock,  # 🚀 Inyectado
+        'stock_bajo': stock_bajo,            # 🚀 Inyectado
+        'agotados': agotados,                # 🚀 Inyectado
     }
-
     return render(request, 'inventario.html', context)
 
 @login_required
@@ -1471,8 +1485,8 @@ def ver_carrito(request):
     carrito_json = json.dumps([
         {
             "producto": {"nombre": item.producto.nombre},
-            "color": item.color,
-            "talla": item.talla,
+            "color": item.variante.color if item.variante and hasattr(item.variante, 'color') else getattr(item, 'color', None),
+            "talla": item.variante.talla if item.variante and hasattr(item.variante, 'talla') else getattr(item, 'talla', None),
             "cantidad": float(item.cantidad) if item.cantidad else 0,
             "subtotal": float(item.subtotal_calculado) if item.subtotal_calculado else 0,
             "total_gramos": float(item.total_gramos) if item.total_gramos else None
