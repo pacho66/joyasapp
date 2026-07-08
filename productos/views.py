@@ -974,7 +974,7 @@ def panel_crm(request):
         }
     }
 
-    return render(request, 'cmr/panel_crm.html', context)
+    return render(request, 'crm/panel_crm.html', context)
 
 @login_required
 def exportar_excel_dashboard(request):
