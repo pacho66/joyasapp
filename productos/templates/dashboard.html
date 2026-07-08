@@ -442,6 +442,7 @@ tr:last-child td {
             </div>
             <div id="menu-dash-lista" class="menu-dashboard-links mt-2">
                 <a href="{% url 'dashboard' %}">📊 Inicio</a>
+                <a href="{% url 'panel_crm' %}">🎯 Módulo CRM</a> <!-- 📊 Enlace acoplado en el menú principal -->
                 <a href="{% url 'estadisticas' %}">📈 Estadísticas</a>
                 <a href="{% url 'ganancias' %}">💰 Ganancias</a>
                 <a href="{% url 'inventario' %}">📦 Inventario</a>
@@ -498,7 +499,11 @@ tr:last-child td {
     </section>
 
     <!-- 3. BOTONES DE ACCIÓN RÁPIDA ESTILIZADOS -->
-    <div class="botones-panel bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-2">
+    <div class="botones-panel bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-2 items-center">
+        <!-- 🎯 Acceso Premium al Módulo CRM -->
+        <a href="{% url 'panel_crm' %}" class="btn btn-morado text-xs md:text-sm font-bold shadow-sm" style="background-color: #6d28d9; color: white;">
+            🎯 Módulo CRM
+        </a>
         <a href="{% url 'modificar_banner' %}" class="btn btn-gris text-xs md:text-sm">🖼️ Banner</a>
         <a href="{% url 'estadisticas' %}" class="btn btn-azul text-xs md:text-sm">📈 Estadísticas</a>
         <a href="{% url 'ganancias' %}" class="btn btn-verde text-xs md:text-sm">💰 Ganancias</a>
@@ -508,7 +513,11 @@ tr:last-child td {
         <a href="{% url 'crear_producto' %}" class="btn btn-verde text-xs md:text-sm">➕ Producto</a>
         <a href="{% url 'crear_categoria' %}" class="btn btn-azul text-xs md:text-sm">📂 Categoría</a>
         <a href="{% url 'mis_productos' %}" class="btn btn-azul text-xs md:text-sm">📦 Mis Productos</a>
-        <a href="{% url 'exportar_excel_dashboard' %}" class="btn btn-success fw-bold px-3 py-2 shadow-sm mb-3" style="border-radius: 10px; font-size: 0.9rem;">📊 Descargar Excel Contable</a>
+        
+        <!-- 📊 Botón Verde Excel Contable Premium (Pintado con Tailwind e integrado en el flujo) -->
+        <a href="{% url 'exportar_excel_dashboard' %}" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs md:text-sm px-4 py-2 rounded-xl transition shadow-sm ml-auto">
+            📥 Descargar Excel Contable
+        </a>
     </div>
 
     <!-- 4. CUADRÍCULA DE TARJETAS (KPIs) ACTUALIZADA -->
@@ -547,7 +556,7 @@ tr:last-child td {
         </div>
     </div>
 
-    <!-- 5. ESTRUCTURA DE PANELES Y GRÁFICAS (Mantenemos tus clases originales para no romper CSS) -->
+    <!-- 5. ESTRUCTURA DE PANELES Y GRÁFICAS -->
     <div class="main-dashboard-layout">
 
         <!-- GRÁFICA VENTAS -->
@@ -702,7 +711,6 @@ function toggleMenuDash() {
 }
 
 document.addEventListener("DOMContentLoaded", function(){
-    // El script lee exactamente las mismas variables tuyas sin romperse
     const ctx = document.getElementById('graficaVentas');
     if(ctx){
         new Chart(ctx, {
@@ -762,4 +770,5 @@ document.addEventListener("DOMContentLoaded", function(){
     }
 });
 </script>
+
 {% endblock %}
