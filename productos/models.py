@@ -451,10 +451,18 @@ class Cliente(models.Model):
     
     @property
     def link_whatsapp_cumpleanos(self):
-        """Mensaje de felicitación + gancho de fidelización dinámico"""
+        """Mensaje de felicitación + gancho de fidelización (10% de descuento)"""
         import urllib.parse
-        # Obtenemos el nombre del negocio o del dueño dinámicamente
-        nombre_negocio = self.usuario.first_name if self.usuario.first_name else "nuestra joyería"
+        
+        # 🏢 Intentamos traer el nombre de la tienda configurado en su perfil SaaS
+        try:
+            # Reemplaza 'perfil' por el related_name exacto de tu modelo de configuración
+            nombre_negocio = self.usuario.perfil.nombre_tienda
+        except AttributeError:
+            nombre_negocio = "nuestra joyería"
+            
+        if not nombre_negocio: # Por si el campo está vacío en la base de datos
+            nombre_negocio = "nuestra joyería"
         
         texto = (
             f"¡Hola, {self.nombre}! 🌟 De parte de todo el equipo de {nombre_negocio}, "
@@ -466,9 +474,16 @@ class Cliente(models.Model):
 
     @property
     def link_whatsapp_saldo(self):
-        """Recordatorio sutil y elegante de saldo pendiente dinámico"""
+        """Recordatorio sutil y elegante de saldo pendiente"""
         import urllib.parse
-        nombre_negocio = self.usuario.first_name if self.usuario.first_name else "nuestra joyería"
+        
+        try:
+            nombre_negocio = self.usuario.perfil.nombre_tienda
+        except AttributeError:
+            nombre_negocio = "nuestra joyería"
+            
+        if not nombre_negocio:
+            nombre_negocio = "nuestra joyería"
         
         texto = (
             f"Hola, {self.nombre}. ✨ Esperamos que estés muy bien. Nos comunicamos de "
@@ -481,9 +496,16 @@ class Cliente(models.Model):
 
     @property
     def link_whatsapp_inactivo(self):
-        """Campaña de reactivación para clientes perdidos (+90 días) dinámica"""
+        """Campaña de reactivación para clientes perdidos (+90 días)"""
         import urllib.parse
-        nombre_negocio = self.usuario.first_name if self.usuario.first_name else "nuestra joyería"
+        
+        try:
+            nombre_negocio = self.usuario.perfil.nombre_tienda
+        except AttributeError:
+            nombre_negocio = "nuestra joyería"
+            
+        if not nombre_negocio:
+            nombre_negocio = "nuestra joyería"
         
         texto = (
             f"¡Hola, {self.nombre}! 🥰 Hace tiempo que no sabemos de ti en {nombre_negocio} "
@@ -492,7 +514,7 @@ class Cliente(models.Model):
             f"válido por esta semana si deseas consentirte de nuevo. ¡Un abrazo!"
         )
         return f"https://wa.me/{self.telefono}?text={urllib.parse.quote(texto)}"
-
+    
 class Pedido(models.Model):
 
     # 🔹 IDENTIFICACIÓN
