@@ -308,17 +308,34 @@ class CarritoItem(models.Model):
         return f"{self.cantidad} x {self.producto.nombre}"
 
 class Cliente(models.Model):
-
-    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    # 🏢 AISLAMIENTO SAAS (Multi-tenant)
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE) # El dueño de la joyería
+    
+    # 👤 DATOS BÁSICOS e IDENTIFICACIÓN
     nombre = models.CharField(max_length=100)
     nit = models.CharField(max_length=50, blank=True, null=True)
-    telefono = models.CharField(max_length=20, unique=True)
+    telefono = models.CharField(max_length=20, unique=True) # Llave maestra para WhatsApp
     email = models.EmailField(blank=True, null=True)
-
     ciudad = models.CharField(max_length=100, blank=True, null=True)
     direccion = models.CharField(max_length=255, blank=True, null=True)
+    fecha_cumpleanos = models.DateField(blank=True, null=True)  # 🎂 Para campaña: Cumpleaños
+    observaciones = models.TextField(blank=True)                # Notas internas del vendedor
+    etiquetas = models.CharField(max_length=300, blank=True, help_text="Ej: Novias, Mayorista, Plata") # 🏷️ Tags
+    
+    # 🏢 CRM COLABORATIVO (Asignación interna)
+    asesor = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name="clientes_asignados"
+    ) # Para joyerías con varios vendedores
 
-    # 💎 CLASIFICACIÓN
+    # 🔒 PRIVACIDAD Y SEGUIMIENTO
+    acepta_whatsapp = models.BooleanField(default=True) # 📱 Control de bajas/Opt-in
+    activo = models.BooleanField(default=True)
+
+    # 💎 CLASIFICACIÓN Y DESCUENTOS ORIGINALES
     tipo_cliente = models.CharField(
         max_length=20,
         choices=[
@@ -329,25 +346,153 @@ class Cliente(models.Model):
         ],
         default='detalle'
     )
+    porcentaje_descuento = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
-    # 💰 DESCUENTO AUTOMÁTICO
-    porcentaje_descuento = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        default=0
+    # 📈 SEGMENTACIÓN CRM AVANZADA
+    origen = models.CharField(
+        max_length=30,
+        default="WhatsApp",
+        choices=[
+            ("WhatsApp", "WhatsApp"),
+            ("Tienda", "Tienda"),
+            ("Instagram", "Instagram"),
+            ("Facebook", "Facebook"),
+            ("TikTok", "TikTok"),
+            ("Página Web", "Página Web"),
+        ]
+    )
+    
+    estado = models.CharField(
+        max_length=20,
+        default="Nuevo",
+        choices=[
+            ("Nuevo", "Nuevo"),
+            ("Activo", "Activo"),
+            ("Frecuente", "Frecuente"),
+            ("VIP", "VIP"),
+            ("Inactivo", "Inactivo"),
+        ]
+    )
+    
+    nivel = models.CharField(
+        max_length=20,
+        default="Bronce",
+        choices=[
+            ("Bronce", "Bronce"),
+            ("Plata", "Plata"),
+            ("Oro", "Oro"),
+            ("Diamante", "Diamante"),
+        ]
     )
 
-    # 📊 CONTROL
+    # 📊 CONTROL Y MÉTRICAS FINANCIERAS
     total_compras = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    saldo_pendiente = models.DecimalField(max_digits=12, decimal_places=2, default=0.00) # 🪙 Control de apartados
     numero_pedidos = models.IntegerField(default=0)
-
     ultima_compra = models.DateTimeField(null=True, blank=True)
+    
+    # 🎯 PREFERENCIAS DE CONSUMO (Historial inteligente)
+    categoria_favorita = models.CharField(max_length=100, blank=True, null=True)
+    variante_favorita_resumen = models.CharField(max_length=150, blank=True, null=True)
+    
+    # 🔄 RETENCIÓN Y REACTIVACIÓN FUTURA
+    ultima_categoria = models.CharField(max_length=100, blank=True, null=True)
+    ultima_variante = models.CharField(max_length=150, blank=True, null=True)
+    ultima_factura = models.CharField(max_length=40, blank=True, null=True)
+    dias_sin_comprar = models.IntegerField(default=0) # 🎁 Base para el automatizador
+    ultimo_contacto = models.DateTimeField(blank=True, null=True)
+    proxima_tarea = models.DateTimeField(blank=True, null=True)
 
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"{self.nombre} - {self.telefono}"
+    def _str_(self):
+        return f"[{self.nivel}] {self.nombre} - {self.telefono}"
+        
+    @property
+    def ticket_promedio(self):
+        """Calcula dinámicamente el valor promedio por pedido"""
+        if self.numero_pedidos > 0:
+            return self.total_compras / self.numero_pedidos
+        return 0.00
+
+    def actualizar_ciclo_y_rangos(self):
+        """
+        🚀 MÓDULO INTELIGENTE POST-VENTA
+        Evalúa automáticamente la inactividad, promueve a VIP y gestiona los rangos del CRM.
+        """
+        # 1. Control de Días sin comprar (Reactivación)
+        if self.ultima_compra:
+            delta = timezone.now() - self.ultima_compra
+            self.dias_sin_comprar = delta.days
+            if self.dias_sin_comprar > 90:
+                self.estado = "Inactivo"
+        else:
+            self.dias_sin_comprar = 0
+
+        # 2. Asignación Inteligente de Niveles (Gamificación basada en tus metas de negocio)
+        if self.total_compras >= 5000000 or self.numero_pedidos >= 20:
+            self.nivel = "Diamante"
+            self.estado = "VIP"
+            self.tipo_cliente = "vip" # Sincroniza con tu campo original
+        elif self.total_compras >= 3000000 or self.numero_pedidos >= 10:
+            self.nivel = "Oro"
+            if self.dias_sin_comprar <= 90: 
+                self.estado = "Frecuente"
+        elif self.total_compras >= 1000000 or self.numero_pedidos >= 5:
+            self.nivel = "Plata"
+            if self.dias_sin_comprar <= 90: 
+                self.estado = "Activo"
+        else:
+            self.nivel = "Bronce"
+            if self.numero_pedidos == 1: 
+                self.estado = "Nuevo"
+
+    # === 📱 MÓDULO DE AUTOMATIZACIÓN DE WHATSAPP (ENLACES DINÁMICOS MULTI-TENANT) ===
     
+    @property
+    def link_whatsapp_cumpleanos(self):
+        """Mensaje de felicitación + gancho de fidelización dinámico"""
+        import urllib.parse
+        # Obtenemos el nombre del negocio o del dueño dinámicamente
+        nombre_negocio = self.usuario.first_name if self.usuario.first_name else "nuestra joyería"
+        
+        texto = (
+            f"¡Hola, {self.nombre}! 🌟 De parte de todo el equipo de {nombre_negocio}, "
+            f"te deseamos un espectacular feliz cumpleaños. 🎂 En tu día, queremos "
+            f"celebrarte con un obsequio especial: un 10% de descuento en tu próxima "
+            f"joya favorita. 💎 ¡Que pases un día maravilloso!"
+        )
+        return f"https://wa.me/{self.telefono}?text={urllib.parse.quote(texto)}"
+
+    @property
+    def link_whatsapp_saldo(self):
+        """Recordatorio sutil y elegante de saldo pendiente dinámico"""
+        import urllib.parse
+        nombre_negocio = self.usuario.first_name if self.usuario.first_name else "nuestra joyería"
+        
+        texto = (
+            f"Hola, {self.nombre}. ✨ Esperamos que estés muy bien. Nos comunicamos de "
+            f"{nombre_negocio} para actualizar tu estado de cuenta. Actualmente presentas "
+            f"un saldo pendiente de ${self.saldo_pendiente:,.0f}. 📝 Si deseas realizar el pago "
+            f"por transferencia o reportar tu comprobante, quedamos atentos por este medio. "
+            f"¡Muchas gracias por tu confianza!"
+        )
+        return f"https://wa.me/{self.telefono}?text={urllib.parse.quote(texto)}"
+
+    @property
+    def link_whatsapp_inactivo(self):
+        """Campaña de reactivación para clientes perdidos (+90 días) dinámica"""
+        import urllib.parse
+        nombre_negocio = self.usuario.first_name if self.usuario.first_name else "nuestra joyería"
+        
+        texto = (
+            f"¡Hola, {self.nombre}! 🥰 Hace tiempo que no sabemos de ti en {nombre_negocio} "
+            f"y te extrañamos. Nos acaban de llegar unas piezas hermosas en nuestra última "
+            f"colección que van perfectas con tu estilo. ✨ Te dejamos un envío gratis "
+            f"válido por esta semana si deseas consentirte de nuevo. ¡Un abrazo!"
+        )
+        return f"https://wa.me/{self.telefono}?text={urllib.parse.quote(texto)}"
+
 class Pedido(models.Model):
 
     # 🔹 IDENTIFICACIÓN

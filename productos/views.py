@@ -888,6 +888,91 @@ def dashboard(request):
     return render(request, 'dashboard.html', context)
 
 @login_required
+def panel_crm(request):
+    """
+    📊 CONTROLADOR CENTRAL DEL CRM (JoyasApp SaaS)
+    Filtra los clientes del usuario autenticado y genera las métricas en tiempo real.
+    """
+    # 🏢 Regla de Oro SaaS: Filtrar estrictamente por la joyería actual
+    clientes_base = Cliente.objects.filter(usuario=request.user, activo=True)
+
+    # 1. CAPTURA DE FILTROS DESDE LA URL (Para la barra de búsqueda y barra lateral)
+    buscar = request.GET.get('q', '').strip()
+    filtro_nivel = request.GET.get('nivel', '').strip()
+    filtro_estado = request.GET.get('estado', '').strip()
+    filtro_origen = request.GET.get('origen', '').strip()
+    filtro_alerta = request.GET.get('alerta', '').strip() # nuevo: cumpleaños, inactivos, saldo
+
+    # Aplicar buscador por texto (Nombre, Teléfono, Ciudad o Etiquetas)
+    if buscar:
+        clientes_base = clientes_base.filter(
+            Q(nombre__icontains=buscar) |
+            Q(telefono__icontains=buscar) |
+            Q(ciudad__icontains=buscar) |
+            Q(etiquetas__icontains=buscar)
+        )
+
+    # Aplicar filtros específicos
+    if filtro_nivel:
+        clientes_base = clientes_base.filter(nivel=filtro_nivel)
+    if filtro_estado:
+        clientes_base = clientes_base.filter(estado=filtro_estado)
+    if filtro_origen:
+        clientes_base = clientes_base.filter(origen=filtro_origen)
+
+    # 🚨 FILTROS INTELIGENTES Y PREDICTIVOS (Alertas operativas)
+    hoy = timezone.now().date()
+    if filtro_alerta == 'cumpleanos':
+        clientes_base = clientes_base.filter(fecha_cumpleanos_month=hoy.month, fecha_cumpleanos_day=hoy.day)
+    elif filtro_alerta == 'inactivos_90':
+        clientes_base = clientes_base.filter(dias_sin_comprar__gte=90)
+    elif filtro_alerta == 'saldo_pendiente':
+        clientes_base = clientes_base.filter(saldo_pendiente__gt=0)
+    elif filtro_alerta == 'whatsapp_ok':
+        clientes_base = clientes_base.filter(acepta_whatsapp=True)
+
+    # 📈 CÁLCULO DE MÉTRICAS GLOBALES EN TIEMPO REAL (Para los contadores superiores)
+    clientes_joyeria = Cliente.objects.filter(usuario=request.user, activo=True)
+    
+    total_clientes = clientes_joyeria.count()
+    nuevos = clientes_joyeria.filter(estado='Nuevo').count()
+    vips = clientes_joyeria.filter(estado='VIP').count()
+    diamantes = clientes_joyeria.filter(nivel='Diamante').count()
+    
+    # Sumatoria segura del saldo pendiente global
+    saldo_total_dict = clientes_joyeria.aggregate(Sum('saldo_pendiente'))
+    saldo_pendiente_total = saldo_total_dict['saldo_pendiente__sum'] or 0.00
+    
+    cumpleanos_hoy = clientes_joyeria.filter(fecha_cumpleanos_month=hoy.month, fecha_cumpleanos_day=hoy.day).count()
+    sin_comprar_90 = clientes_joyeria.filter(dias_sin_comprar__gte=90).count()
+    whatsapp_habilitados = clientes_joyeria.filter(acepta_whatsapp=True).count()
+
+    # Contexto unificado para inyectar en el HTML
+    context = {
+        'clientes': clientes_base,  # Clientes filtrados que se muestran en la tabla
+        'buscar': buscar,
+        'filtros': {
+            'nivel': filtro_nivel,
+            'estado': filtro_estado,
+            'origen': filtro_origen,
+            'alerta': filtro_alerta,
+        },
+        # Indicadores numéricos del Dashboard
+        'metricas': {
+            'total_clientes': total_clientes,
+            'nuevos': nuevos,
+            'vips': vips,
+            'diamantes': diamantes,
+            'saldo_pendiente': saldo_pendiente_total,
+            'cumpleanos_hoy': cumpleanos_hoy,
+            'sin_comprar_90': sin_comprar_90,
+            'whatsapp_habilitados': whatsapp_habilitados,
+        }
+    }
+
+    return render(request, 'cmr/panel_crm.html', context)
+
+@login_required
 def exportar_excel_dashboard(request):
     # Traemos solo los pedidos del joyero que tiene la sesión iniciada
     if request.user.is_superuser:
