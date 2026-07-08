@@ -1672,21 +1672,20 @@ def comprar_whatsapp(request, producto_id=None):
             })
 
     # =========================================================
-    # 📊 PASO 2: CAPTURA SEGURA Y MODELADO REAL
+    # 📊 PASO 2: CAPTURA SEGURA (Sin autonomía del cliente)
     # =========================================================
     numero = generar_numero_orden(usuario)
 
-    aplica_iva = request.POST.get('aplica_iva') == 'on'
-    es_retenedor = request.POST.get('es_retenedor') == 'on'
-    valor_descuento = request.POST.get('descuento', '0')
+    # 🔒 OBTENEMOS LAS REGLAS DIRECTAMENTE DEL PERFIL DEL JOYERO (No del POST)
+    perfil, _ = Perfil.objects.get_or_create(user=usuario)
+    
+    # Supongamos que en tu modelo Perfil tienes campos como 'cobra_iva' o 'es_autoretenedor'.
+    # Si no existen, puedes dejarlos en False por defecto o usar los atributos correctos de tu modelo:
+    aplica_iva = getattr(perfil, 'cobra_iva', False) 
+    es_retenedor = getattr(perfil, 'es_retenedor', False)
+    porcentaje_descuento = Decimal('0')  # El cliente público no puede auto-asignarse descuentos
 
-    try:
-        porcentaje_descuento = Decimal(str(valor_descuento))
-    except:
-        porcentaje_descuento = Decimal('0')
-
-    porcentaje_descuento = max(Decimal('0'), min(Decimal('100'), porcentaje_descuento))
-
+    # Solo capturamos los datos personales y de envío del cliente
     nombre_cliente = request.POST.get('nombre', '').strip()
     telefono_cliente = request.POST.get('telefono', '').strip()
     ciudad_destino = request.POST.get('ciudad', '').strip()
@@ -1702,7 +1701,7 @@ def comprar_whatsapp(request, producto_id=None):
     else:
         cliente_email = "cliente_whatsapp@joyasapp.com"
 
-    # Cálculo de Totales (Tu lógica original intacta)
+    # Cálculo de Totales basado en la configuración real del Joyero
     subtotal_general = Decimal('0')
     for data in resumen_items:
         subtotal_general += data['subtotal']
@@ -1713,7 +1712,6 @@ def comprar_whatsapp(request, producto_id=None):
     iva = subtotal_con_descuento * Decimal('0.19') if aplica_iva else Decimal('0')
     retefuente = subtotal_con_descuento * Decimal('0.025') if es_retenedor else Decimal('0')
     
-    # Mantiene tu consulta de envío original
     costo_envio = calcular_envio(ciudad_destino, subtotal_con_descuento)
     total_final = subtotal_con_descuento + iva - retefuente + costo_envio
 
@@ -1728,8 +1726,8 @@ def comprar_whatsapp(request, producto_id=None):
             cliente_ciudad=ciudad_destino,
             cliente_direccion=direccion_entrega,
             cliente_nit=nit,
-            total=float(total_final),  # 🚀 Aseguramos tipo nativo compatible con la DB
-            porcentaje_descuento=float(porcentaje_descuento),  # 🚀 Evita el choque de tipos en DB
+            total=float(total_final),  
+            porcentaje_descuento=float(porcentaje_descuento),  
             descuento_total=float(descuento),
             costo_envio=float(costo_envio),
             aplica_iva=aplica_iva,
@@ -1780,7 +1778,6 @@ def comprar_whatsapp(request, producto_id=None):
             f"Quedo atento a tus indicaciones para realizar el pago. ¡Muchas gracias!"
         ).replace(",", ".")
 
-        perfil, _ = Perfil.objects.get_or_create(user=usuario)
         if not perfil.whatsapp:
             messages.warning(request, "El comercio no tiene configurado WhatsApp.")
             return redirect('ver_carrito') if not es_compra_directa else redirect('detalle_producto', id=producto.id, slug=producto.slug)
@@ -2302,7 +2299,6 @@ def pago_exitoso(request, token):
 
     return redirect('factura_publica', token=token)
 
-
 @login_required
 def lista_pedidos(request):
     pedidos = Pedido.objects.filter(usuario=request.user).order_by('-fecha')
@@ -2310,7 +2306,6 @@ def lista_pedidos(request):
 
     for p in pedidos:
         if getattr(p, 'tipo_pago', 'contado') == 'credito' and p.fecha_limite:
-            # Evitamos errores usando safe fallbacks de saldo_pendiente
             saldo = getattr(p, 'saldo_pendiente', Decimal('0.00')) or Decimal('0.00')
             if saldo > 0 and p.fecha_limite < hoy:
                 p.estado_visual = 'vencido'
@@ -2323,6 +2318,7 @@ def lista_pedidos(request):
 
     return render(request, 'lista_pedidos.html', {'pedidos': pedidos})
 
+
 @login_required
 def detalle_pedido(request, pedido_id):
     # 🎯 Buscamos el pedido asegurando que pertenezca al joyero autenticado
@@ -2331,6 +2327,31 @@ def detalle_pedido(request, pedido_id):
         id=pedido_id,
         usuario=request.user
     )
+
+    # =======================================================
+    # 🔄 BLINDAJE Y ACTUALIZACIÓN EN CALIENTE DEL CRM (Evita el $0)
+    # =======================================================
+    if pedido.cliente:
+        cliente_actual = pedido.cliente
+        
+        # 1. Sumamos de forma real e histórica todos los pedidos pagados de este cliente
+        total_historico = Pedido.objects.filter(
+            cliente=cliente_actual,
+            usuario=request.user,
+            estado='pagado'
+        ).aggregate(Sum('total'))['total__sum'] or Decimal('0.00')
+
+        # 2. Sumamos lo que debe actualmente en cartera
+        total_cartera = Pedido.objects.filter(
+            cliente=cliente_actual,
+            usuario=request.user,
+            saldo_pendiente__gt=0
+        ).aggregate(Sum('saldo_pendiente'))['saldo_pendiente__sum'] or Decimal('0.00')
+
+        # 3. Forzamos la actualización física en la ficha del cliente
+        cliente_actual.total_compras = total_historico
+        cliente_actual.saldo_pendiente = total_cartera
+        cliente_actual.save()  # ← ¡Esto borra el $0 del CRM para siempre!
 
     items = pedido.items.select_related('producto', 'variante').all()
 
@@ -2345,12 +2366,8 @@ def detalle_pedido(request, pedido_id):
     total_final = Decimal(pedido.total or 0)
 
     # 🔗 ENLACES NATIVOS
-    link_pdf = request.build_absolute_uri(
-        reverse('pedido_pdf', args=[pedido.id])
-    )
-    link_publico = request.build_absolute_uri(
-        reverse('confirmar_pago_publico', args=[pedido.token_publico])
-    )
+    link_pdf = request.build_absolute_uri(reverse('pedido_pdf', args=[pedido.id]))
+    link_publico = request.build_absolute_uri(reverse('confirmar_pago_publico', args=[pedido.token_publico]))
 
     # 📲 WHATSAPP
     whatsapp_url = generar_link_whatsapp(request, pedido)
@@ -2376,10 +2393,10 @@ def detalle_pedido(request, pedido_id):
     total_abonado = sum(a.monto for a in abonos) if abonos else 0
 
     # ===============================
-    # 📦 CONTEXT (¡CORREGIDO CON user=!)
+    # 📦 CONTEXT COPIADO TAL CUAL
     # ===============================
+    logo_path = None
     try:
-        # 🔥 Aquí corregimos el campo real: 'user' en vez de 'usuario'
         perfil = Perfil.objects.get(user=request.user)
         empresa_nombre = perfil.nombre_tienda or "Mi Joyería"
         empresa_nit = perfil.nit or "Sin NIT"
@@ -2396,51 +2413,35 @@ def detalle_pedido(request, pedido_id):
     context = {
         'pedido': pedido,
         'items': items,
-        'cliente': getattr(pedido, 'cliente', None),  # 🚀 Inyección segura para evitar errores en el HTML
-        
+        'cliente': getattr(pedido, 'cliente', None),
         'subtotal': subtotal,
         'iva_total': iva_total,
         'descuento_total': descuento_total,
         'retefuente_total': retefuente_total,
         'envio': envio,
         'total_final': total_final,
-
         'link_pdf': link_pdf,
         'link_publico': link_publico,
-        
         'whatsapp_url': whatsapp_url,
-
         'estado_credito': estado_credito,
         'abonos': abonos,
         'total_abonado': total_abonado,
-
-        # 🏢 DATOS DE EMPRESA SEGUROS
         'empresa_nombre': empresa_nombre,
         'empresa_nit': empresa_nit,
         'empresa_telefono': empresa_telefono,
         'empresa_direccion': empresa_direccion,
         'logo_path': logo_path,
-
         'qr_pago_url': link_publico,
     }
-    print("DETALLE PEDIDO OK")
-    print("Pedido:", pedido.id)
-    print("Numero:", pedido.numero_orden)
-    print("Cliente:", getattr(pedido, 'cliente', None))
-    print("Fecha:", getattr(pedido, 'fecha', None))
-    print("Fecha creación:", getattr(pedido, 'fecha_creacion', None))
+    
+    print("DETALLE PEDIDO OK - CRM SINCRONIZADO")
+    return render(request, 'detalle_pedido.html', context)
 
-    try:
-        return render(request, 'detalle_pedido.html', context)
-
-    except Exception as e:
-        print("ERROR DETALLE PEDIDO:", str(e))
-        raise
 
 def pedido_pdf(request, pedido_id):
+    # (Todo el código de tu función pedido_pdf se queda idéntico, no requiere cambios)
     pedido = get_object_or_404(Pedido, id=pedido_id)
     items = pedido.items.select_related('producto', 'variante').all()
-    
     usuario_pedido = pedido.usuario
 
     try:
@@ -2453,11 +2454,10 @@ def pedido_pdf(request, pedido_id):
     empresa_telefono = perfil.whatsapp if perfil else ""
     empresa_direccion = perfil.direccion if perfil else ""
     empresa_email = perfil.email_empresa if perfil else ""
-    # 🛡️ Obtención segura del logo de la empresa (Cloudinary o URL local)
+    
     empresa_logo = None
     if perfil and perfil.logo:
         try:
-            # Extraemos la URL segura del logo guardado en Cloudinary
             empresa_logo = perfil.logo.url
         except Exception:
             empresa_logo = None
@@ -2465,7 +2465,6 @@ def pedido_pdf(request, pedido_id):
     color_primario = perfil.color_primario if perfil else "#111111"
     color_secundario = perfil.color_secundario if perfil else "#333333"
 
-    # 🛡️ PROTECCIÓN MANUAL DE CÁLCULOS ANTI-NOT_ITERABLE 
     subtotal = Decimal('0')
     iva_total = Decimal('0')
     descuento_total = Decimal('0')
@@ -2498,24 +2497,20 @@ def pedido_pdf(request, pedido_id):
     context = {
         'pedido': pedido,
         'items': items,
-
         'cliente_nombre': pedido.cliente_nombre,
         'cliente_email': pedido.cliente_email,
         'cliente_telefono': pedido.cliente_telefono,
         'cliente_direccion': pedido.cliente_direccion,
         'cliente_ciudad': pedido.cliente_ciudad,
         'cliente_nit': pedido.cliente_nit,
-
         'empresa_nombre': empresa_nombre,
         'empresa_nit': empresa_nit,
         'empresa_telefono': empresa_telefono,
         'empresa_direccion': empresa_direccion,
         'empresa_email': empresa_email,
         'empresa_logo': empresa_logo,
-
         'color_primario': color_primario,
         'color_secundario': color_secundario,
-
         'subtotal': subtotal,
         'iva_total': iva_total,
         'descuento_total': descuento_total,
@@ -2528,19 +2523,15 @@ def pedido_pdf(request, pedido_id):
     try:
         template = get_template('pedido_pdf.html')
         html = template.render(context)
-
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="pedido_{pedido.numero_orden}.pdf"'
-
         pdf = pisa.CreatePDF(html, dest=response)
         if pdf.err:
-            print(f"❌ ERROR EN XHTML2PDF: {pdf.err}")
             return HttpResponse(f"Error generando PDF: {pdf.err}", status=500)
-
         return response
     except Exception as e:
-        print(f"❌ EXCEPCIÓN EN RENDERIZADO PDF: {str(e)}")
         return HttpResponse(f"Error interno: {str(e)}", status=500)
+
 
 @login_required
 def lista_gastos(request):

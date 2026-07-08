@@ -399,25 +399,12 @@
             </label>
         </div>
 
-        <div class="opciones-fiscales">
-            <h5 style="margin: 0 0 12px 0; color: #6c757d; font-size: 12px; font-weight: 600; text-transform: uppercase;">Impuestos y Régimen Fiscal (Opcional Mayoristas)</h5>
-            
-            <div class="fiscales-flex">
-                <label class="checkbox-label">
-                    <input type="checkbox" name="aplica_iva"> Aplicar IVA (19%)
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" name="es_retenedor"> Cliente Retenedor (Aplica retefuente)
-                </label>
-                <label style="font-size: 13px; color: #495057;">
-                    NIT / CC: 
-                    <input type="text" name="nit" placeholder="Opcional" class="input-SaaS" style="width: 140px; display: inline-block; margin-top: 0; padding: 6px 10px;">
-                </label>
-                <label style="font-size: 13px; color: #495057; margin-left: 10px;">
-                    % Descuento: 
-                    <input type="number" name="descuento" min="0" max="100" placeholder="0" class="input-SaaS" style="width: 70px; display: inline-block; margin-top: 0; padding: 6px 10px;">
-                </label>
-            </div>
+        <!-- 🔒 BLOQUE FISCAL RESTRINGIDO: Solo identificación opcional para el cliente -->
+        <div class="opciones-fiscales" style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ced4da;">
+            <label style="font-size: 13px; color: #495057; font-weight: 500; margin: 0;">
+                Cédula o NIT (Opcional para facturación): 
+                <input type="text" name="nit" placeholder="Ej: 1017000111" class="input-SaaS" style="width: 180px; display: inline-block; margin-top: 0; padding: 6px 10px; margin-left: 8px;">
+            </label>
         </div>
     
         <div style="margin-top: 25px; display: flex; flex-direction: column; gap: 12px;">
@@ -435,6 +422,7 @@
                 </a>
             </div>
         </div>
+    
     </div> </form> <a href="#" id="whatsapp-flotante" style="position: fixed; bottom: 20px; right: 20px; background: #25D366; color: white; padding: 12px 20px; border-radius: 30px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 999; display: flex; align-items: center; gap: 5px; font-size: 14px;">
     📱 WhatsApp - <span id="whatsapp-info">0 piezas - $0</span>
 </a>
