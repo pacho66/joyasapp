@@ -2587,25 +2587,40 @@ def registrar_abono(request, pedido_id):
     )
 
     if request.method == 'POST':
-        monto = request.POST.get('monto')
+        monto_raw = request.POST.get('monto')
 
-        if monto:
-            monto = float(monto)
+        if monto_raw:
+            # 🔥 CORRECCIÓN: Convertir a Decimal, NUNCA a float para evitar errores en Render
+            monto = Decimal(monto_raw)
 
             Abono.objects.create(
                 pedido=pedido,
                 monto=monto
             )
 
-            # 🔥 RESTAR AL SALDO
+            # 🔥 RESTAR AL SALDO DEL PEDIDO
             pedido.saldo_pendiente -= monto
 
             # 🔥 SI YA PAGÓ TODO
             if pedido.saldo_pendiente <= 0:
-                pedido.saldo_pendiente = 0
+                pedido.saldo_pendiente = Decimal('0.00')
                 pedido.estado = "pagado"
 
             pedido.save()
+
+            # 🔥 ALINEACIÓN CON EL CRM: Si el pedido tiene un cliente asignado, actualizamos su saldo global
+            if pedido.cliente:
+                cliente = pedido.cliente
+                # Recalculamos de forma exacta sumando todos sus pedidos pendientes
+                from django.db.models import Sum
+                saldo_total_dict = Pedido.objects.filter(
+                    cliente=cliente, 
+                    usuario=request.user, 
+                    saldo_pendiente__gt=0
+                ).aggregate(Sum('saldo_pendiente'))
+                
+                cliente.saldo_pendiente = saldo_total_dict['saldo_pendiente__sum'] or Decimal('0.00')
+                cliente.save()  # ← ¡Esto actualiza el panel del CRM al instante!
 
             messages.success(request, "Abono registrado correctamente")
 
@@ -2619,8 +2634,9 @@ def cobrar_cliente(request, cliente_id):
         usuario=request.user
     )
 
+    # 🔥 CORRECCIÓN: Filtrar por la relación directa 'cliente=cliente' en lugar de texto para evitar fallos por tildes
     pedidos = Pedido.objects.filter(
-        cliente_nombre=cliente.nombre,
+        cliente=cliente,
         usuario=request.user,
         tipo_pago='credito',
         saldo_pendiente__gt=0
@@ -2632,12 +2648,21 @@ def cobrar_cliente(request, cliente_id):
     mensaje += "Te recordamos que tienes una factura pendiente:\n\n"
 
     for p in pedidos:
-        mensaje += f"🧾 {p.numero_orden} - ${p.saldo_pendiente:,.0f}\n".replace(",", ".")
+        # 🇨🇴 Formato de miles con puntos colombianos impecable
+        saldo_p_formateado = f"{p.saldo_pendiente:,.0f}".replace(",", ".")
+        mensaje += f"🧾 {p.numero_orden or p.id} - ${saldo_p_formateado}\n"
 
-    mensaje += f"\n💰 Total pendiente: ${total_deuda:,.0f}".replace(",", ".")
+    total_deuda_formateado = f"{total_deuda:,.0f}".replace(",", ".")
+    mensaje += f"\n💰 Total pendiente: ${total_deuda_formateado}"
     mensaje += "\n\nPor favor realizar el pago lo antes posible 🙏"
 
-    telefono = ''.join(filter(str.isdigit, cliente.telefono))
+    # Limpiar teléfono de manera segura por si tiene nulos
+    telefono = ''.join(filter(str.isdigit, cliente.telefono or ""))
+
+    if not telefono:
+        messages.warning(request, "El cliente no tiene un teléfono válido registrado")
+        # 🔥 CORRECCIÓN: Te regresa a la cartera de clientes de forma segura si no hay teléfono
+        return redirect('cartera_clientes') 
 
     if not telefono.startswith('57'):
         telefono = f"57{telefono}"
@@ -2645,37 +2670,41 @@ def cobrar_cliente(request, cliente_id):
     url = f"https://wa.me/{telefono}?text={quote(mensaje)}"
 
     return redirect(url)
-
+    
 @login_required
 def cobrar_whatsapp(request, pedido_id):
-    pedido = get_object_or_404(
-        Pedido,
-        id=pedido_id,
-        usuario=request.user
-    )
+    """
+    📱 COBRO DE UN PEDIDO INDEPENDIENTE
+    """
+    pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
 
-    hoy = timezone.now().date()
-
-    # 🔥 VALIDAR QUE DEBE
+    # Validar si el pedido ya está saldado
     if pedido.saldo_pendiente <= 0:
         messages.info(request, "Este pedido ya está pago")
         return redirect('detalle_pedido', pedido_id=pedido.id)
 
-    # 🔥 MENSAJE AUTOMÁTICO PRO
+    # 🇨🇴 Formatear dinero con puntos para miles en Colombia de forma segura
+    saldo_formateado = f"{pedido.saldo_pendiente:,.0f}".replace(",", ".")
+
+    # Traer el nombre de la tienda de forma segura
+    try:
+        nombre_tienda = request.user.perfil.nombre_tienda or "nuestra joyería"
+    except AttributeError:
+        nombre_tienda = "nuestra joyería"
+
     mensaje = (
         f"Hola {pedido.cliente_nombre},\n\n"
-        f"Te escribimos de {request.user.perfil.nombre_tienda} 💎\n\n"
+        f"Te escribimos de {nombre_tienda} 💎\n\n"
         f"🧾 Factura: {pedido.numero_orden}\n"
         f"📅 Vencimiento: {pedido.fecha_limite}\n"
-        f"💰 Saldo pendiente: ${pedido.saldo_pendiente:,.0f}\n\n"
+        f"💰 Saldo pendiente: ${saldo_formateado}\n\n"
         f"⚠️ Esta factura se encuentra vencida.\n"
         f"Agradecemos tu pago lo antes posible.\n\n"
         f"Si ya realizaste el pago, por favor ignora este mensaje 🙏"
-    ).replace(",", ".")
+    )
 
-    # 🔥 LIMPIAR TELÉFONO
+    # Limpiar teléfono
     telefono = ''.join(filter(str.isdigit, pedido.cliente_telefono or ""))
-
     if not telefono:
         messages.warning(request, "Cliente sin teléfono válido")
         return redirect('detalle_pedido', pedido_id=pedido.id)
@@ -2684,40 +2713,58 @@ def cobrar_whatsapp(request, pedido_id):
         telefono = f"57{telefono}"
 
     url = f"https://wa.me/{telefono}?text={quote(mensaje)}"
-
     return redirect(url)
+
 
 @login_required
 def cobrar_moroso(request, cliente_id):
+    """
+    💵 COBRO DE CARTERA TOTAL DE UN CLIENTE (Suma todos sus pedidos vencidos)
+    """
     cliente = get_object_or_404(Cliente, id=cliente_id, usuario=request.user)
 
+    # Traer solo pedidos que tengan saldo mayor a 0
     pedidos = Pedido.objects.filter(
         cliente=cliente,
         saldo_pendiente__gt=0
     ).order_by('fecha_limite')
 
     if not pedidos:
+        messages.info(request, "Este cliente no tiene cuentas pendientes.")
         return redirect('cartera_clientes')
 
-    total = 0
-    mensaje = f"Hola {cliente.nombre},\n\nTienes las siguientes facturas pendientes:\n\n"
+    # 🔥 CORRECCIÓN: Iniciar el total como Decimal para evitar el bloqueo del $0
+    total_acumulado = Decimal('0.00')
+    
+    mensaje = f"Hola {cliente.nombre},\n\nTienes las siguientes facturas pendientes en nuestra joyería:\n\n"
 
     for p in pedidos:
-        mensaje += f"🧾 Pedido #{p.id} → ${p.saldo_pendiente}\n"
-        total += p.saldo_pendiente
+        saldo_pedido_formateado = f"{p.saldo_pendiente:,.0f}".replace(",", ".")
+        mensaje += f"🧾 Pedido #{p.numero_orden or p.id} → ${saldo_pedido_formateado}\n"
+        total_acumulado += p.saldo_pendiente  # Suma limpia entre Decimals
 
-    mensaje += f"\n💰 Total: ${total}\n"
-    mensaje += "Por favor realizar el pago 🙏"
+    # Sincronizar el campo físico del modelo Cliente para que el CRM no muestre 0
+    if cliente.saldo_pendiente != total_acumulado:
+        cliente.saldo_pendiente = total_acumulado
+        cliente.save()
 
+    # Formatear el gran total final para el mensaje de WhatsApp
+    total_formateado = f"{total_acumulado:,.0f}".replace(",", ".")
+    
+    mensaje += f"\n💰 Total Pendiente: ${total_formateado}\n\n"
+    mensaje += "Por favor, agradeceríamos realizar el pago por transferencia o reportar tu comprobante. ¡Muchas gracias por tu confianza! 🙏"
+
+    # Limpiar e imponer indicativo de Colombia
     telefono = ''.join(filter(str.isdigit, cliente.telefono or ""))
+    if not telefono:
+        messages.warning(request, "El cliente no tiene un teléfono válido registrado")
+        return redirect('cartera_clientes')
 
     if not telefono.startswith('57'):
         telefono = f"57{telefono}"
 
     url = f"https://wa.me/{telefono}?text={quote(mensaje)}"
-
     return redirect(url)
-
 
 @login_required
 def cartera_clientes(request):
@@ -3073,25 +3120,26 @@ def whatsapp_segmento(request):
     clientes = Cliente.objects.filter(usuario=usuario)
 
     # =====================================
-    # 🎯 FILTROS CORREGIDOS
+    # 🎯 FILTROS CORREGIDOS (ANTI-ERROR 500)
     # =====================================
     if tipo == 'vip':
         # Clientes que han comprado igual o más de $500,000 COP
         clientes = clientes.filter(total_compras__gte=500000)
 
     elif tipo == 'nuevos':
+        # Filtra de forma segura por la fecha de registro de hoy
         clientes = clientes.filter(fecha_creacion__date=hoy)
 
     elif tipo == 'dormidos':
-        # 🔥 FIX CRÍTICO: Corregido a la sintaxis real de Django (__) relacionando Pedidos.
-        # Filtra clientes cuyo último pedido (u órdenes) fue hace más de 30 días.
-        clientes = clientes.filter(pedidos_fecha_creacion_lt=hace_30).distinct()
+        # 🔥 CORRECCIÓN CRÍTICA: Se usa doble guion bajo '__' para relacionar la tabla Pedido
+        # y la propiedad '__lt' (less than) para evaluar la fecha correctamente en Django.
+        clientes = clientes.filter(pedido__fecha_creacion__lt=hace_30).distinct()
 
     # Si se pasa un ID para excluir, lo sacamos de la lista para avanzar al siguiente
     if excluir_id:
         clientes = clientes.exclude(id=excluir_id)
 
-    # Excluir de entrada registros sin números telefónicos
+    # Excluir de entrada registros sin números telefónicos o nulos
     clientes_validos = clientes.exclude(telefono__isnull=True).exclude(telefono='')
 
     # Traemos el primero disponible de la cola restante
@@ -3102,15 +3150,15 @@ def whatsapp_segmento(request):
             request,
             f"¡Felicidades! Has completado o no hay clientes en el segmento '{tipo}'."
         )
-        return redirect('dashboard') # O a tu panel de marketing/clientes
+        return redirect('dashboard')
 
     # =====================================
-    # ☎️ LIMPIAR TELÉFONO
+    # ☎️ LIMPIAR TELÉFONO SEGURO
     # =====================================
-    telefono = ''.join(filter(str.isdigit, cliente_destino.telefono))
+    telefono = ''.join(filter(str.isdigit, cliente_destino.telefono or ""))
 
     if not telefono:
-        # Si este registro estaba corrupto, saltamos al siguiente ignorándolo
+        # Si este registro estaba vacío, saltamos al siguiente de forma automática
         messages.warning(request, f"Cliente {cliente_destino.nombre} no tiene un formato de teléfono válido.")
         return redirect(f"{request.path}?tipo={tipo}&excluir_id={cliente_destino.id}")
 
@@ -3121,8 +3169,11 @@ def whatsapp_segmento(request):
     # =====================================
     # 🧠 PERSONALIZAR MENSAJE DINÁMICO (SaaS)
     # =====================================
-    perfil = getattr(usuario, 'perfil', None)
-    nombre_tienda = perfil.nombre_tienda if perfil and perfil.nombre_tienda else "Nuestra Joyería"
+    try:
+        perfil = usuario.perfil
+        nombre_tienda = perfil.nombre_tienda if perfil.nombre_tienda else "Nuestra Joyería"
+    except AttributeError:
+        nombre_tienda = "Nuestra Joyería"
 
     mensajes = {
         'vip': "💎 Cliente VIP, tienes acceso a piezas exclusivas de nuestra nueva colección. Escríbenos 👇",
@@ -3143,14 +3194,13 @@ def whatsapp_segmento(request):
     # =====================================
     url_whatsapp = f"https://wa.me/{telefono}?text={urllib.parse.quote(texto_final)}"
 
-    # Guardamos en un mensaje de Django un aviso con el link para despachar al "Siguiente"
-    # Esto le permite al comerciante regresar al panel y saber que puede continuar sin repetir cliente.
+    # Guardamos el link de avance seguro
     url_siguiente = f"{request.path}?tipo={tipo}&excluir_id={cliente_destino.id}"
     messages.success(
         request, 
         f"Abriendo WhatsApp para {cliente_destino.nombre}. "
         f"<a href='{url_siguiente}' style='font-weight:bold; color:#007bff; text-decoration:underline;'>¡Haga clic aquí para pasar al siguiente cliente de la lista!</a>",
-        extra_tags='safe' # Recuerda habilitar en tu HTML el filtro |safe al renderizar mensajes si usas tags
+        extra_tags='safe'
     )
 
     return redirect(url_whatsapp)
