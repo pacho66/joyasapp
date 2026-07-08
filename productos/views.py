@@ -890,8 +890,8 @@ def dashboard(request):
 @login_required
 def panel_crm(request):
     """
-    📊 CONTROLADOR CENTRAL DEL CRM (JoyasApp SaaS) - CORREGIDO ERROR 500
-    Filtra los clientes del usuario autenticado utilizando lookups nativos de Django.
+    📊 CONTROLADOR CENTRAL DEL CRM (JoyasApp SaaS) - FIX DEFINITIVO 500
+    Utiliza los campos nativos e íntegros del modelo Cliente.
     """
     # 🏢 Regla de Oro SaaS: Filtrar estrictamente por la joyería actual
     clientes_base = Cliente.objects.filter(usuario=request.user, activo=True)
@@ -903,7 +903,7 @@ def panel_crm(request):
     filtro_origen = request.GET.get('origen', '').strip()
     filtro_alerta = request.GET.get('alerta', '').strip()
 
-    # Aplicar buscador por texto
+    # Aplicar buscador por texto (Campos exactos del modelo)
     if buscar:
         clientes_base = clientes_base.filter(
             Q(nombre__icontains=buscar) |
@@ -920,16 +920,15 @@ def panel_crm(request):
     if filtro_origen:
         clientes_base = clientes_base.filter(origen=filtro_origen)
 
-    # 🚨 FILTROS INTELIGENTES Y PREDICTIVOS (Lookups correctos de Django)
+    # 🚨 FILTROS INTELIGENTES Y PREDICTIVOS (Campos exactos de tu modelo)
     hoy = timezone.now().date()
-    hace_90_dias = hoy - timedelta(days=90) # Solución limpia para inactivos
-
+    
     if filtro_alerta == 'cumpleanos':
-        # Corrección: doble guion bajo '_month' y '_day' para campos de fecha
+        # Lookups nativos correctos para la fecha de cumpleaños
         clientes_base = clientes_base.filter(fecha_cumpleanos_month=hoy.month, fecha_cumpleanos_day=hoy.day)
     elif filtro_alerta == 'inactivos_90':
-        # En vez de calcular días, filtramos por la fecha de última compra física en la DB
-        clientes_base = clientes_base.filter(ultima_compra__lte=hace_90_dias)
+        # Corrección: Usamos tu columna física real 'dias_sin_comprar' sin calcular fechas manuales
+        clientes_base = clientes_base.filter(dias_sin_comprar__gte=90)
     elif filtro_alerta == 'saldo_pendiente':
         clientes_base = clientes_base.filter(saldo_pendiente__gt=0)
     elif filtro_alerta == 'whatsapp_ok':
@@ -947,9 +946,9 @@ def panel_crm(request):
     saldo_total_dict = clientes_joyeria.aggregate(Sum('saldo_pendiente'))
     saldo_pendiente_total = saldo_total_dict['saldo_pendiente__sum'] or 0.00
     
-    # Aplicamos los mismos criterios estables a las métricas numéricas
+    # Métricas basadas estrictamente en tus columnas del modelo
     cumpleanos_hoy = clientes_joyeria.filter(fecha_cumpleanos_month=hoy.month, fecha_cumpleanos_day=hoy.day).count()
-    sin_comprar_90 = clientes_joyeria.filter(ultima_compra__lte=hace_90_dias).count()
+    sin_comprar_90 = clientes_joyeria.filter(dias_sin_comprar__gte=90).count()
     whatsapp_habilitados = clientes_joyeria.filter(acepta_whatsapp=True).count()
 
     # Contexto unificado para inyectar en el HTML
