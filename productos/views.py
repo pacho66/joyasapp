@@ -719,11 +719,11 @@ def _asegurar_gastos_basicos(usuario):
 def dashboard(request):
     usuario = request.user
 
-    # ✅ CAMBIO DE NOMBRE: Crear u obtener perfil automáticamente con la nueva marca
+    # ✅ Perfil multiusuario del SaaS
     perfil, creado = Perfil.objects.get_or_create(
         user=usuario,
         defaults={
-            'nombre_tienda': 'JoyasApp', # ← Nombre oficial de tu SaaS actualizado
+            'nombre_tienda': 'JoyasApp',
             'plan': 'gratis'
         }
     )
@@ -773,8 +773,8 @@ def dashboard(request):
     clientes_morosos = Cliente.objects.filter(
         usuario=usuario,
         pedidos__tipo_pago='credito',
-        pedidos__saldo_pendiente__gt=0,
-        pedidos__fecha_limite__lt=hoy
+        pedidos_saldo_pendiente_gt=0,
+        pedidos_fecha_limite_lt=hoy
     ).distinct()
 
     morosos_count = clientes_morosos.count()
@@ -796,8 +796,8 @@ def dashboard(request):
     elif tipo == 'morosos':
         clientes_filtrados = clientes.filter(
             pedidos__tipo_pago='credito',
-            pedidos__saldo_pendiente__gt=0,
-            pedidos__fecha_limite__lt=hoy
+            pedidos_saldo_pendiente_gt=0,
+            pedidos_fecha_limite_lt=hoy
         ).distinct()
 
     mensajes = {
@@ -807,6 +807,17 @@ def dashboard(request):
         'morosos': "🔴 Clientes en mora"
     }
     mensaje = mensajes.get(tipo, "📊 Panel General")
+
+    # =======================================================================
+    # 🔥 SOLUCIÓN: Recalcular en caliente el total real de compras acumuladas
+    # =======================================================================
+    for clie in clientes_filtrados:
+        total_real = Pedido.objects.filter(
+            usuario=usuario,
+            cliente_nombre=clie.nombre,
+            estado__iexact='pagado'
+        ).aggregate(suma=Sum('total'))['suma'] or 0
+        clie.total_compras = total_real
 
     # ==========================
     # VENTAS Y ENVIOS
@@ -820,24 +831,47 @@ def dashboard(request):
         fecha__year=hoy.year
     ).aggregate(total=Sum('total'))['total'] or 0
 
-    # ==========================
-    # 💰 FINANZAS AVANZADAS (BLINDADO ANTI-ERROR 500)
-    # ==========================
-    total_ingresos = total_general or 0
-    
-    total_costos_material = pedidos.aggregate(total=Sum('costo_material'))['total'] or 0
-    total_costo_mano_obra = pedidos.aggregate(total=Sum('costo_mano_obra'))['total'] or 0
-    total_costos = float(total_costos_material or 0) + float(total_costo_mano_obra or 0)
-    
-    # Intentamos traer los gastos; si la tabla sigue rota, evitamos el Error 500 asignando 0
+    # =======================================================================
+    # 💰 PANEL FINANCIERO JOYASAPP - EL DIFERENCIAL PRO
+    # =======================================================================
+    total_ingresos = float(total_general or 0)
+
+    costos_pedidos = pedidos.aggregate(
+        mat=Sum('costo_material'),
+        mo=Sum('costo_mano_obra')
+    )
+    total_material = float(costos_pedidos['mat'] or 0)
+    total_mano_obra = float(costos_pedidos['mo'] or 0)
+    total_costos = total_material + total_mano_obra
+
     try:
-        total_gastos = Gasto.objects.filter(usuario=usuario).aggregate(total=Sum('monto'))['total'] or 0
-        total_gastos = float(total_gastos)
+        total_gastos = float(Gasto.objects.filter(usuario=usuario).aggregate(total=Sum('monto'))['total'] or 0)
     except Exception:
         total_gastos = 0.0
 
-    utilidad = float(total_ingresos) - total_costos - total_gastos
-    margen = (utilidad / float(total_ingresos) * 100) if total_ingresos > 0 else 0
+    utilidad_bruta = total_ingresos - total_costos
+    utilidad_neta = utilidad_bruta - total_gastos
+
+    margen_bruto = (utilidad_bruta / total_ingresos * 100) if total_ingresos > 0 else 0
+    margen_neto = (utilidad_neta / total_ingresos * 100) if total_ingresos > 0 else 0
+
+    # =======================================================================
+    # 💎 VALORIZACIÓN DE INVENTARIO
+    # =======================================================================
+    inventario = Producto.objects.filter(usuario=usuario)
+    inv_valorizado_costo = 0.0
+    inv_valorizado_venta = 0.0
+
+    for prod in inventario:
+        cant = float(prod.stock or 0)
+        c_mat = float(prod.costo_material or 0)
+        c_mo = float(prod.costo_mano_obra or 0)
+        p_detal = float(prod.precio_detal or 0)
+        
+        inv_valorizado_costo += cant * (c_mat + c_mo)
+        inv_valorizado_venta += cant * p_detal
+
+    utilidad_potencial_inv = inv_valorizado_venta - inv_valorizado_costo
     
     # ==========================
     # PEDIDOS E INVENTARIO
@@ -855,13 +889,13 @@ def dashboard(request):
 
     total_productos = productos.count()
     productos_sin_stock = productos.filter(stock=0).count()
-    productos_bajo_stock = productos.filter(stock__gt=0, stock__lte=5).count()
+    productos_bajo_stock = productos.filter(stock_gt=0, stock_lte=5).count()
 
     ticket_promedio = total_general / total_pedidos if total_pedidos > 0 else 0
     crecimiento = total_hoy - total_ayer
 
     # ==========================
-    # CONTEXT
+    # CONTEXT CONSOLIDADO
     # ==========================
     context = {
         'mensaje': mensaje,
@@ -876,11 +910,21 @@ def dashboard(request):
         'fechas': fechas,
         'totales': totales,
         
+        # Nuevas variables financieras consistentes
         'total_ingresos': total_ingresos,
+        'total_material': total_material,
+        'total_mano_obra': total_mano_obra,
         'total_costos': total_costos,
         'total_gastos': total_gastos,
-        'utilidad': utilidad,
-        'margen': margen,
+        'utilidad_bruta': utilidad_bruta,
+        'utilidad_neta': utilidad_neta,
+        'margen_bruto': margen_bruto,
+        'margen_neto': margen_neto,
+        
+        # Métricas de inventario pro
+        'inv_valorizado_costo': inv_valorizado_costo,
+        'inv_valorizado_venta': inv_valorizado_venta,
+        'utilidad_potencial_inv': utilidad_potencial_inv,
 
         'pedidos_hoy': pedidos_hoy,
         'total_pedidos': total_pedidos,
