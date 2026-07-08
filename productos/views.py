@@ -856,19 +856,23 @@ def dashboard(request):
     margen_neto = (utilidad_neta / total_ingresos * 100) if total_ingresos > 0 else 0
 
     # =======================================================================
-    # 💎 VALORIZACIÓN DE INVENTARIO
+    # 💎 VALORIZACIÓN DE INVENTARIO (Sincronizado con precio_costo y Variantes)
     # =======================================================================
-    inventario = Producto.objects.filter(usuario=usuario)
+    inventario = Producto.objects.filter(usuario=usuario).prefetch_related('variantes')
     inv_valorizado_costo = 0.0
     inv_valorizado_venta = 0.0
 
     for prod in inventario:
-        cant = float(prod.stock or 0)
-        c_mat = float(prod.costo_material or 0)
-        c_mo = float(prod.costo_mano_obra or 0)
+        p_costo = float(prod.precio_costo or 0)
         p_detal = float(prod.precio_detal or 0)
         
-        inv_valorizado_costo += cant * (c_mat + c_mo)
+        # Sincronización pro: Si tiene variantes sumamos el stock de sus variantes, de lo contrario el base
+        if prod.variantes.exists():
+            cant = sum(int(v.stock or 0) for v in prod.variantes.all())
+        else:
+            cant = int(prod.stock or 0)
+        
+        inv_valorizado_costo += cant * p_costo
         inv_valorizado_venta += cant * p_detal
 
     utilidad_potencial_inv = inv_valorizado_venta - inv_valorizado_costo
