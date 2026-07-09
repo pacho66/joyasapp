@@ -6,6 +6,11 @@ import uuid
 from cloudinary.models import CloudinaryField
 import random
 from decimal import Decimal
+from django.db import models, transaction
+from django.db.models import Sum
+from django.core.exceptions import ValidationError
+from django.db.models.signals import post_save, post_delete, pre_save
+from django.dispatch import receiver
 
 class Perfil(models.Model):
     PLANES = [
@@ -562,12 +567,16 @@ class Pedido(models.Model):
     direccion_envio = models.CharField(max_length=255, blank=True, null=True)
     ciudad_envio = models.CharField(max_length=100, blank=True, null=True)
 
-    # 🔹 TOTAL
-    total = models.DecimalField(max_digits=10, decimal_places=2)
+     # 🔹 TOTAL
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     # 🔹 COSTOS (🔥 PRO)
     costo_material = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     costo_mano_obra = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    # Asegúrate de tener estos campos si usas créditos/descuentos en la sincronización:
+    descuento_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    saldo_pendiente = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     @property
     def utilidad(self):
@@ -582,8 +591,47 @@ class Pedido(models.Model):
         """Devuelve el total como un entero para usar fácilmente en HTML o pasarelas"""
         return int(self.total)
 
-    def __str__(self):
+    def _str_(self):
         return self.numero_orden
+
+    def sincronizar_pedido(self):
+        """
+        🔥 PUNTO ÚNICO DE VERDAD FINANCIERA
+        Centraliza el cálculo matemático total de la orden de forma atómica.
+        """
+        with transaction.atomic():
+            items_relacionados = self.items.select_related('producto').all()
+            
+            subtotal_items = sum(item.subtotal for item in items_relacionados)
+            descuento_items = sum(item.descuento for item in items_relacionados)
+            iva_items = sum(item.iva for item in items_relacionados)
+            
+            # Recalcular costo real de manufactura (precio_costo de cada producto)
+            self.costo_material = sum(Decimal(str(item.producto.precio_costo or 0)) * item.cantidad for item in items_relacionados)
+            
+            # Sumar costos adicionales si tuvieras fletes en el modelo base (ej: costo_envio)
+            envio = Decimal(str(getattr(self, 'costo_envio', 0) or 0))
+            
+            self.total = subtotal_items + iva_items + envio - descuento_items
+            self.descuento_total = descuento_items
+
+            # Sistema de cuentas por cobrar (Créditos / Apartados)
+            if getattr(self, 'tipo_pago', 'contado') == 'credito' or getattr(self, 'es_credito', False):
+                total_abonos = self.abonos.aggregate(suma=Sum('monto'))['suma'] or Decimal('0.00')
+                self.saldo_pendiente = max(Decimal('0.00'), self.total - total_abonos)
+                
+                if getattr(self, 'cliente', None):
+                    self.cliente.saldo_pendiente = self.saldo_pendiente
+                    self.cliente.save(update_fields=['saldo_pendiente'])
+            else:
+                self.saldo_pendiente = Decimal('0.00')
+
+            self.save(update_fields=['total', 'costo_material', 'descuento_total', 'saldo_pendiente'])
+
+
+# ==========================================
+# 💵 CONTROL DE INGRESOS: ABONOS
+# ==========================================
 
 class Abono(models.Model):
     pedido = models.ForeignKey(
@@ -594,8 +642,26 @@ class Abono(models.Model):
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     fecha = models.DateField(auto_now_add=True)
 
-    def __str__(self):
+    def _str_(self):
         return f"Abono {self.monto} - Pedido {self.pedido.numero_orden}"
+
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            # Sincroniza automáticamente el saldo pendiente del pedido al agregar/editar abonos
+            self.pedido.sincronizar_pedido()
+
+    def delete(self, *args, **kwargs):
+        with transaction.atomic():
+            pedido_padre = self.pedido
+            super().delete(*args, **kwargs)
+            # Si se elimina un abono, recalculamos para subir el saldo pendiente de inmediato
+            pedido_padre.sincronizar_pedido()
+
+
+# ==========================================
+# 📦 DETALLE DE FACTURA: PEDIDOITEM
+# ==========================================
 
 class PedidoItem(models.Model):
     usuario = models.ForeignKey(
@@ -614,19 +680,138 @@ class PedidoItem(models.Model):
     iva = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     retefuente = models.DecimalField(max_digits=12, decimal_places=2, default=0)  
     total_final = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total_gramos = models.DecimalField(max_digits=10,decimal_places=2,default=0)
+    total_gramos = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def calcular_subtotal(self):
+        if self.producto.tipo_venta == 'gramo':
+            peso_unitario = Decimal(str(self.producto.peso_producto or 0))
+            self.total_gramos = Decimal(str(self.cantidad)) * peso_unitario
+            return self.total_gramos * self.precio
+        
+        self.total_gramos = 0
         return self.cantidad * self.precio  
+
+    def save(self, *args, **kwargs):
+        self.subtotal = self.calcular_subtotal()
+        
+        if getattr(self.pedido, 'aplica_iva', False):
+            self.iva = self.subtotal * Decimal('0.19')
+        else:
+            self.iva = 0
+
+        self.total_final = self.subtotal + self.iva - self.descuento
+        
+        # Validación estricta antes de escribir en Base de Datos para evitar ventas sin stock
+        if self.variante and self.variante.stock < self.cantidad:
+            raise ValidationError(f"No hay stock suficiente. Disponibles: {self.variante.stock} unidades de esta variante.")
+        elif not self.variante and self.producto.stock < self.cantidad:
+            raise ValidationError(f"No hay stock suficiente. Disponibles: {self.producto.stock} unidades de este producto.")
+
+        super().save(*args, **kwargs)
+
+
+# ==========================================
+# 📉 CONTROL DE EGRESOS: GASTOS
+# ==========================================
 
 class Gasto(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
-
     nombre = models.CharField(max_length=150)
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     categoria = models.CharField(max_length=50, null=True, blank=True) 
-
     fecha = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
+    def _str_(self):
         return f"{self.nombre} - {self.monto}"
+
+
+# ==========================================
+# 🛡️ ESCUDO DE SEÑALES (MÓDULO LOGÍSTICO)
+# ==========================================
+
+@receiver(pre_save, sender=PedidoItem)
+def capturar_estado_anterior_inventario(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            instance._estado_previo = PedidoItem.objects.get(pk=instance.pk)
+        except PedidoItem.DoesNotExist:
+            instance._estado_previo = None
+    else:
+        instance._estado_previo = None
+
+
+@receiver(post_save, sender=PedidoItem)
+def procesar_ajuste_inventario_dinamico(sender, instance, created, **kwargs):
+    with transaction.atomic():
+        # CASO A: Registro de una nueva venta
+        if created:
+            if instance.variante:
+                if instance.variante.stock < instance.cantidad:
+                    raise ValidationError("Stock insuficiente en la variante seleccionada.")
+                instance.variante.stock -= instance.cantidad
+                instance.variante.save(update_fields=['stock'])
+            else:
+                if instance.producto.stock < instance.cantidad:
+                    raise ValidationError("Stock insuficiente en el inventario general.")
+                instance.producto.stock -= instance.cantidad
+                instance.producto.save(update_fields=['stock'])
+                
+        # CASO B: Corrección de factura (Edición de ítem)
+        else:
+            previo = getattr(instance, '_estado_previo', None)
+            if not previo:
+                return
+
+            # Si el usuario cambió de variante/talla/color en la edición
+            if previo.variante != instance.variante:
+                # Devolución a la variante anterior
+                if previo.variante:
+                    previo.variante.stock += previo.cantidad
+                    previo.variante.save(update_fields=['stock'])
+                else:
+                    previo.producto.stock += previo.cantidad
+                    previo.producto.save(update_fields=['stock'])
+
+                # Descuento a la nueva variante elegida
+                if instance.variante:
+                    if instance.variante.stock < instance.cantidad:
+                        raise ValidationError("Stock insuficiente en la nueva variante.")
+                    instance.variante.stock -= instance.cantidad
+                    instance.variante.save(update_fields=['stock'])
+                else:
+                    if instance.producto.stock < instance.cantidad:
+                        raise ValidationError("Stock insuficiente en el inventario general.")
+                    instance.producto.stock -= instance.cantidad
+                    instance.producto.save(update_fields=['stock'])
+            
+            # Si mantuvo la variante pero alteró las cantidades numéricas
+            else:
+                diferencia = instance.cantidad - previo.cantidad
+                if instance.variante:
+                    if instance.variante.stock < diferencia:
+                        raise ValidationError("La cantidad solicitada supera las existencias de la variante.")
+                    instance.variante.stock -= diferencia
+                    instance.variante.save(update_fields=['stock'])
+                else:
+                    if instance.producto.stock < diferencia:
+                        raise ValidationError("La cantidad solicitada supera las existencias del inventario general.")
+                    instance.producto.stock -= diferencia
+                    instance.producto.save(update_fields=['stock'])
+
+        # Se lanza la sincronización financiera consolidada una única vez
+        instance.pedido.sincronizar_pedido()
+
+
+@receiver(post_delete, sender=PedidoItem)
+def devolver_inventario_por_eliminacion(sender, instance, **kwargs):
+    with transaction.atomic():
+        if instance.variante:
+            instance.variante.stock += instance.cantidad
+            instance.variante.save(update_fields=['stock'])
+        else:
+            instance.producto.stock += instance.cantidad
+            instance.producto.save(update_fields=['stock'])
+            
+        # Sincroniza los totales financieros tras la eliminación del ítem
+        instance.pedido.sincronizar_pedido()
+    
