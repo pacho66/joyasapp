@@ -1182,7 +1182,7 @@ def estadisticas(request):
 
     # 🔹 ÚLTIMOS 30 DÍAS
     hace_30 = hoy - timedelta(days=30)
-    ventas_mes = pedidos.filter(fecha_date_gte=hace_30).aggregate(total=Sum('total'))['total'] or 0
+    ventas_mes = pedidos.filter(fecha__date__gte=hace_30).aggregate(total=Sum('total'))['total'] or 0
 
     # 🔹 TOTAL PEDIDOS
     total_pedidos = pedidos.count()
