@@ -1274,7 +1274,7 @@ def inventario(request):
     # 🛠️ PARCHE AL CORTO: Agrupaciones y conteos de stock reales demandados por el HTML
     total_productos = productos.count()
     productos_stock = productos.filter(stock__gt=5).count()
-    stock_bajo = productos.filter(stock_gt=0, stock_lte=5).count()
+    stock_bajo = productos.filter(stock__gt=0, stock__lte=5).count()
     agotados = productos.filter(stock=0).count()
 
     context = {
