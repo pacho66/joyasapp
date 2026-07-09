@@ -35,8 +35,6 @@ import openpyxl
 import time
 import logging
 from django.db.models import Sum, Avg, Count
-from django.db.models import Sum, Value, DecimalField, Q
-from django.db.models.functions import Coalesce
 
 # 🏪 IMPORTACIONES DE LA APP PRODUCTOS
 from productos.models import Producto, Categoria, ProductoImagen, CarritoItem, Cliente, Perfil
@@ -690,32 +688,6 @@ def editar_producto(request, id):
             'categorias': categorias,
         }
     )
-
-def _asegurar_gastos_basicos(usuario):
-    """Verifica si el usuario no tiene gastos e inyecta la estructura base vacía para el SaaS."""
-    if not Gasto.objects.filter(usuario=usuario).exists():
-        # Validamos dinámicamente si existe el campo 'categoria' para no romper la base de datos
-        tiene_categoria = hasattr(Gasto, 'categoria')
-        
-        gastos_base = [
-            {"nombre": "Arriendo Taller/Oficina", "monto": 0, "categoria": "fijo"},
-            {"nombre": "Servicios Públicos (Luz/Internet)", "monto": 0, "categoria": "fijo"},
-            {"nombre": "Mantenimiento de Herramientas y Pulido", "monto": 0, "categoria": "operativo"},
-        ]
-        
-        nuevos_gastos = []
-        for g in gastos_base:
-            datos = {
-                "usuario": usuario,
-                "nombre": g["nombre"],
-                "monto": g["monto"]
-            }
-            if tiene_categoria:
-                datos["categoria"] = g["categoria"]
-                
-            nuevos_gastos.append(Gasto(**datos))
-            
-        Gasto.objects.bulk_create(nuevos_gastos)
 
 @login_required(login_url='/login/')
 def dashboard(request):
@@ -2501,7 +2473,6 @@ def detalle_pedido(request, pedido_id):
     print("DETALLE PEDIDO OK - CRM SINCRONIZADO")
     return render(request, 'detalle_pedido.html', context)
 
-
 def pedido_pdf(request, pedido_id):
     # (Todo el código de tu función pedido_pdf se queda idéntico, no requiere cambios)
     pedido = get_object_or_404(Pedido, id=pedido_id)
@@ -2596,50 +2567,87 @@ def pedido_pdf(request, pedido_id):
     except Exception as e:
         return HttpResponse(f"Error interno: {str(e)}", status=500)
 
+def _asegurar_gastos_basicos(usuario):
+    """Inyecta la estructura de gastos base de JoyasApp protegiendo contra duplicados."""
+    tiene_categoria = hasattr(Gasto, 'categoria')
+    
+    gastos_base = [
+        {"nombre": "Compra de Oro / Insumos", "categoria": "fabricacion"},
+        {"nombre": "Compra de Plata / Insumos", "categoria": "fabricacion"},
+        {"nombre": "Piedras, Circones y Gemas", "categoria": "fabricacion"},
+        {"nombre": "Procesos de Fundición", "categoria": "fabricacion"},
+        {"nombre": "Insumos de Pulido y Soldadura", "categoria": "fabricacion"},
+        {"nombre": "Ligas, Químicos y Ácidos", "categoria": "fabricacion"},
+        {"nombre": "Cajas y Empaques de Lujo", "categoria": "fabricacion"},
+        {"nombre": "Arriendo Taller/Oficina", "categoria": "fijo"},
+        {"nombre": "Servicios Públicos (Luz/Internet)", "categoria": "fijo"},
+        {"nombre": "Publicidad y Marketing", "categoria": "marketing"},
+        {"nombre": "Transporte y Envíos", "categoria": "logistica"},
+        {"nombre": "Comisiones Bancarias y Pasarelas", "categoria": "financiero"},
+        {"nombre": "Papelería y Administración", "categoria": "administrativo"},
+    ]
+    
+    for g in gastos_base:
+        defaults = {"monto": 0.0}
+        if tiene_categoria:
+            defaults["categoria"] = g["categoria"]
+            
+        Gasto.objects.get_or_create(usuario=usuario, nombre=g["nombre"], defaults=defaults)
+
 @login_required(login_url='/login/')
-def lista_gastos(request):
-    # 🛡️ Eliminamos 'is_staff' para que tus usuarios reales del SaaS puedan ver sus propios gastos
-    usuario = request.user
-
-    # 1. Traemos estrictamente los gastos del usuario que inició sesión
-    gastos = Gasto.objects.filter(usuario=usuario).order_by('-fecha')
-
-    # 2. CAPTURAMOS EL FILTRO DEL BOTÓN DEL DASHBOARD (?categoria=fabricacion)
-    categoria_filtrada = request.GET.get('categoria')
-    
-    if categoria_filtrada == 'fabricacion':
-        # Como tu modelo Gasto SÍ tiene 'categoria', filtramos directo por 'operativo'
-        gastos = gastos.filter(categoria__iexact='operativo')
-
-    return render(request, 'lista_gastos.html', {
-        'gastos': gastos,
-        'categoria_filtrada': categoria_filtrada
-    })
-
-@login_required
 def gastos(request):
-    # 🛡️ Protección 2: Inyecta si entra directo a la URL de gastos
+    # 🛡️ Asegura la estructura base de gastos al ingresar al formulario
     _asegurar_gastos_basicos(request.user)
-    
-    # Tu lógica actual optimizada:
-    gastos_list = Gasto.objects.filter(usuario=request.user).order_by('-fecha')
-    form = GastoForm(request.POST or None)
-    
+
     if request.method == 'POST':
+        form = GastoForm(request.POST)
         if form.is_valid():
             gasto = form.save(commit=False)
             gasto.usuario = request.user
             gasto.save()
+            messages.success(request, "Gasto registrado correctamente.")
             return redirect('gastos')
-            
+    else:
+        form = GastoForm()
+
+    gastos_list = Gasto.objects.filter(usuario=request.user).order_by('-fecha')
     total_gastos = gastos_list.aggregate(total=Sum('monto'))['total'] or 0
+
+    return render(
+        request,
+        'gastos.html',
+        {
+            'form': form,
+            'gastos': gastos_list,
+            'total_gastos': total_gastos,
+        }
+    )
+
+@login_required(login_url='/login/')
+def lista_gastos(request):
+    usuario = request.user
     
-    context = {
-        'form': form,
-        'gastos': gastos_list,
-        'total_gastos': total_gastos
-    }
-    return render(request, 'gastos.html', context)
+    # Asegura que el usuario tenga la estructura base al cargar el listado
+    _asegurar_gastos_basicos(usuario)
+
+    gastos = Gasto.objects.filter(usuario=usuario).order_by('-fecha')
+
+    # Filtro dinámico multidireccional por categoría
+    categoria_filtrada = request.GET.get("categoria")
+    if categoria_filtrada:
+        gastos = gastos.filter(categoria__iexact=categoria_filtrada)
+
+    total_gastos = gastos.aggregate(total=Sum("monto"))["total"] or 0
+
+    return render(
+        request,
+        "lista_gastos.html",
+        {
+            "gastos": gastos,
+            "categoria_filtrada": categoria_filtrada,
+            "total_gastos": total_gastos,
+        },
+    )
 
 @login_required
 def registrar_abono(request, pedido_id):
