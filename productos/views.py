@@ -35,6 +35,8 @@ import openpyxl
 import time
 import logging
 from django.db.models import Sum, Avg, Count
+from django.db.models import Sum, Value, DecimalField, Q
+from django.db.models.functions import Coalesce
 
 # 🏪 IMPORTACIONES DE LA APP PRODUCTOS
 from productos.models import Producto, Categoria, ProductoImagen, CarritoItem, Cliente, Perfil
@@ -745,6 +747,7 @@ def dashboard(request):
     # BASE MULTIUSUARIO SaaS
     # ==========================
     pedidos = Pedido.objects.filter(usuario=usuario)
+    productos = Producto.objects.filter(usuario=usuario)
 
     # ==========================
     # 📊 GRÁFICAS (ÚLTIMOS 7 DÍAS)
@@ -764,17 +767,13 @@ def dashboard(request):
     if cliente_id:
         pedidos = pedidos.filter(cliente_id=cliente_id)
 
-    clientes = Cliente.objects.filter(usuario=usuario)
-    productos = Producto.objects.filter(usuario=usuario)
-
     # ==========================
     # 🔴 CARTERA Y MOROSOS
     # ==========================
-    
     clientes_morosos = Cliente.objects.filter(
-    usuario=request.user,
-    pedidos__saldo_pendiente__gt=0,
-    pedidos__fecha_limite__lt=hoy
+        usuario=request.user,
+        pedidos__saldo_pendiente__gt=0,
+        pedidos__fecha_limite__lt=hoy
     ).distinct()
 
     morosos_count = clientes_morosos.count()
@@ -782,9 +781,17 @@ def dashboard(request):
         total=Sum('pedidos__saldo_pendiente')
     )['total'] or 0
 
-    # ==========================
-    # FILTROS CLIENTES
-    # ==========================
+    # =======================================================================
+    # 👥 FILTROS Y OPTIMIZACIÓN DE CLIENTES (Cálculo acumulado en una sola Query)
+    # =======================================================================
+    # En lugar de usar un bucle 'for' que destruye el rendimiento, anotamos el total real con condiciones directas
+    clientes = Cliente.objects.filter(usuario=usuario).annotate(
+        total_real_compras=Coalesce(
+            Sum('pedidos_total', filter=Q(pedidosusuario=usuario, pedidosestado_iexact='pagado')),
+            Value(0, output_field=DecimalField())
+        )
+    )
+
     clientes_filtrados = clientes
 
     if tipo == 'vip':
@@ -794,11 +801,16 @@ def dashboard(request):
     elif tipo == 'dormidos':
         clientes_filtrados = clientes.filter(ultima_compra__lt=hace_30).distinct()
     elif tipo == 'morosos':
+        # 🛠️ CORREGIDO: Se cambiaron los guiones bajos por doble guion bajo estándar de Django (__gt y __lt)
         clientes_filtrados = clientes.filter(
             pedidos__tipo_pago='credito',
-            pedidos_saldo_pendiente_gt=0,
-            pedidos_fecha_limite_lt=hoy
+            pedidos__saldo_pendiente__gt=0,
+            pedidos__fecha_limite__lt=hoy
         ).distinct()
+
+    # Reasignamos el total_real_compras al atributo que busca tu HTML para no romper la compatibilidad
+    for clie in clientes_filtrados:
+        clie.total_compras = clie.total_real_compras
 
     mensajes = {
         'vip': "💎 Clientes VIP",
@@ -807,17 +819,6 @@ def dashboard(request):
         'morosos': "🔴 Clientes en mora"
     }
     mensaje = mensajes.get(tipo, "📊 Panel General")
-
-    # =======================================================================
-    # 🔥 SOLUCIÓN: Recalcular en caliente el total real de compras acumuladas
-    # =======================================================================
-    for clie in clientes_filtrados:
-        total_real = Pedido.objects.filter(
-            usuario=usuario,
-            cliente_nombre=clie.nombre,
-            estado__iexact='pagado'
-        ).aggregate(suma=Sum('total'))['suma'] or 0
-        clie.total_compras = total_real
 
     # ==========================
     # VENTAS Y ENVIOS
@@ -856,9 +857,9 @@ def dashboard(request):
     margen_neto = (utilidad_neta / total_ingresos * 100) if total_ingresos > 0 else 0
 
     # =======================================================================
-    # 💎 VALORIZACIÓN DE INVENTARIO (Sincronizado con precio_costo y Variantes)
+    # 💎 VALORIZACIÓN DE INVENTARIO
     # =======================================================================
-    inventario = Producto.objects.filter(usuario=usuario).prefetch_related('variantes')
+    inventario = productos.prefetch_related('variantes')
     inv_valorizado_costo = 0.0
     inv_valorizado_venta = 0.0
 
@@ -866,7 +867,6 @@ def dashboard(request):
         p_costo = float(prod.precio_costo or 0)
         p_detal = float(prod.precio_detal or 0)
         
-        # Sincronización pro: Si tiene variantes sumamos el stock de sus variantes, de lo contrario el base
         if prod.variantes.exists():
             cant = sum(int(v.stock or 0) for v in prod.variantes.all())
         else:
@@ -878,7 +878,7 @@ def dashboard(request):
     utilidad_potencial_inv = inv_valorizado_venta - inv_valorizado_costo
     
     # ==========================
-    # PEDIDOS E INVENTARIO
+    # PEDIDOS E INVENTARIO (CONTEOS)
     # ==========================
     pedidos_hoy = pedidos.filter(fecha__date=hoy).count()
     total_pedidos = pedidos.count()
@@ -893,7 +893,7 @@ def dashboard(request):
 
     total_productos = productos.count()
     productos_sin_stock = productos.filter(stock=0).count()
-    productos_bajo_stock = productos.filter(stock__gt=0, stock__lte=5).count()
+    productos_bajo_stock = productos.filter(stock_gt=0, stock_lte=5).count()
 
     ticket_promedio = total_general / total_pedidos if total_pedidos > 0 else 0
     crecimiento = total_hoy - total_ayer
@@ -914,12 +914,13 @@ def dashboard(request):
         'fechas': fechas,
         'totales': totales,
         
-        # Nuevas variables financieras consistentes
+        # Variables financieras unificadas para el HTML
         'total_ingresos': total_ingresos,
         'total_material': total_material,
         'total_mano_obra': total_mano_obra,
         'total_costos': total_costos,
         'total_gastos': total_gastos,
+        'utilidad': utilidad_bruta,       # Enlazado como 'utilidad' para responder al bloque CSS de finanzas
         'utilidad_bruta': utilidad_bruta,
         'utilidad_neta': utilidad_neta,
         'margen_bruto': margen_bruto,
