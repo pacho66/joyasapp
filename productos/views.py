@@ -35,6 +35,7 @@ import openpyxl
 import time
 import logging
 from django.db.models import Sum, Avg, Count
+import re
 
 # 🏪 IMPORTACIONES DE LA APP PRODUCTOS
 from productos.models import Producto, Categoria, ProductoImagen, CarritoItem, Cliente, Perfil
@@ -2626,28 +2627,110 @@ def gastos(request):
 @login_required(login_url='/login/')
 def lista_gastos(request):
     usuario = request.user
-    
-    # Asegura que el usuario tenga la estructura base al cargar el listado
     _asegurar_gastos_basicos(usuario)
 
-    gastos = Gasto.objects.filter(usuario=usuario).order_by('-fecha')
+    # Filtro base: Solo registros contables en estado 'Activo'
+    gastos_query = Gasto.objects.filter(usuario=usuario, activo=True)
 
-    # Filtro dinámico multidireccional por categoría
-    categoria_filtrada = request.GET.get("categoria")
-    if categoria_filtrada:
-        gastos = gastos.filter(categoria__iexact=categoria_filtrada)
-
-    total_gastos = gastos.aggregate(total=Sum("monto"))["total"] or 0
-
-    return render(
-        request,
-        "lista_gastos.html",
-        {
-            "gastos": gastos,
-            "categoria_filtrada": categoria_filtrada,
-            "total_gastos": total_gastos,
-        },
+    # 📊 CÁLCULO DE METRICAS KPI CONTINUAS (Para las Tarjetas Superiores)
+    metricas = gastos_query.aggregate(
+        total_global=Sum('monto'),
+        total_fijo=Sum('monto', filter=Q(categoria='fijo')),
+        total_fab=Sum('monto', filter=Q(categoria='fabricacion')),
+        total_mkt=Sum('monto', filter=Q(categoria='marketing')),
     )
+
+    total_global = metricas['total_global'] or 0
+    total_fijo = metricas['total_fijo'] or 0
+    total_fab = metricas['total_fab'] or 0
+    total_mkt = metricas['total_mkt'] or 0
+
+    # 🔢 Obtención de porcentajes reales para analítica visual
+    porcentaje_fijo = (total_fijo / total_global * 100) if total_global > 0 else 0
+    porcentaje_fab = (total_fab / total_global * 100) if total_global > 0 else 0
+    porcentaje_mkt = (total_mkt / total_global * 100) if total_global > 0 else 0
+
+    # Procesar filtros de búsqueda de la UI si existen
+    buscar = request.GET.get('buscar')
+    categoria_filtrada = request.GET.get('categoria')
+
+    if buscar:
+        gastos_query = gastos_query.filter(nombre__icontains=buscar)
+    if categoria_filtrada:
+        gastos_query = gastos_query.filter(categoria__iexact=categoria_filtrada)
+
+    gastos_filtrados = gastos_query.order_by('-fecha')
+    form = GastoForm()
+
+    return render(request, "lista_gastos.html", {
+        "gastos": gastos_filtrados,
+        "categoria_filtrada": categoria_filtrada,
+        "total_gastos": total_global,
+        
+        # Datos empaquetados para las Tarjetas KPI
+        "total_fijo": total_fijo, "porcentaje_fijo": porcentaje_fijo,
+        "total_fab": total_fab, "porcentaje_fab": porcentaje_fab,
+        "total_mkt": total_mkt, "porcentaje_mkt": porcentaje_mkt,
+        
+        "form": form,
+    })
+
+@login_required(login_url='/login/')
+def editar_gasto(request, id):
+    gasto = get_object_or_404(Gasto, id=id, usuario=request.user, activo=True)
+    
+    if request.method == 'POST':
+        form = GastoForm(request.POST, instance=gasto)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Gasto '{gasto.nombre}' actualizado correctamente.")
+            return redirect('lista_gastos')
+        else:
+            # ❌ Si hay errores, volvemos a renderizar la lista pasándole el formulario fallido con sus alertas
+            gastos = Gasto.objects.filter(usuario=request.user, activo=True).order_by('-fecha')
+            total_gastos = gastos.aggregate(total=Sum("monto"))["total"] or 0
+            messages.error(request, "Por favor corrige los errores en el formulario.")
+            return render(request, "lista_gastos.html", {
+                "gastos": gastos, "total_gastos": total_gastos, "form": form
+            })
+    return redirect('lista_gastos')
+
+@login_required(login_url='/login/')
+def duplicar_gasto(request, id):
+    gasto_original = get_object_or_404(Gasto, id=id, usuario=request.user, activo=True)
+    
+    # 🔢 Buscar el número de copia incremental
+    nombre_base = re.sub(r' \(Copia \d+\)$', '', gasto_original.nombre)
+    coincidencias = Gasto.objects.filter(
+        usuario=request.user, 
+        nombre__startswith=nombre_base,
+        activo=True
+    ).count()
+    
+    nuevo_nombre = f"{nombre_base} (Copia {coincidencias})"
+    
+    gasto_nuevo = Gasto(
+        usuario=request.user,
+        nombre=nuevo_nombre,
+        monto=gasto_original.monto,
+        categoria=gasto_original.categoria,
+        observaciones=gasto_original.observaciones
+    )
+    gasto_nuevo.save()
+    messages.success(request, f"Duplicado como: '{nuevo_nombre}'")
+    return redirect('lista_gastos')
+
+@login_required(login_url='/login/')
+def eliminar_gasto(request, id):
+    gasto = get_object_or_404(Gasto, id=id, usuario=request.user)
+    nombre_eliminado = gasto.nombre
+    
+    # 📉 BORRADO LÓGICO: Mantiene el registro intacto para no quebrar estadísticas históricas
+    gasto.activo = False
+    gasto.save()
+    
+    messages.warning(request, f"Gasto '{nombre_eliminado}' archivado/eliminado del panel.")
+    return redirect('lista_gastos')
 
 @login_required
 def registrar_abono(request, pedido_id):

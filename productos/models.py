@@ -713,18 +713,18 @@ class PedidoItem(models.Model):
 # ==========================================
 # 📉 CONTROL DE EGRESOS: GASTOS
 # ==========================================
-
 class Gasto(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     nombre = models.CharField(max_length=150)
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     categoria = models.CharField(max_length=50, null=True, blank=True) 
+    observaciones = models.TextField(null=True, blank=True) # ✅ Añadido para auditoría
+    activo = models.BooleanField(default=True)              # ✅ NUEVO: Borrado lógico contable
     fecha = models.DateTimeField(auto_now_add=True)
 
     def _str_(self):
         return f"{self.nombre} - {self.monto}"
-
-
+ 
 # ==========================================
 # 🛡️ ESCUDO DE SEÑALES (MÓDULO LOGÍSTICO)
 # ==========================================
