@@ -770,11 +770,11 @@ def dashboard(request):
     # ==========================
     # 🔴 CARTERA Y MOROSOS
     # ==========================
+    
     clientes_morosos = Cliente.objects.filter(
-        usuario=usuario,
-        pedidos__tipo_pago='credito',
-        pedidos_saldo_pendiente_gt=0,
-        pedidos_fecha_limite_lt=hoy
+    usuario=request.user,
+    pedidos__saldo_pendiente__gt=0,
+    pedidos__fecha_limite__lt=hoy
     ).distinct()
 
     morosos_count = clientes_morosos.count()
