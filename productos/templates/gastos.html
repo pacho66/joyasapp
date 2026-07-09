@@ -1,37 +1,57 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<!-- Estilos embebidos para asegurar el comportamiento responsivo y el botón flotante en móviles -->
 <style>
     .kpi-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
     .kpi-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-top: 4px solid #ccc; position: relative; }
-    .badge-categoria { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; color: white; display: inline-block; }
+    .badge-categoria { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; color: white; display: inline-block; white-space: nowrap; }
     
-    /* 📱 Estilos de optimización para Smartphones */
+    /* 📱 OPTIMIZACIÓN RESPONSIVE MEJORADA */
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto; /* ✅ Permite deslizar horizontalmente en celulares para ver los botones */
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
     @media (max-width: 768px) {
         .btn-nuevo-escritorio { display: none !important; }
         .btn-flotante-movil { display: flex !important; }
     }
+
+    /* ✅ Corrección del botón flotante para que no lo tape nada y funcione al toque */
     .btn-flotante-movil {
-        display: none; position: fixed; bottom: 25px; right: 25px; 
-        background: #f44336; color: white; border: none; width: 60px; height: 60px; 
-        border-radius: 50%; justify-content: center; align-items: center; 
-        font-size: 24px; box-shadow: 0 4px 15px rgba(244,67,54,0.4); 
-        cursor: pointer; z-index: 999; text-decoration: none;
+        display: none; 
+        position: fixed; 
+        bottom: 80px; /* Subido un poco para que no choque con la barra de navegación del celular */
+        right: 20px; 
+        background: #f44336; 
+        color: white; 
+        border: none; 
+        width: 60px; 
+        height: 60px; 
+        border-radius: 50%; 
+        justify-content: center; 
+        align-items: center; 
+        font-size: 28px; 
+        box-shadow: 0 4px 20px rgba(244,67,54,0.5); 
+        cursor: pointer; 
+        z-index: 999999 !important; /* Súper alto para garantizar que reciba el clic */
     }
 </style>
 
 <div style="max-width:1200px; margin:auto; padding:20px; font-family: 'Segoe UI', system-ui, sans-serif;">
 
-    <!-- 🏦 ENCABEZADO DE CATEGORÍA ERP: CENTRO FINANCIERO -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
-        <div style="display: flex; gap: 20px; align-items: center;">
+    <!-- 🏦 ENCABEZADO DE CATEGORÍA ERP -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-bottom: 2px solid #eee; padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
             <h1 style="margin: 0; font-size: 26px; color: #111; font-weight: 800;">🏦 Centro Financiero</h1>
-            <!-- Pestañas de navegación de alto valor -->
             <nav style="display: flex; gap: 15px; font-size: 15px;">
                 <a href="#" style="color: #f44336; font-weight: bold; text-decoration: none; border-bottom: 2px solid #f44336; padding-bottom: 12px;">💸 Gastos</a>
                 <a href="#" style="color: #666; text-decoration: none; padding-bottom: 12px;">💰 Ingresos</a>
-                <a href="{% url 'estadisticas' %}" style="color: #666; text-decoration: none; padding-bottom: 12px;">📈 Estadísticas</a>
+                <a href="#" style="color: #666; text-decoration: none; padding-bottom: 12px;">📈 Estadísticas</a>
             </nav>
         </div>
         <a href="{% url 'dashboard' %}" style="background:#222; color:white; padding:8px 14px; border-radius:6px; text-decoration:none; font-size: 14px; font-weight: bold;">📊 Dashboard</a>
@@ -42,7 +62,7 @@
         <div style="background: #d4edda; color: #155724; padding:12px; border-radius:8px; margin: 15px 0; text-align:center;">{{ message }}</div>
     {% endfor %}{% endif %}
 
-    <!-- 📊 SECCIÓN DE TARJETAS KPI ANALÍTICAS CON PORCENTAJES -->
+    <!-- 📊 TARJETAS KPI -->
     <div class="kpi-container" style="margin-top: 20px;">
         <div class="kpi-card" style="border-top-color: #f44336;">
             <span style="color: #777; font-size: 12px; font-weight: bold; text-transform: uppercase;">Total Gastos</span>
@@ -66,7 +86,7 @@
         </div>
     </div>
 
-    <!-- 🛠️ FILTROS Y CONTROLES DE ESCRITORIO -->
+    <!-- 🛠️ FILTROS Y CONTROLES -->
     <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
         <form method="GET" action="" style="display: flex; gap: 10px; flex-wrap: wrap; margin: 0;">
             <input type="text" name="buscar" placeholder="🔍 Buscar concepto..." value="{{ request.GET.buscar }}" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;">
@@ -79,9 +99,6 @@
                 <option value="financiero" {% if request.GET.categoria == 'financiero' %}selected{% endif %}>🏦 Financiero</option>
                 <option value="administrativo" {% if request.GET.categoria == 'administrativo' %}selected{% endif %}>💼 Administrativo</option>
             </select>
-            {% if request.GET.categoria or request.GET.buscar %}
-                <a href="{% url 'lista_gastos' %}" style="padding: 8px 12px; background: #eee; color: #333; border-radius: 6px; text-decoration: none; font-size: 14px;">Limpiar filtros</a>
-            {% endif %}
         </form>
 
         <button class="btn-nuevo-escritorio" onclick="abrirModalCrear()" style="background: #28a745; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: bold; cursor: pointer;">
@@ -89,9 +106,9 @@
         </button>
     </div>
 
-    <!-- 📋 TABLA CON BADGES DE COLOR PERSONALIZADOS -->
-    <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-        <table style="width:100%; border-collapse:collapse; text-align:left;">
+    <!-- 📋 ENVOLTORIO RESPONSIVE PARA EL SCROLL LATERAL MÓVIL -->
+    <div class="table-responsive">
+        <table style="width:100%; border-collapse:collapse; text-align:left; background: white; min-width: 750px;">
             <thead>
                 <tr style="background:#f8f9fa; border-bottom: 2px solid #eee;">
                     <th style="padding:15px; color: #555;">Concepto del Gasto</th>
@@ -106,7 +123,6 @@
                 <tr style="border-bottom:1px solid #f1f1f1;">
                     <td style="padding:15px; font-weight: 600; color: #222;">{{ g.nombre }}</td>
                     <td style="padding:15px;">
-                        <!-- ✅ COLORES EN VIVO POR CATEGORÍA PROPUESTOS POR EL USUARIO -->
                         {% if g.categoria == 'fabricacion' %}
                             <span class="badge-categoria" style="background: #fd7e14;">🛠️ Fabricación</span>
                         {% elif g.categoria == 'fijo' %}
@@ -125,40 +141,40 @@
                     </td>
                     <td style="padding:15px; font-weight: bold; color: #111;">${{ g.monto|floatformat:0 }}</td>
                     <td style="padding:15px; color: #666; font-size: 14px;">{{ g.fecha|date:"d M Y" }}</td>
-                    <td style="padding:15px; text-align: center; display: flex; justify-content: center; gap: 6px;">
-                        <button class="btn-edit" data-id="{{ g.id }}" data-nombre="{{ g.nombre }}" data-monto="{{ g.monto }}" data-categoria="{{ g.categoria }}" data-observaciones="{{ g.observaciones|default:'' }}" style="background: #ffc107; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;">✏️ Editar</button>
-                        <a href="{% url 'duplicar_gasto' g.id %}" style="background: #17a2b8; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold;">📋 Duplicar</a>
-                        <a href="{% url 'eliminar_gasto' g.id %}" onclick="return confirm('¿Archivar este registro? Conservará su valor histórico en reportes globales.');" style="background: #e2e8f0; color: #4a5568; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold;">📉 Archivar</a>
+                    <td style="padding:15px; text-align: center; white-space: nowrap;">
+                        <button class="btn-edit" data-id="{{ g.id }}" data-nombre="{{ g.nombre }}" data-monto="{{ g.monto }}" data-categoria="{{ g.categoria }}" data-observaciones="{{ g.observaciones|default:'' }}" style="background: #ffc107; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; margin-right: 4px;">✏️ Editar</button>
+                        <a href="{% url 'duplicar_gasto' g.id %}" style="background: #17a2b8; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; margin-right: 4px;">📋 Duplicar</a>
+                        <a href="{% url 'eliminar_gasto' g.id %}" onclick="return confirm('¿Archivar este registro?');" style="background: #e2e8f0; color: #4a5568; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold;">📉 Archivar</a>
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5" style="padding:30px; text-align:center; color: #999;">No hay registros para los criterios solicitados.</td></tr>
+                <tr><td colspan="5" style="padding:30px; text-align:center; color: #999;">No hay registros disponibles.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
 
-<!-- 📱 BOTÓN ACCIÓN FLOTANTE PARA DISPOSITIVOS MÓVILES -->
-<button class="btn-flotante-movil" onclick="abrirModalCrear()">➕</button>
+<!-- 📱 BOTÓN ACCIÓN FLOTANTE (Ajustado con evento touchstart) -->
+<button class="btn-flotante-movil" onclick="abrirModalCrear()" ontouchstart="abrirModalCrear()">➕</button>
 
-<!-- 📦 MODAL DE GESTIÓN (IDÉNTICO AL PROCESAMIENTO ANTERIOR) -->
-<div id="modalGasto" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
-    <div style="background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 480px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); margin: 15px;">
+<!-- 📦 MODAL DE GESTIÓN -->
+<div id="modalGasto" style="display: none; position: fixed; z-index: 9999999 !important; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+    <div style="background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 440px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); margin: 15px; box-sizing: border-box;">
         <h2 id="modalTitulo" style="margin-top: 0; font-size: 18px; color: #222;">Operación Contable</h2>
         <form id="formGastoModal" method="POST" action="">
             {% csrf_token %}
             <div style="margin-bottom:12px;">
                 <label style="display: block; margin-bottom: 4px; font-weight: bold; font-size: 13px;">Concepto:</label>
-                <input type="text" name="nombre" id="id_nombre" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
+                <input type="text" name="nombre" id="id_nombre" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;">
             </div>
             <div style="margin-bottom:12px;">
                 <label style="display: block; margin-bottom: 4px; font-weight: bold; font-size: 13px;">Valor de Operación ($):</label>
-                <input type="number" name="monto" id="id_monto" step="0.01" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
+                <input type="number" name="monto" id="id_monto" step="0.01" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;">
             </div>
             <div style="margin-bottom:12px;">
                 <label style="display: block; margin-bottom: 4px; font-weight: bold; font-size: 13px;">Categoría:</label>
-                <select name="categoria" id="id_categoria" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
+                <select name="categoria" id="id_categoria" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;">
                     <option value="fabricacion">🛠️ Fabricación</option>
                     <option value="fijo">🏢 Gasto Fijo</option>
                     <option value="marketing">📢 Marketing</option>
@@ -168,12 +184,12 @@
                 </select>
             </div>
             <div style="margin-bottom:15px;">
-                <label style="display: block; margin-bottom: 4px; font-weight: bold; font-size: 13px;">Notas de Auditoría (Observaciones):</label>
-                <textarea name="observaciones" id="id_observaciones" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; resize: none;"></textarea>
+                <label style="display: block; margin-bottom: 4px; font-weight: bold; font-size: 13px;">Notas de Auditoría:</label>
+                <textarea name="observaciones" id="id_observaciones" rows="2" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; resize: none; box-sizing: border-box;"></textarea>
             </div>
             <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                <button type="button" onclick="cerrarModal()" style="background: #eee; color: #333; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer;">Cancelar</button>
-                <button type="submit" style="background: #f44336; color: white; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-weight: bold;">Confirmar Registro</button>
+                <button type="button" onclick="cerrarModal()" style="background: #eee; color: #333; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancelar</button>
+                <button type="submit" style="background: #f44336; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold;">Confirmar</button>
             </div>
         </form>
     </div>
