@@ -110,45 +110,96 @@
                 <label for="destacado">Marcar como Producto destacado</label>
             </div>
 
-            <div class="form-group">
-                <label for="variantes">🎨 Variantes (Formato: Color|Talla|Stock)</label>
-                <textarea id="variantes" name="variantes" rows="6">{% for variante in producto.variantes.all %}{{ variante.color }}|{{ variante.talla }}|{{ variante.stock }}{% if not forloop.last %}
-{% endif %}{% endfor %}</textarea>
-            </div>
+            <!-- ================= INICIO NUEVO CONSTRUCTOR DE VARIANTES (EDICIÓN) ================= -->
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="font-size: 16px; margin-bottom: 10px;">🎨 Constructor de Variantes Inteligente</label>
+                
+                <!-- Generador Masivo -->
+                <div style="background: #ffffff; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e0e0e0;">
+                    <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: bold; color: #666;">⚡ GENERADOR EN MASA (Separa por comas)</p>
+                    <div class="grid-3-col" style="gap: 10px;">
+                        <input type="text" id="gen_colores" placeholder="Ej: Oro, Plata">
+                        <input type="text" id="gen_tallas" placeholder="Ej: 6, 7">
+                        <button type="button" class="btn-submit" style="padding: 6px; font-size: 13px; background-color: #444;" onclick="ejecutarGeneradorMasivo()">Combinar</button>
+                    </div>
+                </div>
 
+                <div id="contenedor-tarjetas-variantes" style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Se cargarán las variantes existentes de la BD mediante JS -->
+                </div>
+
+                <button type="button" class="btn-volver" style="margin-top: 10px; background: #e0e0e0; color: #333; font-size: 13px; padding: 8px;" onclick="agregarTarjetaManual('', '', 1, '')">
+                    ➕ Agregar Variante Individual
+                </button>
+            </div>
+            <!-- ================= FIN NUEVO CONSTRUCTOR DE VARIANTES (EDICIÓN) ================= -->
+            
             <div class="form-group">
                 <label for="descripcion">Descripción</label>
                 <textarea id="descripcion" name="descripcion" rows="4">{{ producto.descripcion|default:'' }}</textarea>
             </div>
         </fieldset>
 
+        <!-- ================= INICIO MULTIMEDIA ENRIQUECIDA ================= -->
         <fieldset class="media-section">
-            <legend>Multimedia</legend>
+            <legend>Multimedia y Archivos</legend>
             
+            <!-- Imagen Principal -->
             {% if producto.imagen_principal %}
                 <div class="current-image">
-                    <p><strong>Imagen actual:</strong></p>
+                    <p><strong>Imagen principal actual:</strong></p>
                     <img src="{{ producto.imagen_principal.url }}" alt="{{ producto.nombre }}">
                 </div>
             {% endif %}
 
             <div class="form-group">
-                <label for="imagen_principal">Cambiar imagen</label>
+                <label for="imagen_principal">Cambiar imagen principal</label>
                 <input type="file" id="imagen_principal" name="imagen_principal" class="file-input" accept="image/*">
             </div>
 
-            <hr>
-            
-            <h4>Galería de imágenes</h4>
+            <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;">
 
+            <!-- 🎥 GESTIÓN DE VIDEO -->
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="video">Video del Producto</label>
+                {% if producto.video %}
+                    <div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin-bottom: 8px; border: 1px solid #ffeeba;">
+                        <p style="font-size: 12px; margin: 0 0 5px 0; color: #856404;">🎥 <strong>Video cargado:</strong> <a href="{{ producto.video.url }}" target="_blank">Ver video actual</a></p>
+                        <label style="font-size: 12px; color: #991b1b; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" name="eliminar_video"> 🗑️ Marcar para eliminar video
+                        </label>
+                    </div>
+                {% endif %}
+                <input type="file" id="video" name="video" accept="video/*">
+                <small style="color: #666; font-size: 11px;">Formatos recomendados: MP4, MOV</small>
+            </div>
+
+            <!-- 📜 GESTIÓN DE CERTIFICADO -->
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="certificado">Certificado de Autenticidad</label>
+                {% if producto.certificado %}
+                    <div style="background: #d4edda; padding: 10px; border-radius: 6px; margin-bottom: 8px; border: 1px solid #c3e6cb;">
+                        <p style="font-size: 12px; margin: 0 0 5px 0; color: #155724;">📜 <strong>Certificado cargado:</strong> <a href="{{ producto.certificado.url }}" target="_blank">Ver documento actual</a></p>
+                        <label style="font-size: 12px; color: #991b1b; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" name="eliminar_certificado"> 🗑️ Marcar para eliminar certificado
+                        </label>
+                    </div>
+                {% endif %}
+                <input type="file" id="certificado" name="certificado" accept="application/pdf,image/*">
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+            
+            <!-- Galería Renderizada -->
+            <h4>Galería de imágenes secundarias</h4>
             {% if producto.imagenes.exists %}
                 <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
                     {% for foto in producto.imagenes.all %}
                         {% if foto.imagen.url != producto.imagen_principal.url %}
-                            <div style="text-align:center;">
-                                <img src="{{ foto.imagen.url }}" style="width:120px; height:120px; object-fit:cover; border-radius:8px;">
+                            <div style="text-align:center; background: #fff; padding: 5px; border: 1px solid #ddd; border-radius: 8px;">
+                                <img src="{{ foto.imagen.url }}" style="width:100px; height:100px; object-fit:cover; border-radius:6px;">
                                 <br>
-                                <a href="{% url 'eliminar_imagen_galeria' foto.id %}" style="color:red; font-size:12px; text-decoration:none;">
+                                <a href="{% url 'eliminar_imagen_galeria' foto.id %}" style="color:red; font-size:12px; text-decoration:none; font-weight:bold; display:block; margin-top:5px;">
                                     🗑️ Eliminar
                                 </a>
                             </div>
@@ -162,7 +213,8 @@
                 <input type="file" id="galeria" name="galeria" multiple accept="image/*">
             </div>
         </fieldset>
-
+        <!-- ================= FIN MULTIMEDIA ENRIQUECIDA ================= -->
+        
         <button type="submit" class="btn-submit">
             💾 Guardar Cambios
         </button>
@@ -306,7 +358,49 @@
             height: 95px !important;
         }
     }
-</style>
 
+    /* Estilos para el Constructor de Tarjetas Inteligentes */
+    .variante-card {
+        background: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .variante-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #f0f0f0;
+    }
+    .badge-sku {
+        background: #e2e8f0;
+        color: #333;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: bold;
+    }
+    .badge-status {
+    font-size: 11px;
+    font-weight: bold;
+    }
+    .badge-utilidad {
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: bold;
+    }
+    .btn-action-card {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 2px 5px;
+    }
+    
+</style>
 
 {% endblock %}

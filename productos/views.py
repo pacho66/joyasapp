@@ -45,6 +45,7 @@ from productos.services.envios import calcular_envio
 # 📂 IMPORTACIONES DE LA APP ACTUAL (Pedidos/Ventas)
 from .models import ProductoVariante, Pedido, PedidoItem, Perfil, Abono, Gasto
 from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm, ProductoForm
+from django.db import IntegrityError
 
 from .utils import generar_link_whatsapp, generar_numero_orden 
 from .utils import generar_link_whatsapp, generar_numero_orden, generar_pdf_pedido
@@ -430,14 +431,12 @@ def crear_producto(request):
                 {
                     'categorias': categorias,
                     'valores': request.POST,  
-                    'variantes_texto': request.POST.get('variantes', '')  
                 }
             )
 
-        # ✨ Capturamos la imagen principal aquí para usarla de escudo abajo
         imagen_principal = request.FILES.get('imagen_principal')
 
-        # 🚀 2. CREACIÓN SEGURA E INTELIGENTE (Cambiamos .create por instanciación manual)
+        # 🚀 2. INSTANCIACIÓN MANUAL SEGURA
         producto = Producto(
             usuario=request.user,
             nombre=request.POST.get('nombre'),
@@ -445,7 +444,6 @@ def crear_producto(request):
             descripcion=request.POST.get('descripcion'),
             categoria_id=request.POST.get('categoria'),
             tipo_venta=request.POST.get('tipo_venta') or 'unidad',
-            # Evitamos guardar un string vacío '' si el campo no se llena en el HTML:
             precio_detal=request.POST.get('precio_detal') or None,
             precio_semimayor=request.POST.get('precio_semimayor') or None,
             precio_mayor=request.POST.get('precio_mayor') or None,
@@ -460,56 +458,46 @@ def crear_producto(request):
             certificado=request.FILES.get('certificado'),
             video=request.FILES.get('video'),
         )
-        
-        # 🔥 OBLIGAMOS A DJANGO A EJECUTAR EL MÉTODO SAVE() PERSONALIZADO
-        # Esto calcula automáticamente los precios finales si el producto es por gramos
         producto.save() 
 
         # 🎨 3. PROCESAMIENTO DE IMÁGENES DE GALERÍA
         imagenes = request.FILES.getlist('galeria')
-
         for imagen in imagenes:
-            # 🛡️ ESCUDO POR PESO: Si mide exactamente los mismos bytes que la principal, se salta
             if imagen_principal and imagen.size == imagen_principal.size:
                 continue
-
-            ProductoImagen.objects.create(
-                producto=producto,
-                imagen=imagen
-            )
+            ProductoImagen.objects.create(producto=producto, imagen=imagen)
             
-        # ⚙️ PROCESAMIENTO DE VARIANTES
-        variantes = request.POST.get('variantes', '')
+        # ⚙️ 4. CONSTRUCTOR DE VARIANTES INTELIGENTES (Lectura de Listas Paralelas)
+        v_colores = request.POST.getlist('v_color[]')
+        v_tallas = request.POST.getlist('v_talla[]')
+        v_stocks = request.POST.getlist('v_stock[]')
+        v_precios = request.POST.getlist('v_precio[]')
 
-        for linea in variantes.splitlines():
-            linea = linea.strip()
-            if not linea:
-                continue
-
-            datos = linea.split('|')
-            if len(datos) != 3:
-                continue
-
+        for i in range(len(v_colores)):
             try:
-                ProductoVariante.objects.create(
-                    producto=producto,
-                    color=datos[0].strip(),
-                    talla=datos[1].strip(),
-                    stock=int(datos[2].strip())
-                )
-            except ValueError:
-                pass
+                c_val = v_colores[i].strip() if i < len(v_colores) and v_colores[i] else None
+                t_val = v_tallas[i].strip() if i < len(v_tallas) and v_tallas[i] else None
+                s_val = int(v_stocks[i].strip()) if i < len(v_stocks) and v_stocks[i] else 0
+                p_val = float(v_precios[i].strip()) if i < len(v_precios) and v_precios[i] else 0
+
+                # Creamos la variante únicamente si tiene al menos un identificador
+                if c_val or t_val:
+                    ProductoVariante.objects.create(
+                        producto=producto,
+                        color=c_val,
+                        talla=t_val,
+                        stock=s_val,
+                        precio_venta=p_val # Resguardado si actualizaste el modelo, sino lo calcula por el precio base
+                    )
+            except (IndexError, ValueError):
+                continue
+            except IntegrityError:
+                continue # Evita la caída si el usuario generó un duplicado exacto de color/talla
 
         messages.success(request, "¡Producto y sus variantes creados correctamente!")
         return redirect('dashboard')
 
-    return render(
-        request,
-        'crear_producto.html',
-        {
-            'categorias': categorias
-        }
-    )
+    return render(request, 'crear_producto.html', {'categorias': categorias})
 
 @login_required
 def mis_productos(request):
@@ -571,18 +559,10 @@ def eliminar_imagen_producto(request, id):
 
 @login_required
 def editar_producto(request, id):
-
-    producto = Producto.objects.get(
-        id=id,
-        usuario=request.user
-    )
-
-    categorias = Categoria.objects.filter(
-        usuario=request.user
-    )
+    producto = Producto.objects.get(id=id, usuario=request.user)
+    categorias = Categoria.objects.filter(usuario=request.user)
 
     if request.method == 'POST':
-
         producto.nombre = request.POST.get('nombre')
         producto.descripcion = request.POST.get('descripcion')
         producto.referencia = request.POST.get('referencia')
@@ -592,103 +572,62 @@ def editar_producto(request, id):
 
         producto.precio_costo = request.POST.get('precio_costo') or 0
         producto.stock = request.POST.get('stock') or 0
-
         producto.precio_detal = request.POST.get('precio_detal') or 0
         producto.precio_semimayor = request.POST.get('precio_semimayor') or 0
         producto.precio_mayor = request.POST.get('precio_mayor') or 0
-
         producto.tipo_venta = request.POST.get('tipo_venta') or 'unidad'
-
         producto.peso_producto = request.POST.get('peso_producto') or 0
-
-        producto.precio_por_gramo_detal = (
-            request.POST.get('precio_por_gramo_detal') or 0
-        )
-
-        producto.precio_por_gramo_semimayor = (
-            request.POST.get('precio_por_gramo_semimayor') or 0
-        )
-
-        producto.precio_por_gramo_mayor = (
-            request.POST.get('precio_por_gramo_mayor') or 0
-        )
-
-        producto.destacado = (
-            request.POST.get('destacado') == 'on'
-        )
+        producto.precio_por_gramo_detal = request.POST.get('precio_por_gramo_detal') or 0
+        producto.precio_por_gramo_semimayor = request.POST.get('precio_por_gramo_semimayor') or 0
+        producto.precio_por_gramo_mayor = request.POST.get('precio_por_gramo_mayor') or 0
+        producto.destacado = (request.POST.get('destacado') == 'on')
 
         if request.FILES.get('imagen_principal'):
-            producto.imagen_principal = request.FILES.get(
-                'imagen_principal'
-            )
-
+            producto.imagen_principal = request.FILES.get('imagen_principal')
         if request.FILES.get('certificado'):
-            producto.certificado = request.FILES.get(
-                'certificado'
-            )
-
+            producto.certificado = request.FILES.get('certificado')
         if request.FILES.get('video'):
-            producto.video = request.FILES.get(
-                'video'
-            )
-
+            producto.video = request.FILES.get('video')
         producto.save()
 
-        
-        # 📸 Agregar nuevas imágenes a la galería con protección por peso
         galeria = request.FILES.getlist('galeria')
-
         for imagen in galeria:
-            # 🛡️ ESCUDO POR PESO: Compara los bytes del archivo subido con la imagen principal actual
             if producto.imagen_principal and imagen.size == producto.imagen_principal.size:
                 continue
+            ProductoImagen.objects.create(producto=producto, imagen=imagen)
 
-            ProductoImagen.objects.create(
-                producto=producto,
-                imagen=imagen
-            )
-
+        # 🔄 Reconstrucción limpia de variantes basadas en la matriz
         producto.variantes.all().delete()
 
-        variantes = request.POST.get(
-            'variantes',
-            ''
-        )
+        v_colores = request.POST.getlist('v_color[]')
+        v_tallas = request.POST.getlist('v_talla[]')
+        v_stocks = request.POST.getlist('v_stock[]')
+        v_precios = request.POST.getlist('v_precio[]')
 
-        for linea in variantes.splitlines():
-
-            linea = linea.strip()
-
-            if not linea:
-                continue
-
-            datos = linea.split('|')
-
-            if len(datos) != 3:
-                continue
-
+        for i in range(len(v_colores)):
             try:
+                c_val = v_colores[i].strip() if i < len(v_colores) and v_colores[i] else None
+                t_val = v_tallas[i].strip() if i < len(v_tallas) and v_tallas[i] else None
+                s_val = int(v_stocks[i].strip()) if i < len(v_stocks) and v_stocks[i] else 0
+                p_val = float(v_precios[i].strip()) if i < len(v_precios) and v_precios[i] else 0
 
-                ProductoVariante.objects.create(
-                    producto=producto,
-                    color=datos[0].strip(),
-                    talla=datos[1].strip(),
-                    stock=int(datos[2].strip())
-                )
-
-            except ValueError:
+                if c_val or t_val:
+                    ProductoVariante.objects.create(
+                        producto=producto,
+                        color=c_val,
+                        talla=t_val,
+                        stock=s_val,
+                        precio_venta=p_val
+                    )
+            except (IndexError, ValueError):
+                continue
+            except IntegrityError:
                 continue
 
         return redirect('mis_productos')
 
-    return render(
-        request,
-        'editar_producto.html',
-        {
-            'producto': producto,
-            'categorias': categorias,
-        }
-    )
+    return render(request, 'editar_producto.html', {'producto': producto, 'categorias': categorias})
+
 
 @login_required(login_url='/login/')
 def dashboard(request):

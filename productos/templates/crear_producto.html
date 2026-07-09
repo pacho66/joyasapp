@@ -201,7 +201,48 @@ input:focus, select:focus, textarea:focus {
         width: 100%;
         text-align: center;
     }
-}
+    }
+    /* Estilos para el Constructor de Tarjetas Inteligentes */
+    .variante-card {
+        background: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .variante-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .badge-sku {
+        background: #e2e8f0;
+        color: #333;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: bold;
+    }
+    .badge-status {
+        font-size: 11px;
+        font-weight: bold;
+    }
+    .badge-utilidad {
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: bold;
+        }
+    .btn-action-card {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 2px 5px;
+    }
 </style>
 
 <div class="container-formulario">
@@ -463,55 +504,171 @@ input:focus, select:focus, textarea:focus {
 
         </div>
 
-        <div class="form-card">
-            <h3>🎨 Variantes (Color | Talla Numérica # | Stock)</h3>
-
-            <div class="form-group">
-                <label for="variantes">
-                    Ingresa una variante por línea utilizando el separador |
-                </label>
-
-                <textarea
-                    id="variantes"
-                    name="variantes"
-                    rows="4"
-                    placeholder="Color | Talla (#) | Stock&#10;Oro Amarillo | 6 | 10&#10;Plata | 7 | 5&#10;Oro Rosado | 18 | 3">{{ variantes_texto|default:'' }}</textarea>
+        <!-- ================= INICIO NUEVO CONSTRUCTOR DE VARIANTES ================= -->
+        <div class="form-card" style="margin-bottom: 20px;">
+            <h3>🎨 Constructor de Variantes Inteligente</h3>
+            
+            <!-- ⚡ Generador Masivo (Estilo Shopify) -->
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+                <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: bold; color: #64748b;">⚡ GENERADOR EN MASA (Separa por comas)</p>
+                <div class="grid-3-col" style="gap: 10px; margin-bottom: 0;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <input type="text" id="gen_colores" placeholder="Ej: Oro Amarillo, Oro Blanco">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <input type="text" id="gen_tallas" placeholder="Ej: 6, 7, 8">
+                    </div>
+                    <button type="button" class="btn-submit" style="padding: 8px; font-size: 14px; background-color: #333;" onclick="ejecutarGeneradorMasivo()">
+                        ⚡ Combinar y Crear
+                    </button>
+                </div>
             </div>
-        </div>
 
-        <div class="form-actions">
-            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
-                Cancelar
-            </a>
+            <!-- Contenedor donde se inyectan las tarjetas dinámicas -->
+            <div id="contenedor-tarjetas-variantes" style="display: flex; flex-direction: column; gap: 12px;">
+                <!-- Se generan dinámicamente con JS -->
+            </div>
 
-            <button type="submit" class="btn btn-primary">
-                Guardar Producto
+            <button type="button" class="btn-volver" style="margin-top: 12px; background: #e2e8f0; color: #333; font-size: 14px; padding: 10px;" onclick="agregarTarjetaManual('', '', 1, '')">
+                ➕ Agregar Variante Individual
             </button>
         </div>
-
+        <!-- ================= FIN NUEVO CONSTRUCTOR DE VARIANTES ================= -->
+        
     </form>
 
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const selectTipoVenta = document.getElementById('tipo_venta');
-        const contenedorGramos = document.getElementById('campos_gramos');
+    let contadorVariantes = 0;
 
-        function alternarVisibilidad() {
-            if (selectTipoVenta.value === 'gramo') {
-                contenedorGramos.style.display = 'block';
-            } else {
-                contenedorGramos.style.display = 'none';
-            }
+    function agregarTarjetaManual(color = '', talla = '', stock = 1, precio = '') {
+        contadorVariantes++;
+        const idUnico = 'var_row_' + contadorVariantes;
+        const contenedor = document.getElementById('contenedor-tarjetas-variantes');
+
+        // Tomar el precio detal base de la interfaz por defecto si viene vacío
+        if (!precio) {
+            precio = document.getElementById('precio_detal')?.value || '0';
         }
 
-        // Detectar cambios en tiempo real en la pantalla
-        selectTipoVenta.addEventListener('change', alternarVisibilidad);
-        
-        // Ejecutar al cargar la página (por si hay errores de validación y regresa con datos)
-        alternarVisibilidad();
+        const div = document.createElement('div');
+        div.className = 'variante-card';
+        div.id = idUnico;
+
+        div.innerHTML = `
+            <div class="variante-header">
+                <div>
+                    <span class="badge-sku">VAR-${String(contadorVariantes).padStart(3, '0')}</span>
+                    <span id="txt_status_${idUnico}" class="badge-status" style="margin-left: 8px;">🟢 Disponible</span>
+                </div>
+                <div>
+                    <span id="badge_utilidad_${idUnico}" class="badge-utilidad">Utilidad: $0</span>
+                    <button type="button" class="btn-action-card" title="Duplicar" onclick="duplicarTarjeta('${idUnico}')">📋</button>
+                    <button type="button" class="btn-action-card" title="Eliminar" onclick="document.getElementById('${idUnico}').remove();">🗑️</button>
+                </div>
+            </div>
+            <div class="grid-4-col" style="margin-bottom:0; gap:10px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:11px;">Color</label>
+                    <input type="text" name="v_color[]" value="${color}" placeholder="Oro" oninput="actualizarMetadatos('${idUnico}')">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:11px;">Talla</label>
+                    <input type="text" name="v_talla[]" value="${talla}" placeholder="7" oninput="actualizarMetadatos('${idUnico}')">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:11px;">Stock</label>
+                    <input type="number" name="v_stock[]" value="${stock}" min="0" oninput="actualizarMetadatos('${idUnico}')" id="stock_input_${idCard = idUnico}">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:11px;">Precio ($)</label>
+                    <input type="number" name="v_precio[]" value="${precio}" oninput="actualizarMetadatos('${idUnico}')" id="precio_input_${idUnico}">
+                </div>
+            </div>
+        `;
+
+        contenedor.appendChild(div);
+        actualizarMetadatos(idUnico);
+    }
+
+    function ejecutarGeneradorMasivo() {
+        const rawColores = document.getElementById('gen_colores').value.split(',').map(s => s.trim()).filter(Boolean);
+        const rawTallas = document.getElementById('gen_tallas').value.split(',').map(s => s.trim()).filter(Boolean);
+
+        const listaColores = rawColores.length ? rawColores : [''];
+        const listaTallas = rawTallas.length ? rawTallas : [''];
+
+        listaColores.forEach(color => {
+            listaTallas.forEach(talla => {
+                agregarTarjetaManual(color, talla, 1, '');
+            });
+        });
+
+        document.getElementById('gen_colores').value = '';
+        document.getElementById('gen_tallas').value = '';
+    }
+
+    function duplicarTarjeta(idTarget) {
+        const cardTarget = document.getElementById(idTarget);
+        if (!cardTarget) return;
+
+        const color = cardTarget.querySelector('input[name="v_color[]"]').value;
+        const talla = cardTarget.querySelector('input[name="v_talla[]"]').value;
+        const stock = cardTarget.querySelector('input[name="v_stock[]"]').value;
+        const precio = cardTarget.querySelector('input[name="v_precio[]"]').value;
+
+        agregarTarjetaManual(color, talla, stock, precio);
+    }
+
+    function actualizarMetadatos(idCard) {
+        const stockInput = document.getElementById(stock_input_${idCard});
+        const precioInput = document.getElementById(precio_input_${idCard});
+        const txtStatus = document.getElementById(txt_status_${idCard});
+        const badgeUtilidad = document.getElementById(badge_utilidad_${idCard});
+
+        if (!stockInput || !precioInput) return;
+
+        const stockVal = parseInt(stockInput.value) || 0;
+        if (stockVal > 3) {
+            txtStatus.textContent = "🟢 Disponible";
+            txtStatus.style.color = "#28a745";
+        } else if (stockVal > 0) {
+            txtStatus.textContent = "🟡 Poco Stock";
+            txtStatus.style.color = "#ffc107";
+        } else {
+            txtStatus.textContent = "🔴 Agotado";
+            txtStatus.style.color = "#dc3545";
+        }
+
+        const precioCostoGlobal = parseFloat(document.getElementById('precio_costo')?.value) || 0;
+        const precioVentaVariante = parseFloat(precioInput.value) || 0;
+        const utilidad = precioVentaVariante - precioCostoGlobal;
+
+        badgeUtilidad.textContent = Utilidad: $${utilidad.toLocaleString('es-CO', { maximumFractionDigits: 0 })};
+        badgeUtilidad.style.backgroundColor = utilidad > 0 ? "#d4edda" : "#f8d7da";
+        badgeUtilidad.style.color = utilidad > 0 ? "#155724" : "#721c24";
+    }
+
+    function recalcularTodasLasTarjetas() {
+        document.querySelectorAll('.variante-card').forEach(card => actualizarMetadatos(card.id));
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Enlazar el cálculo automático al cambiar el costo global
+        document.getElementById('precio_costo')?.addEventListener('input', recalcularTodasLasTarjetas);
+
+        // Renderizado inicial seguro usando las etiquetas de Django
+        {% if producto and producto.variantes.exists %}
+            {% for v in producto.variantes.all %}
+                agregarTarjetaManual("{{ v.color|default_if_none:''|escapejs }}", "{{ v.talla|default_if_none:''|escapejs }}", {{ v.stock|default:0 }}, "{{ v.precio_venta|default:'' }}");
+            {% endfor %}
+        {% else %}
+            agregarTarjetaManual('', '', 1, '');
+        {% endif %}
     });
+
 </script>
+
 
 {% endblock %}

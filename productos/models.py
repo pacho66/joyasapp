@@ -234,6 +234,14 @@ class ProductoVariante(models.Model):
         default=0
     )
 
+    precio_venta = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0.00, 
+        blank=True, 
+        null=True
+    )
+
     class Meta:
         unique_together = (
             'producto',
@@ -249,6 +257,9 @@ class ProductoVariante(models.Model):
 
         if self.talla:
             texto += f" | Talla: {self.talla}"
+
+        if self.precio_venta:
+            texto += f" | Precio: ${self.precio_venta}"
 
         return texto
 
