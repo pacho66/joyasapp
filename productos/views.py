@@ -2594,17 +2594,30 @@ def pedido_pdf(request, pedido_id):
     except Exception as e:
         return HttpResponse(f"Error interno: {str(e)}", status=500)
 
-
 @login_required
 def lista_gastos(request):
     if not request.user.is_staff:
         raise Http404()  # 🔥 oculta completamente la página
 
+    # 1. Traemos los gastos del usuario
     gastos = Gasto.objects.filter(usuario=request.user)
 
+    # 2. CAPTURAMOS EL FILTRO DEL BOTÓN DEL DASHBOARD
+    categoria_filtrada = request.GET.get('categoria')
+    
+    if categoria_filtrada == 'fabricacion':
+        # Filtramos por los gastos que corresponden al taller (operativos/fabricación)
+        # Puedes buscar por el nombre o por el campo categoría si tu modelo lo tiene
+        if hasattr(Gasto, 'categoria'):
+            gastos = gastos.filter(categoria__iexact='operativo')
+        else:
+            gastos = gastos.filter(nombre__icontains='Mantenimiento')
+
     return render(request, 'lista_gastos.html', {
-        'gastos': gastos
+        'gastos': gastos,
+        'categoria_filtrada': categoria_filtrada
     })
+
 
 @login_required
 def gastos(request):
