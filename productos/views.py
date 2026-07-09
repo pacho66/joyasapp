@@ -747,7 +747,6 @@ def dashboard(request):
     # BASE MULTIUSUARIO SaaS
     # ==========================
     pedidos = Pedido.objects.filter(usuario=usuario)
-    productos = Producto.objects.filter(usuario=usuario)
 
     # ==========================
     # 📊 GRÁFICAS (ÚLTIMOS 7 DÍAS)
@@ -767,6 +766,9 @@ def dashboard(request):
     if cliente_id:
         pedidos = pedidos.filter(cliente_id=cliente_id)
 
+    clientes = Cliente.objects.filter(usuario=usuario)
+    productos = Producto.objects.filter(usuario=usuario)
+
     # ==========================
     # 🔴 CARTERA Y MOROSOS
     # ==========================
@@ -781,17 +783,9 @@ def dashboard(request):
         total=Sum('pedidos__saldo_pendiente')
     )['total'] or 0
 
-    # =======================================================================
-    # 👥 FILTROS Y OPTIMIZACIÓN DE CLIENTES (Cálculo acumulado en una sola Query)
-    # =======================================================================
-    # En lugar de usar un bucle 'for' que destruye el rendimiento, anotamos el total real con condiciones directas
-    clientes = Cliente.objects.filter(usuario=usuario).annotate(
-        total_real_compras=Coalesce(
-            Sum('pedidos_total', filter=Q(pedidosusuario=usuario, pedidosestado_iexact='pagado')),
-            Value(0, output_field=DecimalField())
-        )
-    )
-
+    # ==========================
+    # FILTROS CLIENTES
+    # ==========================
     clientes_filtrados = clientes
 
     if tipo == 'vip':
@@ -801,16 +795,12 @@ def dashboard(request):
     elif tipo == 'dormidos':
         clientes_filtrados = clientes.filter(ultima_compra__lt=hace_30).distinct()
     elif tipo == 'morosos':
-        # 🛠️ CORREGIDO: Se cambiaron los guiones bajos por doble guion bajo estándar de Django (__gt y __lt)
+        # 🛠️ RECTIFICADO: Ahora usa correctamente el doble guion bajo estándar de Django (__)
         clientes_filtrados = clientes.filter(
             pedidos__tipo_pago='credito',
             pedidos__saldo_pendiente__gt=0,
             pedidos__fecha_limite__lt=hoy
         ).distinct()
-
-    # Reasignamos el total_real_compras al atributo que busca tu HTML para no romper la compatibilidad
-    for clie in clientes_filtrados:
-        clie.total_compras = clie.total_real_compras
 
     mensajes = {
         'vip': "💎 Clientes VIP",
@@ -819,6 +809,17 @@ def dashboard(request):
         'morosos': "🔴 Clientes en mora"
     }
     mensaje = mensajes.get(tipo, "📊 Panel General")
+
+    # =======================================================================
+    # 🔥 SOLUCIÓN: Recalcular en caliente el total real de compras acumuladas
+    # =======================================================================
+    for clie in clientes_filtrados:
+        total_real = Pedido.objects.filter(
+            usuario=usuario,
+            cliente_nombre=clie.nombre,
+            estado__iexact='pagado'
+        ).aggregate(suma=Sum('total'))['suma'] or 0
+        clie.total_compras = total_real
 
     # ==========================
     # VENTAS Y ENVIOS
@@ -857,9 +858,9 @@ def dashboard(request):
     margen_neto = (utilidad_neta / total_ingresos * 100) if total_ingresos > 0 else 0
 
     # =======================================================================
-    # 💎 VALORIZACIÓN DE INVENTARIO
+    # 💎 VALORIZACIÓN DE INVENTARIO (Sincronizado con precio_costo y Variantes)
     # =======================================================================
-    inventario = productos.prefetch_related('variantes')
+    inventario = Producto.objects.filter(usuario=usuario).prefetch_related('variantes')
     inv_valorizado_costo = 0.0
     inv_valorizado_venta = 0.0
 
@@ -878,7 +879,7 @@ def dashboard(request):
     utilidad_potencial_inv = inv_valorizado_venta - inv_valorizado_costo
     
     # ==========================
-    # PEDIDOS E INVENTARIO (CONTEOS)
+    # PEDIDOS E INVENTARIO
     # ==========================
     pedidos_hoy = pedidos.filter(fecha__date=hoy).count()
     total_pedidos = pedidos.count()
@@ -914,13 +915,13 @@ def dashboard(request):
         'fechas': fechas,
         'totales': totales,
         
-        # Variables financieras unificadas para el HTML
+        # Variables financieras consistentes
         'total_ingresos': total_ingresos,
         'total_material': total_material,
         'total_mano_obra': total_mano_obra,
         'total_costos': total_costos,
         'total_gastos': total_gastos,
-        'utilidad': utilidad_bruta,       # Enlazado como 'utilidad' para responder al bloque CSS de finanzas
+        'utilidad': utilidad_bruta,       # Asegurada para compatibilidad de plantillas
         'utilidad_bruta': utilidad_bruta,
         'utilidad_neta': utilidad_neta,
         'margen_bruto': margen_bruto,
