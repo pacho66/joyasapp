@@ -2662,7 +2662,7 @@ def lista_gastos(request):
     gastos_filtrados = gastos_query.order_by('-fecha')
     form = GastoForm()
 
-    return render(request, "lista_gastos.html", {
+    return render(request, "gastos.html", {
         "gastos": gastos_filtrados,
         "categoria_filtrada": categoria_filtrada,
         "total_gastos": total_global,
