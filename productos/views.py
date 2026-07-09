@@ -1246,7 +1246,7 @@ def ganancias(request):
     pedidos_usuario = Pedido.objects.filter(usuario=request.user)
 
     ventas_hoy = pedidos_usuario.filter(fecha__date=hoy).aggregate(total=Sum('total'))['total'] or 0
-    ventas_mes = pedidos_usuario.filter(fecha_date_gte=hace_30).aggregate(total=Sum('total'))['total'] or 0
+    ventas_mes = pedidos_usuario.filter(fecha__date__gte=hace_30).aggregate(total=Sum('total'))['total'] or 0
     ventas_total = pedidos_usuario.aggregate(total=Sum('total'))['total'] or 0
     
     # 🛠️ PARCHE AL CORTO: Cálculo del Ticket Promedio real
