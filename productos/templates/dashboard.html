@@ -671,7 +671,7 @@ tr:last-child td {
         <!-- FILTROS Y CLIENTES -->
         <div class="seccion-card full-width bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h3>👥 Gestión de Clientes</h3>
-            
+    
             <div class="filtros-container">
                 <a href="?tipo=vip">💎 VIP</a>
                 <a href="?tipo=nuevos">🆕 Nuevos</a>
@@ -690,7 +690,43 @@ tr:last-child td {
                 </div>
                 {% endfor %}
             </div>
+        </div> <!-- Aquí termina la tarjeta de clientes -->
 
+        <!-- === SECCIÓN DE COSTOS DE FABRICACIÓN (UBICACIÓN IDEAL) === -->
+        <div class="seccion-card full-width bg-white p-6 rounded-2xl border border-slate-200 shadow-sm" style="margin-top: 25px;">
+            <h3 style="margin-top: 0; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                <i class="bi bi-tools" style="color: #ca8a04;"></i> 🛠️ Costos de Fabricación y Producción
+            </h3>
+    
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
+        
+            <!-- Tarjeta: Materiales -->
+            <div style="background: #fef08a; padding: 15px; border-radius: 12px; border-left: 5px solid #ca8a04;">
+                <span style="font-size: 13px; color: #713f12; font-weight: 600; text-transform: uppercase;">Materiales</span>
+                <div style="font-size: 24px; font-weight: 700; color: #451a03; margin-top: 5px;">
+                    ${{ material_total|default:"0.0" }}
+                </div>
+            </div>
+
+            <!-- Tarjeta: Mano de Obra -->
+            <div style="background: #dbeafe; padding: 15px; border-radius: 12px; border-left: 5px solid #2563eb;">
+                <span style="font-size: 13px; color: #1e40af; font-weight: 600; text-transform: uppercase;">Mano de Obra</span>
+                <div style="font-size: 24px; font-weight: 700; color: #1e3a8a; margin-top: 5px;">
+                    ${{ total_mano_obra|default:"0.0" }}
+                 </div>
+            </div>
+
+            <!-- Tarjeta: Costo Total -->
+            <div style="background: #f3f4f6; padding: 15px; border-radius: 12px; border-left: 5px solid #4b5563;">
+                <span style="font-size: 13px; color: #374151; font-weight: 600; text-transform: uppercase;">Inversión Total</span>
+                <div style="font-size: 24px; font-weight: 700; color: #111827; margin-top: 5px;">
+                    ${{ costos_totales|default:"0.0" }}
+            </div>
+        </div>
+
+    </div>
+</div>
+        
             <!-- Tabla de Clientes -->
             <div class="table-wrap">
                 <table>

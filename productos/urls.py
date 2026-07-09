@@ -81,6 +81,7 @@ urlpatterns = [
     # 📊 PANEL / SaaS
     # ===============================
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('fabricacion/', views.fabricacion, name='fabricacion'),
     path('renovar/', views.renovar_manual, name='renovar_manual'),
     path('modificar-banner/', views.modificar_banner, name='modificar_banner'),
     path('estadisticas/', views.estadisticas, name='estadisticas'),
