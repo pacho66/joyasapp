@@ -894,7 +894,7 @@ def dashboard(request):
 
     total_productos = productos.count()
     productos_sin_stock = productos.filter(stock=0).count()
-    productos_bajo_stock = productos.filter(stock_gt=0, stock_lte=5).count()
+    productos_bajo_stock = productos.filter(stock__gt=0, stock__lte=5).count()
 
     ticket_promedio = total_general / total_pedidos if total_pedidos > 0 else 0
     crecimiento = total_hoy - total_ayer
