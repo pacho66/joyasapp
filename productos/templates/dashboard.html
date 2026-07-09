@@ -442,7 +442,7 @@ tr:last-child td {
             </div>
             <div id="menu-dash-lista" class="menu-dashboard-links mt-2">
                 <a href="{% url 'dashboard' %}">📊 Inicio</a>
-                <a href="{% url 'panel_crm' %}">🎯 Módulo CRM</a> <!-- 📊 Enlace acoplado en el menú principal -->
+                <a href="{% url 'panel_crm' %}">🎯 Módulo CRM</a>
                 <a href="{% url 'estadisticas' %}">📈 Estadísticas</a>
                 <a href="{% url 'ganancias' %}">💰 Ganancias</a>
                 <a href="{% url 'inventario' %}">📦 Inventario</a>
@@ -500,7 +500,6 @@ tr:last-child td {
 
     <!-- 3. BOTONES DE ACCIÓN RÁPIDA ESTILIZADOS -->
     <div class="botones-panel bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-2 items-center">
-        <!-- 🎯 Acceso Premium al Módulo CRM -->
         <a href="{% url 'panel_crm' %}" class="btn btn-morado text-xs md:text-sm font-bold shadow-sm" style="background-color: #6d28d9; color: white;">
             🎯 Módulo CRM
         </a>
@@ -508,125 +507,127 @@ tr:last-child td {
         <a href="{% url 'estadisticas' %}" class="btn btn-azul text-xs md:text-sm">📈 Estadísticas</a>
         <a href="{% url 'ganancias' %}" class="btn btn-verde text-xs md:text-sm">💰 Ganancias</a>
         <a href="{% url 'inventario' %}" class="btn btn-naranja text-xs md:text-sm">📦 Inventario</a>
+        <a href="{% url 'lista_gastos' %}?categoria=fabricacion" class="inline-flex items-center gap-1 text-xs md:text-sm font-bold px-3 py-2 rounded-xl transition shadow-sm text-amber-800 bg-amber-100 hover:bg-amber-200">
+            🛠️ Fabricación
+        </a>
         <a href="{% url 'whatsapp_segmento' %}?tipo=vip" class="btn btn-morado text-xs md:text-sm">📲 WA VIP</a>
         <a href="{% url 'configurar_negocio' %}" class="btn btn-gris text-xs md:text-sm">⚙️ Ajustes</a>
         <a href="{% url 'crear_producto' %}" class="btn btn-verde text-xs md:text-sm">➕ Producto</a>
         <a href="{% url 'crear_categoria' %}" class="btn btn-azul text-xs md:text-sm">📂 Categoría</a>
         <a href="{% url 'mis_productos' %}" class="btn btn-azul text-xs md:text-sm">📦 Mis Productos</a>
         
-        <!-- 📊 Botón Verde Excel Contable Premium (Pintado con Tailwind e integrado en el flujo) -->
         <a href="{% url 'exportar_excel_dashboard' %}" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs md:text-sm px-4 py-2 rounded-xl transition shadow-sm ml-auto">
             📥 Descargar Excel Contable
         </a>
     </div>
 
     <!-- 💰 1. SECCIÓN FINANCIERA PRINCIPAL (JOYASAPP PRO) -->
-<div class="mt-8">
-    <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-        <span>💰</span> Balance Financiero Operativo
-    </h3>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Ingresos Totales -->
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-blue-500">
-            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">🏦 Ingresos Totales</h4>
-            <h2 class="text-2xl font-bold text-blue-600 mt-2">${{ total_ingresos|floatformat:0 }}</h2>
-            <p class="text-xs text-slate-400 mt-1">Suma de todas las ventas</p>
-        </div>
-        
-        <!-- Costo Total de Ventas -->
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-amber-500">
-            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">🛠️ Costos Totales</h4>
-            <h2 class="text-2xl font-bold text-amber-600 mt-2">${{ total_costos|floatformat:0 }}</h2>
-            <div class="flex justify-between text-slate-400 mt-1" style="font-size: 10px;">
-                <span>Mat: ${{ total_material|floatformat:0 }}</span>
-                <span>M.O: ${{ total_mano_obra|floatformat:0 }}</span>
+    <div class="mt-8">
+        <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <span>💰</span> Balance Financiero Operativo
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Ingresos Totales -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-blue-500">
+                <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">🏦 Ingresos Totales</h4>
+                <h2 class="text-2xl font-bold text-blue-600 mt-2">${{ total_ingresos|floatformat:0 }}</h2>
+                <p class="text-xs text-slate-400 mt-1">Suma de todas las ventas</p>
+            </div>
+            
+            <!-- Costo Total de Ventas -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-amber-500">
+                <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">🛠️ Costos Totales</h4>
+                <h2 class="text-2xl font-bold text-amber-600 mt-2">${{ total_costos|floatformat:0 }}</h2>
+                <div class="flex justify-between text-slate-400 mt-1" style="font-size: 10px;">
+                    <span>Mat: ${{ total_material|floatformat:0 }}</span>
+                    <span>M.O: ${{ total_mano_obra|floatformat:0 }}</span>
+                </div>
+            </div>
+
+            <!-- Gastos Operativos -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-rose-500">
+                <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">📉 Gastos Operativos</h4>
+                <h2 class="text-2xl font-bold text-rose-600 mt-2">${{ total_gastos|floatformat:0 }}</h2>
+                <p class="text-xs text-slate-400 mt-1">Fijos + Variables del mes</p>
+            </div>
+
+            <!-- Utilidad Neta Real -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-emerald-500">
+                <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">🏆 Utilidad Neta</h4>
+                <h2 class="text-2xl font-bold text-emerald-600 mt-2">${{ utilidad_neta|floatformat:0 }}</h2>
+                <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 mt-1">
+                    Margen Neto: {{ margen_neto|floatformat:1 }}%
+                </span>
             </div>
         </div>
+    </div>
 
-        <!-- Gastos Operativos -->
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-rose-500">
-            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">📉 Gastos Operativos</h4>
-            <h2 class="text-2xl font-bold text-rose-600 mt-2">${{ total_gastos|floatformat:0 }}</h2>
-            <p class="text-xs text-slate-400 mt-1">Fijos + Variables del mes</p>
-        </div>
+    <!-- 💎 2. INDICADORES DE VALORIZACIÓN DE INVENTARIO -->
+    <div class="mt-8">
+        <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <span>💎</span> Valorización de Inventario y Vitrina Real
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <!-- Stock al Costo -->
+            <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-sm border border-slate-800">
+                <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">📦 Valor Stock (Al Costo)</h4>
+                <h2 class="text-2xl font-bold text-white mt-2">${{ inv_valorizado_costo|floatformat:0 }}</h2>
+                <p class="text-xs text-slate-400 mt-1">Inversión en metal y mano de obra</p>
+            </div>
 
-        <!-- Utilidad Neta Real -->
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-emerald-500">
-            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">🏆 Utilidad Neta</h4>
-            <h2 class="text-2xl font-bold text-emerald-600 mt-2">${{ utilidad_neta|floatformat:0 }}</h2>
-            <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 mt-1">
-                Margen Neto: {{ margen_neto|floatformat:1 }}%
-            </span>
+            <!-- Stock a la Venta -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-indigo-500">
+                <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">💵 Valor Comercial (A la Venta)</h4>
+                <h2 class="text-2xl font-bold text-indigo-600 mt-2">${{ inv_valorizado_venta|floatformat:0 }}</h2>
+                <p class="text-xs text-slate-400 mt-1">Precio detal total proyectado</p>
+            </div>
+
+            <!-- Utilidad Potencial -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-teal-500">
+                <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">🚀 Utilidad Potencial Esperada</h4>
+                <h2 class="text-2xl font-bold text-teal-600 mt-2">${{ utilidad_potencial_inv|floatformat:0 }}</h2>
+                <span class="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700 mt-1">
+                    Margen Bruto Objeto: {{ margen_bruto|floatformat:1 }}%
+                </span>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- 💎 2. INDICADORES DE VALORIZACIÓN DE INVENTARIO (EL DIFERENCIAL) -->
-<div class="mt-8">
-    <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-        <span>💎</span> Valorización de Inventario y Vitrina Real
-    </h3>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <!-- Stock al Costo -->
-        <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-sm border border-slate-800">
-            <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">📦 Valor Stock (Al Costo)</h4>
-            <h2 class="text-2xl font-bold text-white mt-2">${{ inv_valorizado_costo|floatformat:0 }}</h2>
-            <p class="text-xs text-slate-400 mt-1">Inversión en metal y mano de obra</p>
-        </div>
-
-        <!-- Stock a la Venta -->
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-indigo-500">
-            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">💵 Valor Comercial (A la Venta)</h4>
-            <h2 class="text-2xl font-bold text-indigo-600 mt-2">${{ inv_valorizado_venta|floatformat:0 }}</h2>
-            <p class="text-xs text-slate-400 mt-1">Precio detal total proyectado</p>
-        </div>
-
-        <!-- Utilidad Potencial -->
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-teal-500">
-            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">🚀 Utilidad Potencial Esperada</h4>
-            <h2 class="text-2xl font-bold text-teal-600 mt-2">${{ utilidad_potencial_inv|floatformat:0 }}</h2>
-            <span class="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700 mt-1">
-                Margen Bruto Objeto: {{ margen_bruto|floatformat:1 }}%
-            </span>
+    <!-- 📊 3. CUADRÍCULA DE OPERACIÓN Y TRÁFICO -->
+    <div class="mt-8">
+        <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <span>📈</span> KPIs de Operación y Tráfico
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-emerald-500">
+                <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">💰 Ventas Hoy</h4>
+                <h2 class="text-2xl font-bold text-slate-900 mt-2">${{ total_hoy|floatformat:0 }}</h2>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">🗓️ Ventas Ayer</h4>
+                <h2 class="text-2xl font-bold text-slate-900 mt-2">${{ total_ayer|floatformat:0 }}</h2>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">📦 Pedidos Totales</h4>
+                <h2 class="text-2xl font-bold text-slate-900 mt-2">{{ total_pedidos }}</h2>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">💵 Ticket Promedio</h4>
+                <h2 class="text-2xl font-bold text-slate-900 mt-2">${{ ticket_promedio|floatformat:0 }}</h2>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">👥 Clientes Totales</h4>
+                <h2 class="text-2xl font-bold text-slate-900 mt-2">{{ total_clientes }}</h2>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-violet-500">
+                <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">💎 Clientes VIP</h4>
+                <h2 class="text-2xl font-bold text-slate-900 mt-2">{{ clientes_vip }}</h2>
+            </div>
         </div>
     </div>
-</div>
-
-<!-- 📊 3. CUADRÍCULA DE OPERACIÓN Y TRÁFICO (REORGANIZADA) -->
-<div class="mt-8">
-    <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-        <span>📈</span> KPIs de Operación y Tráfico
-    </h3>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-emerald-500">
-            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">💰 Ventas Hoy</h4>
-            <h2 class="text-2xl font-bold text-slate-900 mt-2">${{ total_hoy|floatformat:0 }}</h2>
-        </div>
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">🗓️ Ventas Ayer</h4>
-            <h2 class="text-2xl font-bold text-slate-900 mt-2">${{ total_ayer|floatformat:0 }}</h2>
-        </div>
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">📦 Pedidos Totales</h4>
-            <h2 class="text-2xl font-bold text-slate-900 mt-2">{{ total_pedidos }}</h2>
-        </div>
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">💵 Ticket Promedio</h4>
-            <h2 class="text-2xl font-bold text-slate-900 mt-2">${{ ticket_promedio|floatformat:0 }}</h2>
-        </div>
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">👥 Clientes Totales</h4>
-            <h2 class="text-2xl font-bold text-slate-900 mt-2">{{ total_clientes }}</h2>
-        </div>
-        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-violet-500">
-            <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">💎 Clientes VIP</h4>
-            <h2 class="text-2xl font-bold text-slate-900 mt-2">{{ clientes_vip }}</h2>
-        </div>
-    </div>
-</div>
     
     <!-- 5. ESTRUCTURA DE PANELES Y GRÁFICAS -->
-    <div class="main-dashboard-layout">
+    <div class="main-dashboard-layout grid grid-cols-1 gap-6 mt-8">
 
         <!-- GRÁFICA VENTAS -->
         <div class="seccion-card bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -639,7 +640,7 @@ tr:last-child td {
         <!-- FINANZAS PRO ACTUALIZADO -->
         <div class="seccion-card bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h3>💰 Finanzas del negocio</h3>
-            <div class="grid-finanzas" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
+            <div class="grid-finanzas grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
                 <div class="fin-card ingreso">
                     <h4>Ingresos Totales</h4>
                     <h2>${{ total_ingresos|floatformat:0 }}</h2>
@@ -652,7 +653,7 @@ tr:last-child td {
                     <h4>Gastos Adicionales</h4>
                     <h2>${{ total_gastos|floatformat:0 }}</h2>
                 </div>
-                <div class="fin-card utilidad" style="grid-column: span 2; background: #f5f3ff; border-color: #ddd6fe; color: #6d28d9;">
+                <div class="fin-card utilidad" style="grid-column: span 2; background: #f5f3ff; border-color: #ddd6fe; color: #6d28d9; padding: 15px; border-radius: 12px; border: 1px solid;">
                     <h4>Utilidad Real Bruta</h4>
                     <h2 class="text-xl font-bold">${{ utilidad|floatformat:0 }}</h2>
                     <small class="text-xs opacity-75">Dinero Neto Disponible</small>
@@ -672,80 +673,80 @@ tr:last-child td {
         <div class="seccion-card full-width bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h3>👥 Gestión de Clientes</h3>
     
-            <div class="filtros-container">
-                <a href="?tipo=vip">💎 VIP</a>
-                <a href="?tipo=nuevos">🆕 Nuevos</a>
-                <a href="?tipo=dormidos">😴 Dormidos</a>
-                <a href="?">🔄 Todos</a>
+            <div class="filtros-container mb-4 flex gap-2">
+                <a href="?tipo=vip" class="px-3 py-1 bg-slate-100 rounded-lg hover:bg-slate-200 transition">💎 VIP</a>
+                <a href="?tipo=nuevos" class="px-3 py-1 bg-slate-100 rounded-lg hover:bg-slate-200 transition">🆕 Nuevos</a>
+                <a href="?tipo=dormidos" class="px-3 py-1 bg-slate-100 rounded-lg hover:bg-slate-200 transition">😴 Dormidos</a>
+                <a href="?" class="px-3 py-1 bg-slate-100 rounded-lg hover:bg-slate-200 transition">🔄 Todos</a>
             </div>
 
             <!-- Acciones Rápidas Cobrar -->
-            <div class="lista-cobros-rapidos">
+            <div class="lista-cobros-rapidos space-y-2">
                 {% for cliente in clientes_filtrados %}
-                <div class="cobro-item">
+                <div class="cobro-item flex justify-between items-center p-2 bg-slate-50 rounded-xl border border-slate-100">
                     <span>{{ cliente.nombre }}</span>
-                    <a href="{% url 'cobrar_cliente' cliente.id %}" class="btn-cobrar-sm">
+                    <a href="{% url 'cobrar_cliente' cliente.id %}" class="btn-cobrar-sm text-xs bg-amber-500 text-white px-2 py-1 rounded-lg">
                         💬 Cobrar
                     </a>
                 </div>
                 {% endfor %}
             </div>
-        </div> <!-- Aquí termina la tarjeta de clientes -->
+        </div> <!-- Aquí cerraba correctamente la tarjeta de clientes, lo que iba después quedaba huérfano -->
 
-        <!-- === SECCIÓN DE COSTOS DE FABRICACIÓN (UBICACIÓN IDEAL) === -->
-        <div class="seccion-card full-width bg-white p-6 rounded-2xl border border-slate-200 shadow-sm" style="margin-top: 25px;">
+        <!-- === SECCIÓN DE COSTOS DE FABRICACIÓN === -->
+        <div class="seccion-card full-width bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h3 style="margin-top: 0; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                <i class="bi bi-tools" style="color: #ca8a04;"></i> 🛠️ Costos de Fabricación y Producción
+                <i class="bi bi-tools" style="color: #ca8a04;"></i> 🛠️ Costos de Fabricación y Production
             </h3>
     
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
-        
-            <!-- Tarjeta: Materiales -->
-            <div style="background: #fef08a; padding: 15px; border-radius: 12px; border-left: 5px solid #ca8a04;">
-                <span style="font-size: 13px; color: #713f12; font-weight: 600; text-transform: uppercase;">Materiales</span>
-                <div style="font-size: 24px; font-weight: 700; color: #451a03; margin-top: 5px;">
-                    ${{ material_total|default:"0.0" }}
+                <!-- Tarjeta: Materiales -->
+                <div style="background: #fef08a; padding: 15px; border-radius: 12px; border-left: 5px solid #ca8a04;">
+                    <span style="font-size: 13px; color: #713f12; font-weight: 600; text-transform: uppercase;">Materiales</span>
+                    <div style="font-size: 24px; font-weight: 700; color: #451a03; margin-top: 5px;">
+                        ${{ material_total|default:"0.0" }}
+                    </div>
+                </div>
+
+                <!-- Tarjeta: Mano de Obra -->
+                <div style="background: #dbeafe; padding: 15px; border-radius: 12px; border-left: 5px solid #2563eb;">
+                    <span style="font-size: 13px; color: #1e40af; font-weight: 600; text-transform: uppercase;">Mano de Obra</span>
+                    <div style="font-size: 24px; font-weight: 700; color: #1e3a8a; margin-top: 5px;">
+                        ${{ total_mano_obra|default:"0.0" }}
+                    </div>
+                </div>
+
+                <!-- Tarjeta: Costo Total -->
+                <div style="background: #f3f4f6; padding: 15px; border-radius: 12px; border-left: 5px solid #4b5563;">
+                    <span style="font-size: 13px; color: #374151; font-weight: 600; text-transform: uppercase;">Inversión Total</span>
+                    <div style="font-size: 24px; font-weight: 700; color: #111827; margin-top: 5px;">
+                        ${{ costos_totales|default:"0.0" }}
+                    </div>
                 </div>
             </div>
-
-            <!-- Tarjeta: Mano de Obra -->
-            <div style="background: #dbeafe; padding: 15px; border-radius: 12px; border-left: 5px solid #2563eb;">
-                <span style="font-size: 13px; color: #1e40af; font-weight: 600; text-transform: uppercase;">Mano de Obra</span>
-                <div style="font-size: 24px; font-weight: 700; color: #1e3a8a; margin-top: 5px;">
-                    ${{ total_mano_obra|default:"0.0" }}
-                 </div>
-            </div>
-
-            <!-- Tarjeta: Costo Total -->
-            <div style="background: #f3f4f6; padding: 15px; border-radius: 12px; border-left: 5px solid #4b5563;">
-                <span style="font-size: 13px; color: #374151; font-weight: 600; text-transform: uppercase;">Inversión Total</span>
-                <div style="font-size: 24px; font-weight: 700; color: #111827; margin-top: 5px;">
-                    ${{ costos_totales|default:"0.0" }}
-            </div>
         </div>
-
-    </div>
-</div>
         
-            <!-- Tabla de Clientes -->
-            <div class="table-wrap">
-                <table>
+        <!-- === TABLA DE CLIENTES === -->
+        <div class="seccion-card full-width bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h3>👥 Clientes Filtrados</h3>
+            <div class="table-wrap" style="margin-top: 15px; overflow-x: auto;">
+                <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Teléfono</th>
-                            <th>Total Compras</th>
-                            <th>Acción</th>
+                        <tr class="border-bottom border-slate-200">
+                            <th class="p-2">Nombre</th>
+                            <th class="p-2">Teléfono</th>
+                            <th class="p-2">Total Compras</th>
+                            <th class="p-2">Acción</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for cliente in clientes_filtrados %}
-                        <tr>
-                            <td><strong>{{ cliente.nombre }}</strong></td>
-                            <td>{{ cliente.telefono }}</td>
-                            <td>${{ cliente.total_compras|floatformat:0 }}</td>
-                            <td>
-                                <a class="whatsapp-link" href="https://wa.me/57{{ cliente.telefono }}">
+                        <tr class="border-bottom border-slate-100">
+                            <td class="p-2"><strong>{{ cliente.nombre }}</strong></td>
+                            <td class="p-2">{{ cliente.telefono }}</td>
+                            <td class="p-2">${{ cliente.total_compras|floatformat:0 }}</td>
+                            <td class="p-2">
+                                <a class="whatsapp-link text-emerald-600 font-bold" href="https://wa.me/57{{ cliente.telefono }}" target="_blank">
                                     📲 WhatsApp
                                 </a>
                             </td>
@@ -760,35 +761,35 @@ tr:last-child td {
             </div>
         </div>
 
-        <!-- PEDIDOS RECIENTES -->
+        <!-- === PEDIDOS RECIENTES === -->
         <div class="seccion-card full-width bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h3>📦 Pedidos Recientes</h3>
-            <div class="table-wrap">
-                <table>
+            <div class="table-wrap" style="margin-top: 15px; overflow-x: auto;">
+                <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr>
-                            <th>Orden</th>
-                            <th>Total</th>
-                            <th>Estado</th>
-                            <th>Factura</th>
+                        <tr class="border-bottom border-slate-200">
+                            <th class="p-2">Orden</th>
+                            <th class="p-2">Total</th>
+                            <th class="p-2">Estado</th>
+                            <th class="p-2">Factura</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for pedido in pedidos_recientes %}
-                        <tr>
-                            <td>#{{ pedido.numero_orden }}</td>
-                            <td><strong>${{ pedido.total|floatformat:0 }}</strong></td>
-                            <td>
+                        <tr class="border-bottom border-slate-100">
+                            <td class="p-2">#{{ pedido.numero_orden }}</td>
+                            <td class="p-2"><strong>${{ pedido.total|floatformat:0 }}</strong></td>
+                            <td class="p-2">
                                 {% if pedido.estado == 'pagado' %}
-                                <span class="badge ok">Pagado</span>
+                                <span class="badge ok bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs">Pagado</span>
                                 {% elif pedido.estado == 'pendiente' %}
-                                <span class="badge pen">Pendiente</span>
+                                <span class="badge pen bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs">Pendiente</span>
                                 {% else %}
-                                <span class="badge can">{{ pedido.estado }}</span>
+                                <span class="badge can bg-rose-100 text-rose-800 px-2 py-0.5 rounded text-xs">{{ pedido.estado }}</span>
                                 {% endif %}
                             </td>
-                            <td>
-                                <a class="btn btn-azul" style="padding: 6px 12px; font-size: 12px; display: inline-flex;" href="{% url 'detalle_pedido' pedido.id %}">
+                            <td class="p-2">
+                                <a class="btn btn-azul bg-blue-600 text-white" style="padding: 6px 12px; font-size: 12px; display: inline-flex; border-radius: 8px;" href="{% url 'detalle_pedido' pedido.id %}">
                                     Ver
                                 </a>
                             </td>
@@ -803,8 +804,8 @@ tr:last-child td {
             </div>
         </div>
 
-    </div>
-</div>
+    </div> <!-- Cierre correcto de main-dashboard-layout -->
+</div> <!-- Cierre definitivo del contenedor principal (container-dashboard) -->
 
 <!-- MANDAMOS EL RECURSO DE CHART.JS -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
