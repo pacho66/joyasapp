@@ -179,83 +179,112 @@ textarea{
     </div>
     {% endif %}
     
-    <h3 class="sub-seccion-titulo">⚖️ Reglas Fiscales y Facturación</h3>
+    <!-- ==========================================
+         💰 FISCAL
+         ========================================== -->
+    <h3 class="sub-seccion-titulo">💰 Fiscal</h3>
     
     <div class="grupo" style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
         {{ form.responsable_iva }}
         <label for="id_responsable_iva" style="margin-bottom: 0; cursor: pointer;">¿Es Responsable de IVA?</label>
     </div>
 
-    <div class="grupo">
+    <div class="grupo" style="margin-bottom: 12px;">
         <label>🔢 Porcentaje de IVA (%)</label>
         {{ form.porcentaje_iva }}
     </div>
 
-    <div class="grupo" style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
+    <div class="grupo" style="display: flex; gap: 10px; align-items: center; margin-bottom: 16px;">
         {{ form.mostrar_iva_discriminado }}
-        <label for="id_mostrar_iva_discriminado" style="margin-bottom: 0; cursor: pointer;">Mostrar IVA Discriminado en Factura PDF</label>
+        <label for="id_mostrar_iva_discriminado" style="margin-bottom: 0; cursor: pointer;">Mostrar IVA discriminado en PDF</label>
     </div>
 
-    <div class="mb-3 form-check">
+
+    <!-- ==========================================
+         🧾 RETENCIÓN
+         ========================================== -->
+    <h3 class="sub-seccion-titulo">🧾 Retención</h3>
+
+    <div class="grupo" style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
         {{ form.aplicar_retefuente }}
-        <label class="form-check-label font-weight-bold" for="{{ form.aplicar_retefuente.id_for_label }}">
-            🛑 ¿Manejar Retención en la Fuente?
-        </label>
+        <label for="{{ form.aplicar_retefuente.id_for_label }}" style="margin-bottom: 0; cursor: pointer;">Aplicar Retefuente</label>
     </div>
 
-    <div class="mb-3">
-        <label class="form-label font-weight-bold" for="{{ form.porcentaje_retefuente.id_for_label }}">
-            🔢 Porcentaje Retefuente (%)
-        </label>
+    <div class="grupo" style="margin-bottom: 16px;">
+        <label>🔢 Retefuente (%)</label>
         {{ form.porcentaje_retefuente }}
-        <small class="text-muted d-block">Estándar: 2.50% para declarantes o 3.50% para no declarantes.</small>
     </div>
 
-    <div class="grupo">
-        <label>🧾 Prefijo de Factura</label>
-        {{ form.prefijo_factura }}
+
+    <!-- ==========================================
+         📄 FACTURACIÓN
+         ========================================== -->
+    <h3 class="sub-seccion-titulo">📄 Facturación</h3>
+
+    <!-- Prefijo y Consecutivo en la misma fila para ahorrar espacio vertical -->
+    <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+        <div class="grupo" style="flex: 1; margin-bottom: 0;">
+            <label>Prefijo</label>
+            {{ form.prefijo_factura }}
+        </div>
+        <div class="grupo" style="flex: 1; margin-bottom: 0;">
+            <label>Consecutivo</label>
+            {{ form.consecutivo_actual }}
+        </div>
     </div>
 
-    <div class="grupo">
-        <label>🔢 Siguiente Consecutivo de Venta</label>
-        {{ form.consecutivo_actual }}
-    </div>
-
-    <div class="grupo">
-        <label>📜 Texto Legal de Resolución DIAN</label>
+    <div class="grupo" style="margin-bottom: 16px;">
+        <label>Resolución DIAN</label>
         {{ form.resolucion_dian }}
     </div>
 
-    <div class="grupo" style="display: flex; gap: 10px; align-items: center; background: #eef5ff; padding: 12px; border-radius: 8px;">
+
+    <!-- ==========================================
+         ☁️ INTEGRACIONES
+         ========================================== -->
+    <h3 class="sub-seccion-titulo">☁️ Integraciones</h3>
+
+    <div class="grupo" style="display: flex; gap: 10px; align-items: center; background: #eef5ff; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
         {{ form.integracion_siigo_activa }}
-        <label for="id_integracion_siigo_activa" style="margin-bottom: 0; color: #0056b3; font-weight: bold; cursor: pointer;">🔌 Activar Sincronización Automática con Siigo</label>
+        <label for="id_integracion_siigo_activa" style="margin-bottom: 0; color: #0056b3; font-weight: bold; cursor: pointer;">Sincronizar automáticamente con Siigo</label>
     </div>
 
 
-    <h3 class="sub-seccion-titulo">🎁 Campañas y Descuentos en Promo</h3>
+    <!-- ==========================================
+         🎁 CAMPAÑAS
+         ========================================== -->
+    <h3 class="sub-seccion-titulo">🎁 Campañas</h3>
 
     <div class="grupo" style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
         {{ form.aplicar_descuentos }}
-        <label for="id_aplicar_descuentos" style="margin-bottom: 0; font-weight: bold; cursor: pointer;">🎯 Activar descuentos por Campaña / Temporada</label>
+        <label for="id_aplicar_descuentos" style="margin-bottom: 0; font-weight: bold; cursor: pointer;">Activar descuentos</label>
     </div>
 
-    <div class="grupo">
-        <label>📉 Porcentaje de descuento general de la campaña (%)</label>
+    <div class="grupo" style="margin-bottom: 16px;">
+        <label>Descuento general (%)</label>
         {{ form.porcentaje_descuento_promo }}
     </div>
 
+
+    <!-- ==========================================
+         💳 PASARELAS DE PAGO
+         ========================================== -->
     <h3 class="sub-seccion-titulo">💳 Pasarelas de Pago</h3>
     
-    <div class="grupo">
+    <div class="grupo" style="margin-bottom: 12px;">
         <label>🔑 Wompi Public Key</label>
         {{ form.wompi_public_key }}
     </div>
 
-    <div class="grupo">
+    <div class="grupo" style="margin-bottom: 16px;">
         <label>🔑 Mercado Pago Access Token</label>
         {{ form.mercadopago_access_token }}
     </div>
 
+
+    <!-- ==========================================
+         🚚 ENVÍOS
+         ========================================== -->
     <h3 class="sub-seccion-titulo">🚚 Envíos</h3>
     
     <div class="grupo" style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
@@ -263,21 +292,25 @@ textarea{
         <label for="id_cobrar_envio" style="margin-bottom: 0; cursor: pointer;">¿Habilitar cobro de Envío Estándar?</label>
     </div>
 
-    <div class="grupo">
+    <div class="grupo" style="margin-bottom: 12px;">
         <label>💰 Costo de envío estándar (COP)</label>
         {{ form.costo_envio_estandar }}
     </div>
 
-    <div class="grupo">
+    <div class="grupo" style="margin-bottom: 20px;">
         <label>🚚 Envío gratis a partir de este monto de compra (COP)</label>
         {{ form.envio_gratis_desde }}
     </div>
 
+
+    <!-- ==========================================
+         🔘 BOTONES
+         ========================================== -->
     <div class="botones">
         <button type="submit" class="btn guardar">💾 Guardar</button>
         <a href="{% url 'dashboard' %}" class="btn volver">⬅️ Volver</a>
     </div>
-
+    
 </form>
 
 </div>
