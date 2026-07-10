@@ -174,4 +174,66 @@ def generar_numero_orden(usuario=None):
 
     return f"FAC-{numero:06d}"
 
+def calcular_totales_con_reglas_fiscales(pedido, perfil):
+    """
+    Lee la configuración actual guardada en el Perfil de la joyería 
+    y aplica los cálculos matemáticos reales de IVA, descuentos, retefuente y envío.
+    """
+    if not perfil:
+        return pedido
 
+    # 🛒 1. CALCULAR SUBTOTAL DE LOS ÍTEMS
+    subtotal = Decimal('0.00')
+    for item in pedido.items.all():
+        # Aseguramos que cada ítem tenga el precio real de su producto
+        precio = Decimal(str(getattr(item.producto, 'precio', 0.00) or 0.00))
+        cantidad = int(getattr(item, 'cantidad', 1) or 1)
+        
+        # Guardamos el subtotal del ítem en la BD
+        item.subtotal = precio * cantidad
+        item.save()
+        subtotal += item.subtotal
+
+    # 🎁 2. REGLA DE DESCUENTOS DE CAMPAÑA
+    descuento = Decimal('0.00')
+    if getattr(perfil, 'aplicar_descuentos', False) and getattr(perfil, 'porcentaje_descuento_promo', 0) > 0:
+        porcentaje_desc = Decimal(str(perfil.porcentaje_descuento_promo)) / Decimal('100.00')
+        descuento = subtotal * porcentaje_desc
+
+    base_gravable = subtotal - descuento
+
+    # ⚖️ 3. REGLA DE IVA
+    iva = Decimal('0.00')
+    if getattr(perfil, 'responsable_iva', False) and getattr(perfil, 'porcentaje_iva', 0) > 0:
+        porcentaje_iva = Decimal(str(perfil.porcentaje_iva)) / Decimal('100.00')
+        iva = base_gravable * porcentaje_iva
+
+    # 🛑 4. REGLA DE RETEFUENTE
+    retefuente = Decimal('0.00')
+    if getattr(perfil, 'aplicar_retefuente', False) and getattr(perfil, 'porcentaje_retefuente', 0) > 0:
+        porcentaje_rete = Decimal(str(perfil.porcentaje_retefuente)) / Decimal('100.00')
+        retefuente = base_gravable * porcentaje_rete
+
+    # 🚚 5. REGLA DE ENVÍOS
+    envio = Decimal('0.00')
+    if getattr(perfil, 'cobrar_envio', False):
+        envio = Decimal(str(getattr(perfil, 'costo_envio_estandar', 0.00) or 0.00))
+        # Validar si supera el tope de envío gratis
+        tope_gratis = getattr(perfil, 'envio_gratis_desde', None)
+        if tope_gratis and base_gravable >= Decimal(str(tope_gratis)):
+            envio = Decimal('0.00')
+
+    # 💾 6. GUARDAR MATEMÁTICAS EN EL PEDIDO
+    pedido.descuento_total = descuento
+    pedido.iva = iva
+    pedido.retefuente = retefuente
+    pedido.costo_envio = envio
+    
+    # Total Final = (Base + IVA + Envío) - Retefuente
+    pedido.total = (base_gravable + iva + envio) - retefuente
+    
+    if hasattr(pedido, 'total_limpio'):
+        pedido.total_limpio = pedido.total
+
+    pedido.save()
+    return pedido

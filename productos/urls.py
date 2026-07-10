@@ -54,6 +54,7 @@ urlpatterns = [
     path('pago-exitoso/<uuid:token>/', views.pago_exitoso),
     path('confirmar-pago/<uuid:token>/', views.confirmar_pago_publico, name='confirmar_pago_publico'),
     path('confirmar-pago/<int:pedido_id>/', views.confirmar_pago, name='confirmar_pago'),
+    path('pago-fallido/<uuid:token>/', views.pago_fallido, name='pago_fallido'),
 
     # ===============================
     # 💳 WEBHOOKS AUTOMÁTICOS

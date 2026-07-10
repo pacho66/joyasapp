@@ -88,6 +88,13 @@ class Perfil(models.Model):
     cobrar_envio = models.BooleanField(default=False, verbose_name="¿Cobrar Envío?")
     envio_gratis_desde = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Envío Gratis desde Monto")
 
+    @property
+    def get_precio_plan(self):
+        """Devuelve el costo mensual del plan actual del perfil."""
+        # Importamos el diccionario aquí o desde tus constantes para evitar importaciones circulares
+        from .views import PRECIOS_PLANES 
+        plan_info = PRECIOS_PLANES.get(self.plan, PRECIOS_PLANES['basico'])
+        return plan_info['precio_mensual']
     def __str__(self):
         return f"{self.user.username} - {self.nombre_tienda}"   
 

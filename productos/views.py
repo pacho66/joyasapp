@@ -47,12 +47,33 @@ from .models import ProductoVariante, Pedido, PedidoItem, Perfil, Abono, Gasto
 from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm, ProductoForm
 from django.db import IntegrityError
 from .services.producto_service import ProductoService 
+from .utils import _asegurar_gastos_basicos
+from .utils import calcular_totales_con_reglas_fiscales
 
 from .utils import generar_link_whatsapp, generar_numero_orden 
 from .utils import generar_link_whatsapp, generar_numero_orden, generar_pdf_pedido
 
 # Configuración del Logger global para este módulo
 logger = logging.getLogger('joyasapp.auditoria')
+
+# Centro de control de tarifas del SaaS
+PRECIOS_PLANES = {
+    'basico': {
+        'nombre': 'Básico',
+        'precio_mensual': Decimal('50000.00'),  # Ejemplo en COP
+        'descripcion': 'Ideal para tiendas que están iniciando.'
+    },
+    'pro': {
+        'nombre': 'Pro',
+        'precio_mensual': Decimal('120000.00'),
+        'descripcion': 'Para joyerías en crecimiento con pasarelas activas.'
+    },
+    'premium': {
+        'nombre': 'Premium',
+        'precio_mensual': Decimal('250000.00'),
+        'descripcion': 'Todo ilimitado + Facturación Electrónica e integración Siigo.'
+    }
+}
 
 def safe_int(valor, default=1):
     try:
@@ -1372,21 +1393,25 @@ def calcular_totales_con_reglas_fiscales(pedido):
 
 @login_required
 def renovar_manual(request):
+    """Vista para forzar la renovación del plan SaaS desde el panel."""
     perfil = request.user.perfil
     renovar_plan(perfil)
     return redirect('dashboard')
 
 def renovar_plan(perfil):
+    """Lógica centralizada para extender la vigencia del plan 30 días."""
     hoy = timezone.localdate()
 
+    # Si el plan sigue vigente, sumamos días al vencimiento actual (acumulativo)
     if perfil.plan_vence and perfil.plan_vence > hoy:
         perfil.plan_vence = perfil.plan_vence + timedelta(days=30)
+    # Si ya venció, los 30 días arrancan desde hoy
     else:
         perfil.plan_vence = hoy + timedelta(days=30)
 
     perfil.activa = True
-    perfil.save()    
-
+    perfil.save()
+  
 def agregar_al_carrito(request, producto_id):
     if request.method == 'POST':
         producto = get_object_or_404(Producto, id=producto_id)
@@ -1597,7 +1622,6 @@ def aumentar_cantidad(request, item_id):
         item.save()
 
     return redirect('ver_carrito')
-
 
 def disminuir_cantidad(request, item_id):
     # 1. Capturar la sesión del visitante
@@ -2067,14 +2091,12 @@ def pagar_pedido(request):
         
         return HttpResponse(f"Error detectado en el proceso de pago: {str(e)}", status=500)
 
-
 def confirmar_pago_publico(request, token):
     """ El cliente avisa de forma anónima que ya transfirió """
     pedido = get_object_or_404(Pedido, token_publico=token)
     pedido.estado = "confirmacion_pago"
     pedido.save()
     return redirect('factura_publica', token=token)
-
 
 @login_required
 def confirmar_pago(request, pedido_id):
@@ -2212,6 +2234,33 @@ def pagar_con_mercadopago(request, token):
         if not perfil_tienda:
             return HttpResponse("<h3>Error de Configuración</h3><p>No se pudo determinar la joyería dueña de este pedido.</p>", status=200)
 
+        # 🔥 ¡ESTA ES LA LÍNEA CLAVE QUE SEGURO FALTA!
+        # Ejecuta la función para que el pedido calcule su IVA, retefuente, envío y descuento:
+        calcular_totales_con_reglas_fiscales(pedido)
+    
+        # 2. Refrescas el objeto desde la base de datos para asegurarte de que tiene el total nuevo
+        pedido.refresh_from_db()
+    
+        # ... aquí sigue tu código de Mercado Pago ...
+        preference_data = {
+            "items": [
+                {
+                    "title": f"Pedido {pedido.id}",
+                    "quantity": 1,
+                    "currency_id": "COP",
+                    # 🔥 ASEGÚRATE de que aquí le estés pasando 'pedido.total' y NO 'subtotal' o una suma manual
+                    "unit_price": float(pedido.total) 
+                }
+            ],
+            "back_urls": {
+                "success": f"https://joyasapp.onrender.com/pago-exitoso/{pedido.token}/",
+                "failure": f"https://joyasapp.onrender.com/pago-fallido/{pedido.token}/", # La que acabamos de arreglar
+                "pending": f"https://joyasapp.onrender.com/pago-exitoso/{pedido.token}/"
+            },
+            "auto_return": "approved",
+        }
+    
+        # ========================================================
         # 🛡️ EXTRACCIÓN Y LIMPIEZA DE TU TOKEN 'APP_USR'
         token_mp = getattr(perfil_tienda, 'mercadopago_access_token', None)
         
@@ -2373,7 +2422,6 @@ def webhook_mercadopago(request, profile_uuid):
             
     return HttpResponse(status=400)
 
-
 def pago_exitoso(request, token):
     # Ya no se romperá porque tanto Wompi como MercadoPago retornarán el token_publico (UUID)
     pedido = get_object_or_404(Pedido, token_publico=token)
@@ -2383,6 +2431,17 @@ def pago_exitoso(request, token):
     pedido.save()
 
     return redirect('factura_publica', token=token)
+
+def pago_fallido(request, token):
+    """Vista para gestionar los pagos rechazados o fallidos de Mercado Pago/Wompi."""
+    # Buscamos el pedido usando el token UUID que viene en la URL
+    pedido = get_object_or_404(Pedido, token=token) # O el campo UUID que uses para identificarlo públicamente
+    
+    context = {
+        'pedido': pedido,
+        'status': request.GET.get('status'), # Captura el estado que manda Mercado Pago (ej. 'rejected')
+    }
+    return render(request, 'pedidos/pago_fallido.html', context)
 
 @login_required
 def lista_pedidos(request):
@@ -2402,7 +2461,6 @@ def lista_pedidos(request):
             p.estado_visual = 'pagado'
 
     return render(request, 'lista_pedidos.html', {'pedidos': pedidos})
-
 
 @login_required
 def detalle_pedido(request, pedido_id):
@@ -2619,14 +2677,38 @@ def pedido_pdf(request, pedido_id):
 @login_required
 def procesar_checkout(request):
     if request.method == 'POST':
-        # ... Tu lógica actual que crea el Pedido y los PedidoItem ...
-        # pedido = Pedido.objects.create(usuario=request.user, ...)
+        # 1. Creas el pedido base (asociado al usuario)
+        # Cambia los campos según los que tenga tu modelo Pedido real
+        pedido = Pedido.objects.create(
+            usuario=request.user,
+            estado='pendiente'
+            # ... tus otros campos de envío o dirección si aplican ...
+        )
         
-        # 🔥 Una vez creados los ítems, disparas el recálculo fiscal automático:
-        recalcular_totales_pedido_view(pedido.id)
+        # 2. Tu lógica actual para agregar los ítems al pedido
+        # (Este es un ejemplo estándar, déjalo como tú lo tengas en tu app)
+        # Supongamos que recorres los productos de un carrito en sesión o BD:
+        # for item_carrito in carrito:
+        #     PedidoItem.objects.create(
+        #         pedido=pedido,
+        #         producto=item_carrito.producto,
+        #         cantidad=item_carrito.cantidad,
+        #         precio_unitario=item_carrito.producto.precio
+        #     )
         
+        # 3. Extraemos el perfil de la joyería vinculada al usuario
+        perfil_vendedor = getattr(request.user, 'perfil', None)
+        
+        # 4. 🔥 Ejecutamos la matemática fiscal sobre el objeto 'pedido' real
+        # Al pasarle 'pedido' y 'perfil_vendedor' se quita el subrayado amarillo
+        calcular_totales_con_reglas_fiscales(pedido, perfil_vendedor)
+        
+        # 5. Redireccionas al flujo de pago o éxito
         return redirect('pago_exitoso')
-    
+        
+    # Si es un método GET, renderizas el formulario o la vista de confirmación
+    return render(request, 'tienda/checkout.html')
+
 def _asegurar_gastos_basicos(usuario):
     """Inyecta la estructura de gastos base de JoyasApp protegiendo contra duplicados."""
     tiene_categoria = hasattr(Gasto, 'categoria')
