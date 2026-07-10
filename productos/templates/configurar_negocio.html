@@ -196,6 +196,21 @@ textarea{
         <label for="id_mostrar_iva_discriminado" style="margin-bottom: 0; cursor: pointer;">Mostrar IVA Discriminado en Factura PDF</label>
     </div>
 
+    <div class="mb-3 form-check">
+        {{ form.aplicar_retefuente }}
+        <label class="form-check-label font-weight-bold" for="{{ form.aplicar_retefuente.id_for_label }}">
+            🛑 ¿Manejar Retención en la Fuente?
+        </label>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label font-weight-bold" for="{{ form.porcentaje_retefuente.id_for_label }}">
+            🔢 Porcentaje Retefuente (%)
+        </label>
+        {{ form.porcentaje_retefuente }}
+        <small class="text-muted d-block">Estándar: 2.50% para declarantes o 3.50% para no declarantes.</small>
+    </div>
+
     <div class="grupo">
         <label>🧾 Prefijo de Factura</label>
         {{ form.prefijo_factura }}
