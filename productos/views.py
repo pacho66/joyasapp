@@ -448,12 +448,12 @@ def guardar_producto_view(request, pk=None):
             })
 
     # Carga por petición GET normal
-    return render(request, 'joyasapp/editar_producto.html' if pk else 'joyasapp/crear_producto.html', {
-    'producto': producto,
-    'categorias': Categoria.objects.all()
-})
+    return render(request, 'pgjoyasgonzalez/editar_producto.html' if pk else 'pgjoyasgonzalez/crear_producto.html', {
+        'producto': producto,
+        'categorias': Categoria.objects.all()
+    })
+   
     
-
 #@login_required
 #def crear_producto(request):
     categorias = Categoria.objects.filter(usuario=request.user)
