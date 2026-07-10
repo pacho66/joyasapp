@@ -1345,6 +1345,12 @@ def calcular_totales_con_reglas_fiscales(pedido):
         porcentaje_iva = Decimal(str(perfil.porcentaje_iva)) / Decimal('100.00')
         iva_calculado = base_gravable * porcentaje_iva
 
+    retefuente_calculada = Decimal('0.00')
+    if hasattr(perfil, 'aplicar_retefuente') and perfil.aplicar_retefuente:
+        # Nota: Aquí puedes validar si el cliente del pedido es retenedor si tienes ese campo
+        porcentaje_rete = Decimal(str(perfil.porcentaje_retefuente or 2.50)) / Decimal('100.00')
+        retefuente_calculada = base_gravable * porcentaje_rete
+
     # 🚚 REGLA DE ENVÍOS: Control de costos y umbral gratis
     costo_envio = Decimal('0.00')
     if perfil.cobrar_envio:

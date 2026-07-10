@@ -178,6 +178,22 @@ class ConfiguracionNegocioForm(forms.Form):
         })
     )
 
+    # ⚖️ REGLAS FISCALES (Añadir Retefuente)
+    aplicar_retefuente = forms.BooleanField(
+        required=False,
+        label='¿Manejar Retención en la Fuente?',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
+    porcentaje_retefuente = forms.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        required=False,
+        initial=2.50,
+        label='Porcentaje Retefuente (%)',
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '2.50'})
+    )
+
     prefijo_factura = forms.CharField(
         max_length=10,
         required=False,
