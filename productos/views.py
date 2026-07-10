@@ -448,10 +448,11 @@ def guardar_producto_view(request, pk=None):
             })
 
     # Carga por petición GET normal
-    return render(request, 'productos/editar_producto.html' if pk else 'productos/crear_producto.html', {
+    return render(request, 'editar_producto.html' if pk else 'crear_producto.html', {
         'producto': producto,
         'categorias': Categoria.objects.all()
     })
+    
     
 #@login_required
 #def crear_producto(request):
