@@ -47,7 +47,6 @@ from .models import ProductoVariante, Pedido, PedidoItem, Perfil, Abono, Gasto
 from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm, ProductoForm
 from django.db import IntegrityError
 from .services.producto_service import ProductoService 
-from .utils import _asegurar_gastos_basicos
 from .utils import calcular_totales_con_reglas_fiscales
 
 from .utils import generar_link_whatsapp, generar_numero_orden 
@@ -690,7 +689,32 @@ def eliminar_imagen_producto(request, id):
         return redirect('mis_productos')
 
     return render(request, 'editar_producto.html', {'producto': producto, 'categorias': categorias})
-
+def _asegurar_gastos_basicos(usuario):
+    """Inyecta la estructura de gastos base de JoyasApp protegiendo contra duplicados."""
+    tiene_categoria = hasattr(Gasto, 'categoria')
+    
+    gastos_base = [
+        {"nombre": "Compra de Oro / Insumos", "categoria": "fabricacion"},
+        {"nombre": "Compra de Plata / Insumos", "categoria": "fabricacion"},
+        {"nombre": "Piedras, Circones y Gemas", "categoria": "fabricacion"},
+        {"nombre": "Procesos de Fundición", "categoria": "fabricacion"},
+        {"nombre": "Insumos de Pulido y Soldadura", "categoria": "fabricacion"},
+        {"nombre": "Ligas, Químicos y Ácidos", "categoria": "fabricacion"},
+        {"nombre": "Cajas y Empaques de Lujo", "categoria": "fabricacion"},
+        {"nombre": "Arriendo Taller/Oficina", "categoria": "fijo"},
+        {"nombre": "Servicios Públicos (Luz/Internet)", "categoria": "fijo"},
+        {"nombre": "Publicidad y Marketing", "categoria": "marketing"},
+        {"nombre": "Transporte y Envíos", "categoria": "logistica"},
+        {"nombre": "Comisiones Bancarias y Pasarelas", "categoria": "financiero"},
+        {"nombre": "Papelería y Administración", "categoria": "administrativo"},
+    ]
+    
+    for g in gastos_base:
+        defaults = {"monto": 0.0}
+        if tiene_categoria:
+            defaults["categoria"] = g["categoria"]
+            
+        Gasto.objects.get_or_create(usuario=usuario, nombre=g["nombre"], defaults=defaults)
 
 @login_required(login_url='/login/')
 def dashboard(request):
@@ -2708,33 +2732,6 @@ def procesar_checkout(request):
         
     # Si es un método GET, renderizas el formulario o la vista de confirmación
     return render(request, 'tienda/checkout.html')
-
-def _asegurar_gastos_basicos(usuario):
-    """Inyecta la estructura de gastos base de JoyasApp protegiendo contra duplicados."""
-    tiene_categoria = hasattr(Gasto, 'categoria')
-    
-    gastos_base = [
-        {"nombre": "Compra de Oro / Insumos", "categoria": "fabricacion"},
-        {"nombre": "Compra de Plata / Insumos", "categoria": "fabricacion"},
-        {"nombre": "Piedras, Circones y Gemas", "categoria": "fabricacion"},
-        {"nombre": "Procesos de Fundición", "categoria": "fabricacion"},
-        {"nombre": "Insumos de Pulido y Soldadura", "categoria": "fabricacion"},
-        {"nombre": "Ligas, Químicos y Ácidos", "categoria": "fabricacion"},
-        {"nombre": "Cajas y Empaques de Lujo", "categoria": "fabricacion"},
-        {"nombre": "Arriendo Taller/Oficina", "categoria": "fijo"},
-        {"nombre": "Servicios Públicos (Luz/Internet)", "categoria": "fijo"},
-        {"nombre": "Publicidad y Marketing", "categoria": "marketing"},
-        {"nombre": "Transporte y Envíos", "categoria": "logistica"},
-        {"nombre": "Comisiones Bancarias y Pasarelas", "categoria": "financiero"},
-        {"nombre": "Papelería y Administración", "categoria": "administrativo"},
-    ]
-    
-    for g in gastos_base:
-        defaults = {"monto": 0.0}
-        if tiene_categoria:
-            defaults["categoria"] = g["categoria"]
-            
-        Gasto.objects.get_or_create(usuario=usuario, nombre=g["nombre"], defaults=defaults)
 
 @login_required(login_url='/login/')
 def gastos(request):
