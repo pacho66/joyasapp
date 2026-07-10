@@ -149,7 +149,95 @@ class ConfiguracionNegocioForm(forms.Form):
         })
     )
 
-    # 💳 PASARELAS DE PAGO (CAMPOS NUEVOS)
+    # ⚖️ REGLAS FISCALES Y FACTURACIÓN (NUEVOS CAMPOS)
+    responsable_iva = forms.BooleanField(
+        required=False,
+        label='¿Es Responsable de IVA?',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        })
+    )
+
+    porcentaje_iva = forms.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        required=False,
+        initial=19.00,
+        label='Porcentaje de IVA (%)',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '19.00'
+        })
+    )
+
+    mostrar_iva_discriminado = forms.BooleanField(
+        required=False,
+        label='Mostrar IVA Discriminado',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        })
+    )
+
+    prefijo_factura = forms.CharField(
+        max_length=10,
+        required=False,
+        label='Prefijo Factura',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: SETT'
+        })
+    )
+
+    consecutivo_actual = forms.IntegerField(
+        required=False,
+        initial=1,
+        label='Siguiente Consecutivo',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '1'
+        })
+    )
+
+    resolucion_dian = forms.CharField(
+        required=False,
+        label='Resolución DIAN',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Texto legal de la resolución DIAN...'
+        })
+    )
+
+    integracion_siigo_activa = forms.BooleanField(
+        required=False,
+        label='Activar Siigo',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        })
+    )
+
+    # 🎁 CAMPAÑAS Y DESCUENTOS EN PROMO (NUEVOS CAMPOS)
+    aplicar_descuentos = forms.BooleanField(
+        required=False,
+        label='Activar Descuentos en Promoción',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        })
+    )
+
+    porcentaje_descuento_promo = forms.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        required=False,
+        initial=0.00,
+        label='Descuento de Campaña (%)',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '0.00'
+        })
+    )
+
+    # 💳 PASARELAS DE PAGO
     wompi_public_key = forms.CharField(
         max_length=255,
         required=False,
@@ -170,7 +258,15 @@ class ConfiguracionNegocioForm(forms.Form):
         })
     )
 
-    # 🚚 CONFIGURACIÓN DE ENVÍOS (CAMPO NUEVO)
+    # 🚚 CONFIGURACIÓN DE ENVÍOS (AVANZADOS)
+    cobrar_envio = forms.BooleanField(
+        required=False,
+        label='¿Cobrar Envío?',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        })
+    )
+
     costo_envio_estandar = forms.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -180,6 +276,17 @@ class ConfiguracionNegocioForm(forms.Form):
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'placeholder': '0.00'
+        })
+    )
+
+    envio_gratis_desde = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        label='Envío Gratis Desde',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Monto mínimo para envío gratis'
         })
     )
 

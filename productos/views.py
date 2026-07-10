@@ -1244,47 +1244,54 @@ def inventario(request):
 
 @login_required
 def configurar_negocio(request):
-    perfil = request.user.perfil # Usando tu related_name original 'perfil'
+    perfil = request.user.perfil
 
     if request.method == 'POST':
         form = ConfiguracionNegocioForm(request.POST, request.FILES)
 
         if form.is_valid():
+            # Tus mapeos básicos existentes
             perfil.nombre_tienda = form.cleaned_data['nombre_tienda']
             perfil.nit = form.cleaned_data['nit']
             perfil.whatsapp = form.cleaned_data['whatsapp']
             perfil.email_empresa = form.cleaned_data['correo_negocio']
             perfil.direccion = form.cleaned_data['direccion']
             perfil.ciudad = form.cleaned_data['ciudad']
-
-            # 🔥 CAPTURA DE PASARELAS Y ENVÍOS
             perfil.wompi_public_key = form.cleaned_data.get('wompi_public_key', '').strip()
             perfil.mercadopago_access_token = form.cleaned_data.get('mercadopago_access_token', '').strip()
             perfil.costo_envio_estandar = form.cleaned_data.get('costo_envio_estandar') or Decimal('0.00')
 
-            # 🗑️ LÓGICA PARA ELIMINAR EL LOGO ACTUAL
-            # Si marcaron la casilla en el HTML, borramos el logo de Cloudinary y de la BD
+            # 🔥 MAREO DE LOS NUEVOS BOTONES E INPUTS FISCALES
+            perfil.responsable_iva = form.cleaned_data.get('responsable_iva', False)
+            perfil.porcentaje_iva = form.cleaned_data.get('porcentaje_iva') or Decimal('19.00')
+            perfil.mostrar_iva_discriminado = form.cleaned_data.get('mostrar_iva_discriminado', False)
+            perfil.prefijo_factura = form.cleaned_data.get('prefijo_factura', '').strip()
+            perfil.consecutivo_actual = form.cleaned_data.get('consecutivo_actual') or 1
+            perfil.resolucion_dian = form.cleaned_data.get('resolucion_dian', '').strip()
+            perfil.integracion_siigo_activa = form.cleaned_data.get('integracion_siigo_activa', False)
+
+            # Campañas y Envíos Personales
+            perfil.aplicar_descuentos = form.cleaned_data.get('aplicar_descuentos', False)
+            perfil.porcentaje_descuento_promo = form.cleaned_data.get('porcentaje_descuento_promo') or Decimal('0.00')
+            perfil.cobrar_envio = form.cleaned_data.get('cobrar_envio', False)
+            perfil.envio_gratis_desde = form.cleaned_data.get('envio_gratis_desde') or Decimal('0.00')
+
+            # Lógica del logo y colores que ya tenías funcional
             eliminar_logo = request.POST.get('eliminar_logo')
             if eliminar_logo and perfil.logo:
-                perfil.logo.delete(save=False) # Borra el archivo en la nube
-                perfil.logo = None # Limpia el campo en la base de datos
-
-            # LOGO NUEVO
-            # Solo se guarda si el usuario subió un archivo y NO marcó la casilla de eliminar al mismo tiempo
+                perfil.logo.delete(save=False)
+                perfil.logo = None
             if request.FILES.get('logo') and not eliminar_logo:
                 perfil.logo = request.FILES['logo']
 
-            # COLORES
             perfil.color_primario = request.POST.get('color_primario', '#28a745')
             perfil.color_secundario = request.POST.get('color_secundario', '#000000')
 
             perfil.save()
-
             messages.success(request, "Configuración actualizada correctamente")
             return redirect('dashboard')
-
     else:
-        # Pasamos los valores iniciales para que salgan en las casillas al cargar la página
+        # Pasa los datos iniciales al formulario (incluye los nuevos para que se pinten al recargar)
         form = ConfiguracionNegocioForm(initial={
             'nombre_tienda': perfil.nombre_tienda,
             'nit': perfil.nit,
@@ -1295,13 +1302,67 @@ def configurar_negocio(request):
             'wompi_public_key': perfil.wompi_public_key,
             'mercadopago_access_token': perfil.mercadopago_access_token,
             'costo_envio_estandar': perfil.costo_envio_estandar,
+            # Iniciales de la nueva configuración
+            'responsable_iva': perfil.responsable_iva,
+            'porcentaje_iva': perfil.porcentaje_iva,
+            'mostrar_iva_discriminado': perfil.mostrar_iva_discriminado,
+            'prefijo_factura': perfil.prefijo_factura,
+            'consecutivo_actual': perfil.consecutivo_actual,
+            'resolucion_dian': perfil.resolucion_dian,
+            'integracion_siigo_activa': perfil.integracion_siigo_activa,
+            'aplicar_descuentos': perfil.aplicar_descuentos,
+            'porcentaje_descuento_promo': perfil.porcentaje_descuento_promo,
+            'cobrar_envio': perfil.cobrar_envio,
+            'envio_gratis_desde': perfil.envio_gratis_desde,
         })
 
-    return render(request, 'configurar_negocio.html', {
-        'form': form,
-        'perfil': perfil 
-    })
+    return render(request, 'configurar_negocio.html', {'form': form, 'perfil': perfil})
 
+def calcular_totales_con_reglas_fiscales(pedido):
+    """
+    Única función centralizada en views.py para procesar el pedido.
+    Recibe el objeto 'pedido' directamente, lo que facilita su uso en cualquier vista.
+    """
+    perfil = pedido.usuario.perfil  # Accedemos al centro de mando del joyero
+    subtotal_productos = Decimal('0.00')
+    
+    # 1. Sumamos el valor base de los ítems del pedido
+    for item in pedido.items.all():
+        subtotal_productos += Decimal(str(item.subtotal or 0.00))
+
+    # 🎁 REGLA DE CAMPAÑA: ¿El joyero encendió el interruptor de promociones?
+    descuento_aplicado = Decimal('0.00')
+    if perfil.aplicar_descuentos and perfil.porcentaje_descuento_promo > 0:
+        porcentaje_desc = Decimal(str(perfil.porcentaje_descuento_promo)) / Decimal('100.00')
+        descuento_aplicado = subtotal_productos * porcentaje_desc
+    
+    # Base sobre la que se calcula el IVA tras el descuento de campaña
+    base_gravable = subtotal_productos - descuento_aplicado
+
+    # ⚖️ REGLA FISCAL: ¿Es responsable de IVA?
+    iva_calculado = Decimal('0.00')
+    if perfil.responsable_iva and perfil.porcentaje_iva > 0:
+        porcentaje_iva = Decimal(str(perfil.porcentaje_iva)) / Decimal('100.00')
+        iva_calculado = base_gravable * porcentaje_iva
+
+    # 🚚 REGLA DE ENVÍOS: Control de costos y umbral gratis
+    costo_envio = Decimal('0.00')
+    if perfil.cobrar_envio:
+        costo_envio = Decimal(str(perfil.costo_envio_estandar or 0.00))
+        
+        # Si el negocio configuró un tope de envío gratis y la base lo supera, queda en 0
+        if perfil.envio_gratis_desde and base_gravable >= Decimal(str(perfil.envio_gratis_desde)):
+            costo_envio = Decimal('0.00')
+
+    # 💾 Guardamos de forma limpia los resultados en el Pedido
+    pedido.descuento_total = descuento_aplicado
+    pedido.aplica_iva = perfil.responsable_iva  # Sincronizamos el estado del IVA
+    pedido.iva = iva_calculado
+    pedido.costo_envio = costo_envio
+    pedido.total = base_gravable + iva_calculado + costo_envio
+    pedido.save()
+    
+    return pedido
 
 @login_required
 def renovar_manual(request):
@@ -2549,6 +2610,17 @@ def pedido_pdf(request, pedido_id):
     except Exception as e:
         return HttpResponse(f"Error interno: {str(e)}", status=500)
 
+@login_required
+def procesar_checkout(request):
+    if request.method == 'POST':
+        # ... Tu lógica actual que crea el Pedido y los PedidoItem ...
+        # pedido = Pedido.objects.create(usuario=request.user, ...)
+        
+        # 🔥 Una vez creados los ítems, disparas el recálculo fiscal automático:
+        recalcular_totales_pedido_view(pedido.id)
+        
+        return redirect('pago_exitoso')
+    
 def _asegurar_gastos_basicos(usuario):
     """Inyecta la estructura de gastos base de JoyasApp protegiendo contra duplicados."""
     tiene_categoria = hasattr(Gasto, 'categoria')

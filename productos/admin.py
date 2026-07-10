@@ -28,14 +28,42 @@ enviar_whatsapp_masivo.short_description = "Enviar WhatsApp masivo"
 @admin.register(Perfil)
 class PerfilAdmin(admin.ModelAdmin):
     fieldsets = (
-        ('Empresa', {'fields': ('user', 'nombre_tienda', 'logo')}),
+        ('Empresa', {'fields': ('user', 'nombre_tienda', 'logo', 'banner', 'banner_texto')}),
         ('Contacto', {'fields': ('whatsapp', 'email_empresa', 'direccion', 'ciudad')}),
         ('Redes', {'fields': ('instagram', 'facebook', 'tiktok')}),
-        ('Facturación', {'fields': ('nit',)}),
-        ('Plan', {'fields': ('plan', 'activa', 'plan_vence')}),
-        ('Diseño', {'fields': ('color_principal',)}),
+        ('Facturación Legal (DIAN / Siigo)', {
+            'fields': (
+                'nit', 
+                'responsable_iva', 
+                'porcentaje_iva', 
+                'mostrar_iva_discriminado', 
+                'prefijo_factura', 
+                'consecutivo_actual', 
+                'resolucion_dian', 
+                'integracion_siigo_activa'
+            )
+        }),
+        ('Campañas y Promociones', {
+            'fields': ('aplicar_descuentos', 'porcentaje_descuento_promo')
+        }),
+        ('Configuración Avanzada de Envíos', {
+            'fields': ('cobrar_envio', 'costo_envio_estandar', 'envio_gratis_desde')
+        }),
+        ('Plan SaaS', {'fields': ('plan', 'activa', 'plan_vence')}),
+        ('Diseño de Interfaz', {'fields': ('color_principal', 'color_primario', 'color_secundario')}),
     )
-    list_display = ('user', 'nombre_tienda', 'whatsapp', 'plan', 'activa', 'plan_vence')
+    
+    list_display = (
+        'user', 
+        'nombre_tienda', 
+        'whatsapp', 
+        'responsable_iva', 
+        'integracion_siigo_activa', 
+        'aplicar_descuentos', 
+        'plan', 
+        'activa'
+    )
+    list_filter = ('plan', 'activa', 'responsable_iva', 'integracion_siigo_activa', 'aplicar_descuentos')
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):

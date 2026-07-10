@@ -179,6 +179,55 @@ textarea{
     </div>
     {% endif %}
     
+    <h3 class="sub-seccion-titulo">⚖️ Reglas Fiscales y Facturación</h3>
+    
+    <div class="grupo" style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
+        {{ form.responsable_iva }}
+        <label for="id_responsable_iva" style="margin-bottom: 0; cursor: pointer;">¿Es Responsable de IVA?</label>
+    </div>
+
+    <div class="grupo">
+        <label>🔢 Porcentaje de IVA (%)</label>
+        {{ form.porcentaje_iva }}
+    </div>
+
+    <div class="grupo" style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
+        {{ form.mostrar_iva_discriminado }}
+        <label for="id_mostrar_iva_discriminado" style="margin-bottom: 0; cursor: pointer;">Mostrar IVA Discriminado en Factura PDF</label>
+    </div>
+
+    <div class="grupo">
+        <label>🧾 Prefijo de Factura</label>
+        {{ form.prefijo_factura }}
+    </div>
+
+    <div class="grupo">
+        <label>🔢 Siguiente Consecutivo de Venta</label>
+        {{ form.consecutivo_actual }}
+    </div>
+
+    <div class="grupo">
+        <label>📜 Texto Legal de Resolución DIAN</label>
+        {{ form.resolucion_dian }}
+    </div>
+
+    <div class="grupo" style="display: flex; gap: 10px; align-items: center; background: #eef5ff; padding: 12px; border-radius: 8px;">
+        {{ form.integracion_siigo_activa }}
+        <label for="id_integracion_siigo_activa" style="margin-bottom: 0; color: #0056b3; font-weight: bold; cursor: pointer;">🔌 Activar Sincronización Automática con Siigo</label>
+    </div>
+
+
+    <h3 class="sub-seccion-titulo">🎁 Campañas y Descuentos en Promo</h3>
+
+    <div class="grupo" style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
+        {{ form.aplicar_descuentos }}
+        <label for="id_aplicar_descuentos" style="margin-bottom: 0; font-weight: bold; cursor: pointer;">🎯 Activar descuentos por Campaña / Temporada</label>
+    </div>
+
+    <div class="grupo">
+        <label>📉 Porcentaje de descuento general de la campaña (%)</label>
+        {{ form.porcentaje_descuento_promo }}
+    </div>
 
     <h3 class="sub-seccion-titulo">💳 Pasarelas de Pago</h3>
     
@@ -194,9 +243,19 @@ textarea{
 
     <h3 class="sub-seccion-titulo">🚚 Envíos</h3>
     
+    <div class="grupo" style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
+        {{ form.cobrar_envio }}
+        <label for="id_cobrar_envio" style="margin-bottom: 0; cursor: pointer;">¿Habilitar cobro de Envío Estándar?</label>
+    </div>
+
     <div class="grupo">
         <label>💰 Costo de envío estándar (COP)</label>
         {{ form.costo_envio_estandar }}
+    </div>
+
+    <div class="grupo">
+        <label>🚚 Envío gratis a partir de este monto de compra (COP)</label>
+        {{ form.envio_gratis_desde }}
     </div>
 
     <div class="botones">

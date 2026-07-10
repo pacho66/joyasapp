@@ -69,6 +69,24 @@ class Perfil(models.Model):
     # 🚚 CONFIGURACIÓN DE ENVÍOS 
     costo_envio_estandar = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name="Costo de Envío")
 
+    # ⚖️ NUEVA CONFIGURACIÓN TRIBUTARIA (Indispensable para Facturación Legal)
+    responsable_iva = models.BooleanField(default=False, verbose_name="¿Es Responsable de IVA?")
+    porcentaje_iva = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('19.00'), verbose_name="Porcentaje de IVA (%)")
+    mostrar_iva_discriminado = models.BooleanField(default=True, verbose_name="Mostrar IVA Discriminado en Factura")
+    
+    # Conexiones DIAN y Facturación Electrónica (Hitos para Siigo)
+    prefijo_factura = models.CharField(max_length=10, blank=True, null=True, verbose_name="Prefijo de Facturación")
+    consecutivo_actual = models.IntegerField(default=1, verbose_name="Siguiente Consecutivo")
+    resolucion_dian = models.TextField(blank=True, null=True, verbose_name="Resolución DIAN")
+    integracion_siigo_activa = models.BooleanField(default=False, verbose_name="Activar Sincronización con Siigo")
+
+    # 🎁 CAMPAÑAS Y DESCUENTOS EN PROMO
+    aplicar_descuentos = models.BooleanField(default=False, verbose_name="Activar Descuentos por Campaña / Temporada")
+    porcentaje_descuento_promo = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'), verbose_name="Porcentaje Descuento Promoción (%)")
+
+    # 🚚 CONTROL DE ENVÍOS AVANZADO
+    cobrar_envio = models.BooleanField(default=False, verbose_name="¿Cobrar Envío?")
+    envio_gratis_desde = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Envío Gratis desde Monto")
 
     def __str__(self):
         return f"{self.user.username} - {self.nombre_tienda}"   
