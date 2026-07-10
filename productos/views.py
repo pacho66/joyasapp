@@ -46,9 +46,13 @@ from productos.services.envios import calcular_envio
 from .models import ProductoVariante, Pedido, PedidoItem, Perfil, Abono, Gasto
 from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm, ProductoForm
 from django.db import IntegrityError
+from .services.producto_service import ProductoService 
 
 from .utils import generar_link_whatsapp, generar_numero_orden 
 from .utils import generar_link_whatsapp, generar_numero_orden, generar_pdf_pedido
+
+# Configuración del Logger global para este módulo
+logger = logging.getLogger('joyasapp.auditoria')
 
 def safe_int(valor, default=1):
     try:
@@ -411,9 +415,46 @@ def safe_float(val):
         return float(str(val).replace(',', '.'))
     except ValueError:
         return None
+    
+def guardar_producto_view(request, pk=None):
+    """
+    Controlador unificado de nivel Enterprise.
+    Delega la lógica pesada a ProductoService y gestiona el flujo HTTP y UX.
+    """
+    if pk:
+        producto = get_object_or_404(Producto, pk=pk)
+        accion = "actualizado"
+    else:
+        producto = Producto()
+        accion = "creado"
 
-@login_required
-def crear_producto(request):
+    if request.method == 'POST':
+        try:
+            # Delegamos toda la lógica interna (Slug, variantes, transacciones) al servicio
+            producto_guardado = ProductoService.guardar(request, pk=pk)
+            
+            messages.success(request, f"¡Producto '{producto_guardado.nombre}' {accion} con éxito rotundo!")
+            return redirect('mis_productos')
+
+        except Exception as e:
+            # UX de Protección: En caso de error, NO redirigimos para no limpiar el formulario del joyero.
+            # Hacemos render directo manteniendo request.POST vivo en los inputs.
+            logger.error(f"Error crítico en controlador al procesar producto: {str(e)}")
+            messages.error(request, f"⚠️ Error interno: No se guardaron los cambios. Motivo: {str(e)}")
+            
+            return render(request, 'productos/editar_producto.html' if pk else 'productos/crear_producto.html', {
+                'producto': producto,
+                'categorias': Categoria.objects.all()
+            })
+
+    # Carga por petición GET normal
+    return render(request, 'productos/editar_producto.html' if pk else 'productos/crear_producto.html', {
+        'producto': producto,
+        'categorias': Categoria.objects.all()
+    })
+
+#@login_required
+#def crear_producto(request):
     categorias = Categoria.objects.filter(usuario=request.user)
 
     if request.method == 'POST':
@@ -557,8 +598,8 @@ def eliminar_imagen_producto(request, id):
 
     return redirect('editar_producto', id=id)
 
-@login_required
-def editar_producto(request, id):
+#@login_required
+#def editar_producto(request, id):
     producto = Producto.objects.get(id=id, usuario=request.user)
     categorias = Categoria.objects.filter(usuario=request.user)
 

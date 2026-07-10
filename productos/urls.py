@@ -19,15 +19,23 @@ urlpatterns = [
     # ===============================
     path('buscar/', views.buscar_productos, name='buscar_productos'),
     path('producto/<int:id>/<slug:slug>/', views.detalle_producto, name='detalle_producto'),
-    path('productos/nuevo/',views.crear_producto,name='crear_producto'),
-    path('mis-productos/',views.mis_productos,name='mis_productos'),
+    #path('productos/nuevo/',views.crear_producto,name='crear_producto'),
+    #path('mis-productos/',views.mis_productos,name='mis_productos'),
     path('productos/eliminar/<int:id>/',views.eliminar_producto,name='eliminar_producto'),
-    path('productos/editar/<int:id>/',views.editar_producto,name='editar_producto'),
+    #path('productos/editar/<int:id>/',views.editar_producto,name='editar_producto'),
     path('productos/<int:id>/eliminar-imagen/',views.eliminar_imagen_producto,name='eliminar_imagen_producto'),
     path('imagen-galeria/eliminar/<int:id>/',views.eliminar_imagen_galeria,name='eliminar_imagen_galeria'),
     path('categoria/<int:categoria_id>/', views.productos_por_categoria, name='productos_por_categoria'),
     path('categorias/nueva/',views.crear_categoria,name='crear_categoria'),
     path('top-productos/', views.productos_top, name='top_productos'),
+    # Ruta para crear un producto nuevo
+    path('productos/nuevo/', views.guardar_producto_view, name='crear_producto'),
+    
+    # Ruta para editar un producto existente (recibe la clave primaria 'pk')
+    path('productos/<int:pk>/editar/', views.guardar_producto_view, name='editar_producto'),
+    
+    # Tu ruta actual de lista (Asegúrate de que el 'name' coincida con el redirect de tu vista)
+    path('productos/mis-productos/', views.mis_productos_view, name='mis_productos'), 
 
     # ===============================
     # 🛒 CARRITO
