@@ -542,12 +542,22 @@ input:focus, select:focus, textarea:focus {
 <script>
     let contadorVariantes = 0;
 
-    function agregarTarjetaManual(color = '', talla = '', stock = 1, precio = '') {
+    function previsualizarFotoVariante(input, idCard) {
+        const contenedor = document.getElementById('preview_container_' + idCard);
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                contenedor.innerHTML = '<img src="' + e.target.result + '" style="width:100%; height:100%; object-fit:cover;">';
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function agregarTarjetaManual(color = '', talla = '', stock = 1, precio = '', peso = '0.00', codigo = '', foto = '') {
         contadorVariantes++;
         const idUnico = 'var_row_' + contadorVariantes;
         const contenedor = document.getElementById('contenedor-tarjetas-variantes');
 
-        // Tomar el precio detal base de la interfaz por defecto si viene vacío
         if (!precio) {
             precio = document.getElementById('precio_detal')?.value || '0';
         }
@@ -556,42 +566,68 @@ input:focus, select:focus, textarea:focus {
         div.className = 'variante-card';
         div.id = idUnico;
 
-        div.innerHTML = `
-            <div class="variante-header">
-                <div>
-                    <span class="badge-sku">VAR-${String(contadorVariantes).padStart(3, '0')}</span>
-                    <span id="txt_status_${idUnico}" class="badge-status" style="margin-left: 8px;">🟢 Disponible</span>
-                </div>
-                <div>
-                    <span id="badge_utilidad_${idUnico}" class="badge-utilidad">Utilidad: $0</span>
-                    <button type="button" class="btn-action-card" title="Duplicar" onclick="duplicarTarjeta('${idUnico}')">📋</button>
-                    <button type="button" class="btn-action-card" title="Eliminar" onclick="document.getElementById('${idUnico}').remove();">🗑️</button>
-                </div>
-            </div>
-            <div class="grid-4-col" style="margin-bottom:0; gap:10px;">
-                <div class="form-group" style="margin-bottom:0;">
-                    <label style="font-size:11px;">Color</label>
-                    <input type="text" name="v_color[]" value="${color}" placeholder="Oro" oninput="actualizarMetadatos('${idUnico}')">
-                </div>
-                <div class="form-group" style="margin-bottom:0;">
-                    <label style="font-size:11px;">Talla</label>
-                    <input type="text" name="v_talla[]" value="${talla}" placeholder="7" oninput="actualizarMetadatos('${idUnico}')">
-                </div>
-                <div class="form-group" style="margin-bottom:0;">
-                    <label style="font-size:11px;">Stock</label>
-                    <input type="number" name="v_stock[]" value="${stock}" min="0" oninput="actualizarMetadatos('${idUnico}')" id="stock_input_${idCard = idUnico}">
-                </div>
-                <div class="form-group" style="margin-bottom:0;">
-                    <label style="font-size:11px;">Precio ($)</label>
-                    <input type="number" name="v_precio[]" value="${precio}" oninput="actualizarMetadatos('${idUnico}')" id="precio_input_${idUnico}">
-                </div>
-            </div>
-        `;
+        // Código estructurado con comillas simples para evitar que el editor se pinte de rojo
+        let htmlContenido = '';
+        htmlContenido += '<div class="variante-header">';
+        htmlContenido += '    <div>';
+        htmlContenido += '        <span class="badge-sku" id="sku_badge_' + idUnico + '">' + (codigo ? codigo : 'VAR-' + String(contadorVariantes).padStart(3, '0')) + '</span>';
+        htmlContenido += '        <span id="txt_status_' + idUnico + '" class="badge-status" style="margin-left: 8px;">🟢 Disponible</span>';
+        htmlContenido += '    </div>';
+        htmlContenido += '    <div>';
+        htmlContenido += '        <span id="badge_utilidad_' + idUnico + '" class="badge-utilidad">Utilidad: $0</span>';
+        htmlContenido += '        <button type="button" class="btn-action-card" title="Duplicar" onclick="duplicarTarjeta(\'' + idUnico + '\')">📋</button>';
+        htmlContenido += '        <button type="button" class="btn-action-card" title="Eliminar" onclick="document.getElementById(\'' + idUnico + '\').remove();">🗑️</button>';
+        htmlContenido += '    </div>';
+        htmlContenido += '</div>';
+        htmlContenido += '<div style="display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap;">';
+        htmlContenido += '    <div style="text-align: center; width: 85px; flex-shrink: 0;">';
+        htmlContenido += '        <div style="width: 85px; height: 85px; border: 2px dashed #ccc; border-radius: 8px; position: relative; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden;" id="preview_container_' + idUnico + '">';
+        
+        if (foto) {
+            htmlContenido += '        <img src="' + foto + '" style="width:100%; height:100%; object-fit:cover;">';
+        } else {
+            htmlContenido += '        <span style="font-size:24px; color:#94a3b8;">📷</span>';
+        }
+        
+        htmlContenido += '        </div>';
+        htmlContenido += '        <label style="display: block; margin-top: 5px; font-size: 11px; color: #2563eb; cursor: pointer; font-weight: bold;">';
+        htmlContenido += '            Subir Foto';
+        htmlContenido += '            <input type="file" name="v_foto[]" accept="image/*" style="display: none;" onchange="previsualizarFotoVariante(this, \'' + idUnico + '\')">';
+        htmlContenido += '        </label>';
+        htmlContenido += '    </div>';
+        htmlContenido += '    <div style="flex: 1; min-width: 200px;" class="grid-4-col">';
+        htmlContenido += '        <div class="form-group" style="margin-bottom:0;">';
+        htmlContenido += '            <label style="font-size:11px;">Color</label>';
+        htmlContenido += '            <input type="text" name="v_color[]" value="' + color + '" placeholder="Oro" oninput="actualizarMetadatos(\'' + idUnico + '\')">';
+        htmlContenido += '        </div>';
+        htmlContenido += '        <div class="form-group" style="margin-bottom:0;">';
+        htmlContenido += '            <label style="font-size:11px;">Talla</label>';
+        htmlContenido += '            <input type="text" name="v_talla[]" value="' + talla + '" placeholder="7" oninput="actualizarMetadatos(\'' + idUnico + '\')">';
+        htmlContenido += '        </div>';
+        htmlContenido += '        <div class="form-group" style="margin-bottom:0;">';
+        htmlContenido += '            <label style="font-size:11px;">⚖️ Peso (g)</label>';
+        htmlContenido += '            <input type="number" name="v_peso[]" value="' + peso + '" step="0.01" placeholder="4.2" oninput="actualizarMetadatos(\'' + idUnico + '\')">';
+        htmlContenido += '        </div>';
+        htmlContenido += '        <div class="form-group" style="margin-bottom:0;">';
+        htmlContenido += '            <label style="font-size:11px;">📦 Stock</label>';
+        htmlContenido += '            <input type="number" name="v_stock[]" value="' + stock + '" min="0" oninput="actualizarMetadatos(\'' + idUnico + '\')" id="stock_input_' + idUnico + '">';
+        htmlContenido += '        </div>';
+        htmlContenido += '        <div class="form-group" style="margin-bottom:0; grid-column: span 2;">';
+        htmlContenido += '            <label style="font-size:11px;">💰 Precio ($)</label>';
+        htmlContenido += '            <input type="number" name="v_precio[]" value="' + precio + '" oninput="actualizarMetadatos(\'' + idUnico + '\')" id="precio_input_' + idUnico + '">';
+        htmlContenido += '        </div>';
+        htmlContenido += '        <div class="form-group" style="margin-bottom:0; grid-column: span 2;">';
+        htmlContenido += '            <label style="font-size:11px;">🏷️ SKU / Código</label>';
+        htmlContenido += '            <input type="text" name="v_codigo[]" value="' + codigo + '" placeholder="REF-01" oninput="actualizarMetadatos(\'' + idUnico + '\')">';
+        htmlContenido += '        </div>';
+        htmlContenido += '    </div>';
+        htmlContenido += '</div>';
 
+        div.innerHTML = htmlContenido;
         contenedor.appendChild(div);
         actualizarMetadatos(idUnico);
-    }
-
+    }    
+    
     function ejecutarGeneradorMasivo() {
         const rawColores = document.getElementById('gen_colores').value.split(',').map(s => s.trim()).filter(Boolean);
         const rawTallas = document.getElementById('gen_tallas').value.split(',').map(s => s.trim()).filter(Boolean);
@@ -601,7 +637,7 @@ input:focus, select:focus, textarea:focus {
 
         listaColores.forEach(color => {
             listaTallas.forEach(talla => {
-                agregarTarjetaManual(color, talla, 1, '');
+                agregarTarjetaManual(color, talla, 1, '', '0.00', '');
             });
         });
 
@@ -615,17 +651,19 @@ input:focus, select:focus, textarea:focus {
 
         const color = cardTarget.querySelector('input[name="v_color[]"]').value;
         const talla = cardTarget.querySelector('input[name="v_talla[]"]').value;
+        const peso = cardTarget.querySelector('input[name="v_peso[]"]').value;
         const stock = cardTarget.querySelector('input[name="v_stock[]"]').value;
         const precio = cardTarget.querySelector('input[name="v_precio[]"]').value;
+        const codigo = cardTarget.querySelector('input[name="v_codigo[]"]').value;
 
-        agregarTarjetaManual(color, talla, stock, precio);
+        agregarTarjetaManual(color, talla, stock, precio, peso, codigo);
     }
 
     function actualizarMetadatos(idCard) {
-        const stockInput = document.getElementById(stock_input_${idCard});
-        const precioInput = document.getElementById(precio_input_${idCard});
-        const txtStatus = document.getElementById(txt_status_${idCard});
-        const badgeUtilidad = document.getElementById(badge_utilidad_${idCard});
+        const stockInput = document.getElementById('stock_input_' + idCard);
+        const precioInput = document.getElementById('precio_input_' + idCard);
+        const txtStatus = document.getElementById('txt_status_' + idCard);
+        const badgeUtilidad = document.getElementById('badge_utilidad_' + idCard);
 
         if (!stockInput || !precioInput) return;
 
@@ -645,7 +683,7 @@ input:focus, select:focus, textarea:focus {
         const precioVentaVariante = parseFloat(precioInput.value) || 0;
         const utilidad = precioVentaVariante - precioCostoGlobal;
 
-        badgeUtilidad.textContent = Utilidad: $${utilidad.toLocaleString('es-CO', { maximumFractionDigits: 0 })};
+        badgeUtilidad.textContent = "Utilidad: $" + utilidad.toLocaleString('es-CO', { maximumFractionDigits: 0 });
         badgeUtilidad.style.backgroundColor = utilidad > 0 ? "#d4edda" : "#f8d7da";
         badgeUtilidad.style.color = utilidad > 0 ? "#155724" : "#721c24";
     }
@@ -655,19 +693,24 @@ input:focus, select:focus, textarea:focus {
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        // Enlazar el cálculo automático al cambiar el costo global
         document.getElementById('precio_costo')?.addEventListener('input', recalcularTodasLasTarjetas);
 
-        // Renderizado inicial seguro usando las etiquetas de Django
         {% if producto and producto.variantes.exists %}
             {% for v in producto.variantes.all %}
-                agregarTarjetaManual("{{ v.color|default_if_none:''|escapejs }}", "{{ v.talla|default_if_none:''|escapejs }}", {{ v.stock|default:0 }}, "{{ v.precio_venta|default:'' }}");
+                agregarTarjetaManual(
+                    "{{ v.color|default_if_none:''|escapejs }}", 
+                    "{{ v.talla|default_if_none:''|escapejs }}", 
+                    {{ v.stock|default:0 }}, 
+                    "{{ v.precio_venta|default:'' }}",
+                    "{{ v.peso|default:'0.00' }}",
+                    "{{ v.codigo|default_if_none:''|escapejs }}",
+                    "{% if v.foto %}{{ v.foto.url }}{% endif %}"
+                );
             {% endfor %}
         {% else %}
-            agregarTarjetaManual('', '', 1, '');
+            agregarTarjetaManual('', '', 1, '', '0.00', '');
         {% endif %}
     });
-
 </script>
 
 

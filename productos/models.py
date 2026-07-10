@@ -210,58 +210,33 @@ class ProductoImagen(models.Model):
     def _str_(self):
         return f"Imagen de {self.producto.nombre}"
 
-
 class ProductoVariante(models.Model):
     producto = models.ForeignKey(
         Producto,
         on_delete=models.CASCADE,
         related_name='variantes'
     )
-
-    color = models.CharField(
-        max_length=100,
-        null=True,
-        blank=True
-    )
-
-    talla = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True
-    )
-
-    stock = models.PositiveIntegerField(
-        default=0
-    )
-
-    precio_venta = models.DecimalField(
-        max_digits=12, 
-        decimal_places=2, 
-        default=0.00, 
-        blank=True, 
-        null=True
-    )
+    
+    # Parámetros Base
+    color = models.CharField(max_length=100, null=True, blank=True)
+    talla = models.CharField(max_length=50, null=True, blank=True)
+    stock = models.PositiveIntegerField(default=0)
+    precio_venta = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, blank=True, null=True)
+    
+    # 💎 NUEVOS PARÁMETROS DE ESPECIFICACIÓN (JSVE™)
+    peso = models.DecimalField(max_digits=6, decimal_places=2, default=0.00, blank=True, null=True) # En gramos (ej: 4.50)
+    codigo = models.CharField(max_length=50, blank=True, null=True) # SKU único por variante
+    activo = models.BooleanField(default=True)
+    
+    # Foto específica de la variante (Usando Cloudinary o models.ImageField)
+    foto = CloudinaryField('imagen_variante', blank=True, null=True) 
 
     class Meta:
-        unique_together = (
-            'producto',
-            'color',
-            'talla'
-        )
+        unique_together = ('producto', 'color', 'talla')
 
     def __str__(self):
-        texto = self.producto.nombre
+        return f"{self.producto.nombre} | {self.color or 'U'}-{self.talla or 'U'} | ${self.precio_venta} ({self.stock} unds)"
 
-        if self.color:
-            texto += f" | Color: {self.color}"
-
-        if self.talla:
-            texto += f" | Talla: {self.talla}"
-
-        if self.precio_venta:
-            texto += f" | Precio: ${self.precio_venta}"
-
-        return texto
 
 class CarritoItem(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
