@@ -770,19 +770,27 @@ def dashboard(request):
     productos = Producto.objects.filter(usuario=usuario)
 
     # ==========================
-    # 🔴 CARTERA Y MOROSOS
+    # 🔴 CARTERA Y MOROSOS (UNIFICADO Y CORREGIDO)
     # ==========================
-    clientes_morosos = Cliente.objects.filter(
-        usuario=request.user,
-        pedidos_saldo_pendiente_gt=0,
-        pedidos_fecha_limite_lt=hoy
-    ).distinct()
+    # 1. Buscamos primero los pedidos vencidos del usuario de forma directa
+    pedidos_en_mora = Pedido.objects.filter(
+        usuario=usuario,
+        tipo_pago='credito',
+        saldo_pendiente__gt=0,
+        fecha_limite__lt=hoy
+    )
 
-    morosos_count = clientes_morosos.count()
+    # 2. Calculamos el total exacto de la cartera vencida sin riesgo de multiplicarse
+    cartera_agg = pedidos_en_mora.aggregate(suma_mora=Sum('saldo_pendiente'))['suma_mora']
+    morosos_total = float(cartera_agg) if cartera_agg is not None else 0.0
+
+    # 3. Obtenemos los clientes únicos que son dueños de esos pedidos en mora
+    # Usamos list(set(...)) para tener la lista limpia de IDs de clientes morosos
+    clientes_morosos_ids = pedidos_en_mora.values_list('cliente_id', flat=True).distinct()
+    clientes_morosos = Cliente.objects.filter(id__in=clientes_morosos_ids)
     
-    # 🛡️ PROTECCIÓN ANTI-NONE: Si da None, float(None) rompería más adelante
-    raw_morosos_total = clientes_morosos.aggregate(Sum('pedidos_saldo_pendiente'))['pedidossaldo_pendiente_sum']
-    morosos_total = float(raw_morosos_total) if raw_morosos_total is not None else 0.0
+    # El conteo real de personas deudoras en el dashboard
+    morosos_count = clientes_morosos.count()
     
     # ==========================
     # FILTROS CLIENTES
@@ -796,13 +804,16 @@ def dashboard(request):
     elif tipo == 'dormidos':
         clientes_filtrados = clientes.filter(ultima_compra__lt=hace_30).distinct()
     elif tipo == 'morosos':
-        # 🛠️ RECTIFICADO: Ahora usa correctamente el doble guion bajo estándar de Django (__)
-        clientes_filtrados = clientes.filter(
-            pedidos__tipo_pago='credito',
-            pedidos__saldo_pendiente__gt=0,
-            pedidos__fecha_limite__lt=hoy
-        ).distinct()
-
+        # 💎 SOLUCIÓN UNIFICADA: Buscamos los IDs desde Pedido para evitar el colapso en Render
+        ids_morosos = Pedido.objects.filter(
+            usuario=usuario,
+            tipo_pago='credito',
+            saldo_pendiente__gt=0,
+            fecha_limite__lt=hoy
+        ).values_list('cliente_id', flat=True).distinct()
+        
+        clientes_filtrados = clientes.filter(id__in=ids_morosos)
+    
     mensajes = {
         'vip': "💎 Clientes VIP",
         'nuevos': "✨ Clientes nuevos",
