@@ -3040,16 +3040,16 @@ def cartera_clientes(request):
 
         cartera.append({
             'pedido': p,
-            'cliente': p.cliente_nombre,
+            'cliente': p.cliente,
             'telefono': p.cliente_telefono,
             'saldo': p.saldo_pendiente,
             'fecha_limite': p.fecha_limite,
             'dias_mora': dias_mora,
             'estado': estado_visual,
             'link_pago': link_pago,
-            'whatsapp': whatsapp_link, 
+            'whatsapp': whatsapp_link,
         })
-
+        
     # 🌟 CORRECCIÓN: Sumar usando Decimal explícito para evitar fallos de tipos
     morosos_total = sum((c['saldo'] for c in cartera if c['estado'] == 'vencido'), Decimal('0.00'))
     morosos_count = sum(1 for c in cartera if c['estado'] == 'vencido')

@@ -26,7 +26,7 @@
         <tbody>
             {% for c in cartera %}
             <tr style="border-bottom: 1px solid #eee; {% if c.estado == 'vencido' %}background:#ffe5e5;{% endif %}">
-                <td style="padding: 12px 10px; font-weight: 500;">{{ c.nombre }}</td>
+                <td style="padding: 12px 10px; font-weight: 500;">{{ c.cliente.nombre }}</td>
                 <td style="padding: 12px 10px; color: #dc3545; font-weight: 600;">${{ c.saldo }}</td>
                 <td style="padding: 12px 10px;">{{ c.fecha_limite }}</td>
                 <td style="padding: 12px 10px;">
@@ -36,35 +36,36 @@
                         <span style="color: #b06000; font-weight: bold;">🟡 Pendiente</span>
                     {% endif %}
                 </td>
-                <td style="padding: 12px 10px; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
-                    
-                    <!-- 💬 COBRAR PEDIDO -->
-                    <a href="{% url 'cobrar_cliente' c.pedido.id %}" 
-                       style="background:#ffc107; padding:6px 12px; border-radius:4px; text-decoration:none; color:black; font-weight: 500; font-size: 12px;" title="Cobrar este pedido específico">
+                
+                <td style="padding:12px 10px; display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
+
+                    <!-- Cobrar este pedido -->
+                    <a href="{% url 'cobrar_pedido' c.pedido.id %}"
+                        class="btn btn-warning btn-sm">
                         💬 Pedido
                     </a>
 
-                    <!-- 💰 COBRAR TODO -->
-                    <a href="{% url 'cobrar_moroso' c.pedido.id %}" 
-                       style="background:#dc3545; padding:6px 12px; border-radius:4px; text-decoration:none; color:white; font-weight: 500; font-size: 12px;" title="Cobrar saldo total acumulado">
+                    <!-- Cobrar toda la deuda del cliente -->
+                    <a href="{% url 'cobrar_moroso' c.pedido.cliente.id %}"
+                        class="btn btn-danger btn-sm">
                         💰 Todo
                     </a>
 
-                    <!-- 📄 VER FACTURA -->
+                    <!-- Ver factura -->
                     <a href="{{ c.link_pago }}" target="_blank"
-                       style="background:#17a2b8; padding:6px 12px; border-radius:4px; text-decoration:none; color:white; font-weight: 500; font-size: 12px;">
+                        class="btn btn-info btn-sm">
                         📄 Factura
                     </a>
 
-                    <!-- ✅ MARCAR PAGADO -->
-                    <a href="{% url 'marcar_pagado' c.pedido.id %}" 
-                       style="background:#28a745; padding:6px 12px; border-radius:4px; text-decoration:none; color:white; font-weight: 500; font-size: 12px;">
+                    <!-- Registrar pago -->
+                    <a href="{% url 'marcar_pagado' c.pedido.id %}"
+                        class="btn btn-success btn-sm">
                         ✅ Pagado
                     </a>
 
-                    <!-- 📲 WHATSAPP -->
+                     <!-- WhatsApp -->
                     <a href="{{ c.whatsapp }}" target="_blank"
-                        style="background:#25D366; padding:6px 12px; border-radius:4px; text-decoration:none; color:white; font-weight: 500; font-size: 12px;">
+                        class="btn btn-success btn-sm">
                         📱 WhatsApp
                     </a>
 
