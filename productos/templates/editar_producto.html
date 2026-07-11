@@ -51,29 +51,30 @@
 
             <div class="form-group">
                 <label for="precio_costo">Precio de costo</label>
+                <!-- floatformat:"2" asegura el .00 y unlocalize asegura el punto -->
                 <input type="number" step="0.01" id="precio_costo" name="precio_costo" 
-                       value="{{ producto.precio_costo|unlocalize|default:'0.00' }}">
+                    value="{{ producto.precio_costo|floatformat:"2"|unlocalize }}">
             </div>
 
             <div class="form-group">
                 <label for="precio_detal">Precio Detal</label>
                 <input type="number" step="0.01" id="precio_detal" name="precio_detal" 
-                       value="{{ producto.precio_detal|unlocalize|default:'0.00' }}">
+                    value="{{ producto.precio_detal|floatformat:"2"|unlocalize }}">
             </div>
 
             <div class="form-group">
                 <label for="precio_semimayor">Precio SemiMayorista</label>
                 <input type="number" step="0.01" id="precio_semimayor" name="precio_semimayor" 
-                       value="{{ producto.precio_semimayor|unlocalize|default:'0.00' }}">
+                    value="{{ producto.precio_semimayor|floatformat:"2"|unlocalize }}">
             </div>
 
             <div class="form-group">
                 <label for="precio_mayor">Precio Mayorista</label>
                 <input type="number" step="0.01" id="precio_mayor" name="precio_mayor" 
-                       value="{{ producto.precio_mayor|unlocalize|default:'0.00' }}">
+                    value="{{ producto.precio_mayor|floatformat:"2"|unlocalize }}">
             </div>
         </fieldset>
-
+        
         <fieldset class="grid-3-col">
             <legend>Configuración por Gramos</legend>
 
