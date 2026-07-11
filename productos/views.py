@@ -1264,26 +1264,42 @@ def ganancias(request):
     }
     return render(request, 'ganancias.html', context)
 
-
 # ==========================================
 # 📦 INVENTARIO CORREGIDO
 # ==========================================
 @login_required
 def inventario(request):
-    productos = Producto.objects.filter(usuario=request.user).order_by('nombre')
+    # Traemos los productos del usuario cargando sus variantes en una sola consulta (eficiencia)
+    productos = Producto.objects.filter(usuario=request.user).prefetch_related('variantes').order_by('nombre')
 
-    # 🛠️ PARCHE AL CORTO: Agrupaciones y conteos de stock reales demandados por el HTML
     total_productos = productos.count()
-    productos_stock = productos.filter(stock__gt=5).count()
-    stock_bajo = productos.filter(stock__gt=0, stock__lte=5).count()
-    agotados = productos.filter(stock=0).count()
+    
+    # 🌟 CORRECCIÓN PRO: Evaluamos el stock real (del producto o de la suma de sus variantes)
+    productos_stock = 0
+    stock_bajo = 0
+    agotados = 0
+
+    for p in productos:
+        # Si el producto tiene variantes, su stock real es la suma de ellas
+        if p.variantes.exists():
+            stock_real = p.variantes.aggregate(total=Sum('stock'))['total'] or 0
+        else:
+            stock_real = p.stock or 0
+
+        # Clasificación exacta para los contadores del HTML
+        if stock_real > 5:
+            productos_stock += 1
+        elif 0 < stock_real <= 5:
+            stock_bajo += 1
+        else:
+            agotados += 1
 
     context = {
         'productos': productos,
         'total_productos': total_productos,
-        'productos_stock': productos_stock,  # 🚀 Inyectado
-        'stock_bajo': stock_bajo,            # 🚀 Inyectado
-        'agotados': agotados,                # 🚀 Inyectado
+        'productos_stock': productos_stock,  
+        'stock_bajo': stock_bajo,            
+        'agotados': agotados,                
     }
     return render(request, 'inventario.html', context)
 
@@ -2123,11 +2139,25 @@ def confirmar_pago_publico(request, token):
     return redirect('factura_publica', token=token)
 
 @login_required
+@transaction.atomic
 def confirmar_pago(request, pedido_id):
-    """ El administrador aprueba el pago desde su panel privado """
+    """ El administrador aprueba el pago desde su panel privado e impacta inventarios """
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
-    pedido.estado = "pagado"
-    pedido.save()
+    
+    # 🌟 Evitamos procesar dos veces si el administrador da clic doble
+    if pedido.estado != "pagado":
+        # Recorremos los ítems del pedido para restar el stock real en este preciso momento
+        for item in pedido.items.all():  # Ajusta 'items' según el related_name en tu PedidoItem
+            if item.variante:
+                item.variante.stock -= item.cantidad
+                item.variante.save()
+            elif item.producto.tipo_venta != "gramo":
+                item.producto.stock -= item.cantidad
+                item.producto.save()
+        
+        pedido.estado = "pagado"
+        pedido.save()
+        
     return render(request, 'pago_confirmado.html', {'pedido': pedido})
 
 def pagar_wompi(request, token): # <-- Cambiado de pedido_id a token
@@ -2231,8 +2261,12 @@ def webhook_wompi(request):
         return HttpResponse("Error interno procesado", status=200)
 
 def pagar_con_mercadopago(request, token):
-    """Genera la preferencia de Mercado Pago asegurando la correcta obtención del perfil del vendedor."""
+    """
+    Genera la preferencia de Mercado Pago asegurando la correcta obtención 
+    del perfil del vendedor sin recalcular totales de forma prematura.
+    """
     try:
+        # 1. Obtener el pedido usando el token público correcto
         pedido = get_object_or_404(Pedido, token_publico=token)
         
         # 🎯 INTENTO 1: Buscar relación directa si tu modelo Pedido tiene 'perfil_joyeria' o similar
@@ -2240,7 +2274,7 @@ def pagar_con_mercadopago(request, token):
         
         # 🎯 INTENTO 2: Si no viene directo, lo extraemos a través del usuario de la tienda/vendedor
         if not perfil_tienda:
-            primer_item = pedido.items.first()
+            primer_item = pedido.items.first()  # Ajusta 'items' según el related_name de PedidoItem
             if primer_item and hasattr(primer_item.producto, 'usuario'):
                 vendedor = primer_item.producto.usuario
             elif primer_item and hasattr(primer_item.producto, 'perfil'):
@@ -2256,35 +2290,11 @@ def pagar_con_mercadopago(request, token):
                     perfil_tienda = None
 
         if not perfil_tienda:
-            return HttpResponse("<h3>Error de Configuración</h3><p>No se pudo determinar la joyería dueña de este pedido.</p>", status=200)
+            return HttpResponse(
+                "<h3>Error de Configuración</h3><p>No se pudo determinar la joyería dueña de este pedido.</p>", 
+                status=200
+            )
 
-        # 🔥 ¡ESTA ES LA LÍNEA CLAVE QUE SEGURO FALTA!
-        # Ejecuta la función para que el pedido calcule su IVA, retefuente, envío y descuento:
-        calcular_totales_con_reglas_fiscales(pedido)
-    
-        # 2. Refrescas el objeto desde la base de datos para asegurarte de que tiene el total nuevo
-        pedido.refresh_from_db()
-    
-        # ... aquí sigue tu código de Mercado Pago ...
-        preference_data = {
-            "items": [
-                {
-                    "title": f"Pedido {pedido.id}",
-                    "quantity": 1,
-                    "currency_id": "COP",
-                    # 🔥 ASEGÚRATE de que aquí le estés pasando 'pedido.total' y NO 'subtotal' o una suma manual
-                    "unit_price": float(pedido.total) 
-                }
-            ],
-            "back_urls": {
-                "success": f"https://joyasapp.onrender.com/pago-exitoso/{pedido.token}/",
-                "failure": f"https://joyasapp.onrender.com/pago-fallido/{pedido.token}/", # La que acabamos de arreglar
-                "pending": f"https://joyasapp.onrender.com/pago-exitoso/{pedido.token}/"
-            },
-            "auto_return": "approved",
-        }
-    
-        # ========================================================
         # 🛡️ EXTRACCIÓN Y LIMPIEZA DE TU TOKEN 'APP_USR'
         token_mp = getattr(perfil_tienda, 'mercadopago_access_token', None)
         
@@ -2299,19 +2309,21 @@ def pagar_con_mercadopago(request, token):
 
         token_limpio = str(token_mp).strip()
 
-        # Inicialización del SDK con credenciales reales
+        # Inicialización del SDK con credenciales reales del vendedor
         sdk = mercadopago.SDK(token_limpio)
 
-        # URLs de Redirección y Notificación
+        # URLs de Redirección y Notificación usando el atributo real: token_publico
         ruta_relativa = f"/webhooks/mercadopago/{perfil_tienda.webhook_uuid}/"
         url_webhook = request.build_absolute_uri(ruta_relativa).replace("http://", "https://")
+        
         url_success = request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/").replace("http://", "https://")
         url_failure = request.build_absolute_uri(f"/pago-fallido/{pedido.token_publico}/").replace("http://", "https://")
 
-        # Configuración exacta del valor a pagar
+        # Configuración del valor a pagar extraído directamente de lo sellado en la base de datos
         monto_total = getattr(pedido, 'total_limpio', None) or getattr(pedido, 'total', 0)
         monto_total = float(monto_total)
 
+        # Estructura de preferencia ÚNICA y limpia
         preference_data = {
             "items": [
                 {
@@ -2324,18 +2336,20 @@ def pagar_con_mercadopago(request, token):
             "back_urls": {
                 "success": url_success,
                 "failure": url_failure,
+                "pending": url_success
             },
             "auto_return": "approved",
-            "external_reference": pedido.numero_orden,
+            "external_reference": str(pedido.numero_orden),
         }
 
+        # Excluir localhost del webhook para evitar rechazos de Mercado Pago en desarrollo local
         if "localhost" not in url_webhook and "127.0.0.1" not in url_webhook:
             preference_data["notification_url"] = url_webhook
 
         # 1. Hacemos la petición a Mercado Pago
         preference_response = sdk.preference().create(preference_data)
         
-        # 2. 🚨 LOG DE CONTROL: Imprimimos la respuesta completa en Render
+        # 2. LOG DE CONTROL: Imprimimos la respuesta completa en Render para auditorías rápidas
         print("====== RESPUESTA COMPLETA DE MERCADO PAGO ======")
         print(preference_response)
         print("================================================")
@@ -2343,7 +2357,7 @@ def pagar_con_mercadopago(request, token):
         # 3. Extraemos la respuesta usando .get() de forma segura
         preference = preference_response.get("response") if preference_response else None
         
-        # 4. Validamos si Mercado Pago nos devolvió el punto de inicio de pago
+        # 4. Validamos si Mercado Pago nos devolvió el punto de inicio de pago válido
         if not preference or not preference.get("init_point"):
             mensaje_error = preference_response.get("message", "Las credenciales no son válidas o la cuenta requiere homologación en Mercado Pago.")
             return HttpResponse(
@@ -2356,15 +2370,13 @@ def pagar_con_mercadopago(request, token):
                 status=200
             )
         
-        # 5. Redirección segura si todo sale bien
+        # 5. Redirección al checkout transparente de Mercado Pago
         return redirect(preference.get("init_point"))
 
     except Exception as e:
-        import traceback
         print(f"💥 Error crítico detallado en Mercado Pago: {traceback.format_exc()}")
         return HttpResponse(f"Error interno al inicializar el pago: {str(e)}", status=200)
 
-        
 @csrf_exempt
 def webhook_mercadopago(request, profile_uuid):
     """Recibe el UUID directamente en la URL, consulta el pago y procesa el flujo automático."""
