@@ -758,9 +758,10 @@ def dashboard(request):
         .order_by('fecha_dia')
     )
 
-    fechas = [v['fecha_dia'].strftime('%d/%m') for v in ventas_por_dia]
-    totales = [float(v['total']) for v in ventas_por_dia]
-
+    fechas = [v['fecha_dia'].strftime('%d/%m') for v in ventas_por_dia if v['fecha_dia']]
+    # 🛡️ PROTECCIÓN ANTI-NONE: Si no hay ventas, asigna 0.0 en vez de romper
+    totales = [float(v['total']) if v['total'] is not None else 0.0 for v in ventas_por_dia]
+    
     cliente_id = request.GET.get('cliente')
     if cliente_id:
         pedidos = pedidos.filter(cliente_id=cliente_id)
@@ -773,15 +774,16 @@ def dashboard(request):
     # ==========================
     clientes_morosos = Cliente.objects.filter(
         usuario=request.user,
-        pedidos__saldo_pendiente__gt=0,
-        pedidos__fecha_limite__lt=hoy
+        pedidos_saldo_pendiente_gt=0,
+        pedidos_fecha_limite_lt=hoy
     ).distinct()
 
     morosos_count = clientes_morosos.count()
-    morosos_total = clientes_morosos.aggregate(
-        total=Sum('pedidos__saldo_pendiente')
-    )['total'] or 0
-
+    
+    # 🛡️ PROTECCIÓN ANTI-NONE: Si da None, float(None) rompería más adelante
+    raw_morosos_total = clientes_morosos.aggregate(Sum('pedidos_saldo_pendiente'))['pedidossaldo_pendiente_sum']
+    morosos_total = float(raw_morosos_total) if raw_morosos_total is not None else 0.0
+    
     # ==========================
     # FILTROS CLIENTES
     # ==========================
