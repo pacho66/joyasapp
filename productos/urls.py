@@ -81,7 +81,7 @@ urlpatterns = [
     # 💳 COBROS (CORREGIDO)
     # ===============================
     path('cobrar-whatsapp/<int:pedido_id>/', views.cobrar_whatsapp, name='cobrar_whatsapp'),
-    path('cobrar/<int:cliente_id>/',views.cobrar_moroso,name='cobrar_moroso'),
+    path('cobrar/<int:cliente_id>/', views.cobrar_moroso, name='cobrar_cliente'),
     # ===============================
     # 📊 PANEL / SaaS
     # ===============================
