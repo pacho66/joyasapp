@@ -2884,113 +2884,57 @@ def eliminar_gasto(request, id):
 
 @login_required
 def registrar_abono(request, pedido_id):
-    pedido = get_object_or_404(
-        Pedido,
-        id=pedido_id,
-        usuario=request.user
-    )
+    pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
 
     if request.method == 'POST':
         monto_raw = request.POST.get('monto')
 
         if monto_raw:
-            # 🔥 CORRECCIÓN: Convertir a Decimal, NUNCA a float para evitar errores en Render
-            monto = Decimal(monto_raw)
+            try:
+                monto = Decimal(monto_raw)
+            except (ValueError, TypeError):
+                messages.error(request, "Monto de abono inválido.")
+                return redirect('detalle_pedido', pedido_id=pedido.id)
 
-            Abono.objects.create(
-                pedido=pedido,
-                monto=monto
-            )
+            Abono.objects.create(pedido=pedido, monto=monto)
 
-            # 🔥 RESTAR AL SALDO DEL PEDIDO
+            # Restar al saldo del pedido
             pedido.saldo_pendiente -= monto
 
-            # 🔥 SI YA PAGÓ TODO
             if pedido.saldo_pendiente <= 0:
                 pedido.saldo_pendiente = Decimal('0.00')
                 pedido.estado = "pagado"
 
             pedido.save()
 
-            # 🔥 ALINEACIÓN CON EL CRM: Si el pedido tiene un cliente asignado, actualizamos su saldo global
+            # ALINEACIÓN CON EL CRM: Actualización inmediata del saldo global del cliente
             if pedido.cliente:
                 cliente = pedido.cliente
-                # Recalculamos de forma exacta sumando todos sus pedidos pendientes
-                from django.db.models import Sum
                 saldo_total_dict = Pedido.objects.filter(
                     cliente=cliente, 
                     usuario=request.user, 
                     saldo_pendiente__gt=0
-                ).aggregate(Sum('saldo_pendiente'))
+                ).aggregate(total=Sum('saldo_pendiente'))
                 
-                cliente.saldo_pendiente = saldo_total_dict['saldo_pendiente__sum'] or Decimal('0.00')
-                cliente.save()  # ← ¡Esto actualiza el panel del CRM al instante!
+                cliente.saldo_pendiente = saldo_total_dict['total'] or Decimal('0.00')
+                cliente.save()
 
             messages.success(request, "Abono registrado correctamente")
 
     return redirect('detalle_pedido', pedido_id=pedido.id)
 
-@login_required
-def cobrar_cliente(request, cliente_id):
-    cliente = get_object_or_404(
-        Cliente,
-        id=cliente_id,
-        usuario=request.user
-    )
 
-    # 🔥 CORRECCIÓN: Filtrar por la relación directa 'cliente=cliente' en lugar de texto para evitar fallos por tildes
-    pedidos = Pedido.objects.filter(
-        cliente=cliente,
-        usuario=request.user,
-        tipo_pago='credito',
-        saldo_pendiente__gt=0
-    )
-
-    total_deuda = sum(p.saldo_pendiente for p in pedidos)
-
-    mensaje = f"Hola {cliente.nombre},\n\n"
-    mensaje += "Te recordamos que tienes una factura pendiente:\n\n"
-
-    for p in pedidos:
-        # 🇨🇴 Formato de miles con puntos colombianos impecable
-        saldo_p_formateado = f"{p.saldo_pendiente:,.0f}".replace(",", ".")
-        mensaje += f"🧾 {p.numero_orden or p.id} - ${saldo_p_formateado}\n"
-
-    total_deuda_formateado = f"{total_deuda:,.0f}".replace(",", ".")
-    mensaje += f"\n💰 Total pendiente: ${total_deuda_formateado}"
-    mensaje += "\n\nPor favor realizar el pago lo antes posible 🙏"
-
-    # Limpiar teléfono de manera segura por si tiene nulos
-    telefono = ''.join(filter(str.isdigit, cliente.telefono or ""))
-
-    if not telefono:
-        messages.warning(request, "El cliente no tiene un teléfono válido registrado")
-        # 🔥 CORRECCIÓN: Te regresa a la cartera de clientes de forma segura si no hay teléfono
-        return redirect('cartera_clientes') 
-
-    if not telefono.startswith('57'):
-        telefono = f"57{telefono}"
-
-    url = f"https://wa.me/{telefono}?text={quote(mensaje)}"
-
-    return redirect(url)
-    
 @login_required
 def cobrar_whatsapp(request, pedido_id):
-    """
-    📱 COBRO DE UN PEDIDO INDEPENDIENTE
-    """
+    """📱 COBRO DE UN PEDIDO INDEPENDIENTE"""
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
 
-    # Validar si el pedido ya está saldado
     if pedido.saldo_pendiente <= 0:
         messages.info(request, "Este pedido ya está pago")
         return redirect('detalle_pedido', pedido_id=pedido.id)
 
-    # 🇨🇴 Formatear dinero con puntos para miles en Colombia de forma segura
     saldo_formateado = f"{pedido.saldo_pendiente:,.0f}".replace(",", ".")
 
-    # Traer el nombre de la tienda de forma segura
     try:
         nombre_tienda = request.user.perfil.nombre_tienda or "nuestra joyería"
     except AttributeError:
@@ -3007,7 +2951,6 @@ def cobrar_whatsapp(request, pedido_id):
         f"Si ya realizaste el pago, por favor ignora este mensaje 🙏"
     )
 
-    # Limpiar teléfono
     telefono = ''.join(filter(str.isdigit, pedido.cliente_telefono or ""))
     if not telefono:
         messages.warning(request, "Cliente sin teléfono válido")
@@ -3022,14 +2965,12 @@ def cobrar_whatsapp(request, pedido_id):
 
 @login_required
 def cobrar_moroso(request, cliente_id):
-    """
-    💵 COBRO DE CARTERA TOTAL DE UN CLIENTE (Suma todos sus pedidos vencidos)
-    """
+    """💵 COBRO DE CARTERA TOTAL DE UN CLIENTE (Suma todos sus pedidos vencidos)"""
     cliente = get_object_or_404(Cliente, id=cliente_id, usuario=request.user)
 
-    # Traer solo pedidos que tengan saldo mayor a 0
     pedidos = Pedido.objects.filter(
         cliente=cliente,
+        usuario=request.user,  # Importante asegurar que pertenezca al usuario de la sesión
         saldo_pendiente__gt=0
     ).order_by('fecha_limite')
 
@@ -3037,28 +2978,22 @@ def cobrar_moroso(request, cliente_id):
         messages.info(request, "Este cliente no tiene cuentas pendientes.")
         return redirect('cartera_clientes')
 
-    # 🔥 CORRECCIÓN: Iniciar el total como Decimal para evitar el bloqueo del $0
     total_acumulado = Decimal('0.00')
-    
     mensaje = f"Hola {cliente.nombre},\n\nTienes las siguientes facturas pendientes en nuestra joyería:\n\n"
 
     for p in pedidos:
         saldo_pedido_formateado = f"{p.saldo_pendiente:,.0f}".replace(",", ".")
         mensaje += f"🧾 Pedido #{p.numero_orden or p.id} → ${saldo_pedido_formateado}\n"
-        total_acumulado += p.saldo_pendiente  # Suma limpia entre Decimals
+        total_acumulado += p.saldo_pendiente
 
-    # Sincronizar el campo físico del modelo Cliente para que el CRM no muestre 0
     if cliente.saldo_pendiente != total_acumulado:
         cliente.saldo_pendiente = total_acumulado
         cliente.save()
 
-    # Formatear el gran total final para el mensaje de WhatsApp
     total_formateado = f"{total_acumulado:,.0f}".replace(",", ".")
-    
     mensaje += f"\n💰 Total Pendiente: ${total_formateado}\n\n"
     mensaje += "Por favor, agradeceríamos realizar el pago por transferencia o reportar tu comprobante. ¡Muchas gracias por tu confianza! 🙏"
 
-    # Limpiar e imponer indicativo de Colombia
     telefono = ''.join(filter(str.isdigit, cliente.telefono or ""))
     if not telefono:
         messages.warning(request, "El cliente no tiene un teléfono válido registrado")
@@ -3085,25 +3020,23 @@ def cartera_clientes(request):
 
     for p in pedidos:
         dias_mora = 0
-
         if p.fecha_limite and p.fecha_limite < hoy:
             dias_mora = (hoy - p.fecha_limite).days
 
-        # estado visual inteligente
-        estado_visual = 'pendiente'
-
-        if dias_mora > 0:
-            estado_visual = 'vencido'
-
-        # 🔥 link directo factura pública
+        estado_visual = 'vencido' if dias_mora > 0 else 'pendiente'
         link_pago = request.build_absolute_uri(f"/factura/{p.token_publico}/")
 
-        # 📲 mensaje automático whatsapp
-        mensaje = f"Hola {p.cliente_nombre}, tienes un saldo pendiente de ${p.saldo_pendiente}. Puedes pagar aquí: {link_pago}"
-        
-        mensaje_codificado = urllib.parse.quote(mensaje)
+        # Ajuste de mensaje con el formato de moneda limpio
+        saldo_formateado = f"{p.saldo_pendiente:,.0f}".replace(",", ".")
+        mensaje = f"Hola {p.cliente_nombre}, tienes un saldo pendiente de ${saldo_formateado}. Puedes pagar aquí: {link_pago}"
+        mensaje_codificado = quote(mensaje)
 
-        whatsapp_link: f"https://wa.me/{p.cliente_telefono}?text={mensaje}"
+        # 🌟 CORRECCIÓN: Uso de '=' en lugar de ':' y limpieza de número telefónico
+        telefono_limpio = ''.join(filter(str.isdigit, p.cliente_telefono or ""))
+        if telefono_limpio and not telefono_limpio.startswith('57'):
+            telefono_limpio = f"57{telefono_limpio}"
+            
+        whatsapp_link = f"https://wa.me/{telefono_limpio}?text={mensaje_codificado}"
 
         cartera.append({
             'pedido': p,
@@ -3115,17 +3048,17 @@ def cartera_clientes(request):
             'estado': estado_visual,
             'link_pago': link_pago,
             'whatsapp': whatsapp_link, 
-            
         })
 
-    morosos_total = sum(c['saldo'] for c in cartera if c['estado'] == 'vencido')
+    # 🌟 CORRECCIÓN: Sumar usando Decimal explícito para evitar fallos de tipos
+    morosos_total = sum((c['saldo'] for c in cartera if c['estado'] == 'vencido'), Decimal('0.00'))
     morosos_count = sum(1 for c in cartera if c['estado'] == 'vencido')
 
     return render(request, 'cartera.html', {
         'cartera': cartera,
         'morosos_total': morosos_total,
         'morosos_count': morosos_count
-})
+    })
 
 def factura_publica(request, token):
     """
