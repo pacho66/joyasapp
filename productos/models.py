@@ -135,6 +135,13 @@ class Producto(models.Model):
     # 📊 UTILIDADES CORREGIDAS (Sincronizadas con los gramos)
     # =======================================================================
     @property
+    def precio_calculado_detal(self):
+        """Retorna el precio total al detal de una sola pieza (peso x gramo o precio fijo)."""
+        if self.tipo_venta == 'gramo':
+            return Decimal(str(self.precio_por_gramo_detal or 0)) * Decimal(str(self.peso_producto or 0))
+        return Decimal(str(self.precio_detal or 0))
+    
+    @property
     def utilidad_detal(self):
         return self.precio_calculado_detal - (self.precio_costo or 0)
 
@@ -306,6 +313,13 @@ class CarritoItem(models.Model):
                 precio = self.producto.precio_detal
                 
             return Decimal(str(precio or self.producto.precio_detal or 0))
+    
+    def precio_unitario_articulo(self):
+        """Retorna el precio de una sola pieza completa ajustada al nivel actual del carrito."""
+        precio_base = self.precio_aplicado()  # Trae el valor base (por gramo o unidad)
+        if self.producto.tipo_venta == 'gramo':
+            return Decimal(str(self.producto.peso_producto or 0)) * precio_base
+        return precio_base
 
     def subtotal(self):
         """Calcula el subtotal real multiplicando gramos totales o unidades fijas."""

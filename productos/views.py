@@ -1563,26 +1563,22 @@ def ver_carrito(request):
 
     total = Decimal('0.00')
 
-    # 2. Procesamos cada artículo delegando la matemática en el modelo
+    # 2. Procesamos cada artículo de forma segura
     for item in items:
-        # Inyectamos el nivel global en memoria para que el modelo lo sepa usar
+        # Sincronizamos el nivel comercial en la memoria del objeto
         item._tipo_global = tipo_global
 
-        # Calculamos los gramos totales si el producto los requiere (para la plantilla y el JSON)
+        # Calculamos el subtotal ejecutando el método original sin pisar su nombre
+        item.subtotal_calculado = item.subtotal()
+        
         if item.producto.tipo_venta == "gramo":
             item.total_gramos = Decimal(str(item.cantidad or 0)) * Decimal(str(item.producto.peso_producto or 0))
         else:
             item.total_gramos = None
 
-        # Asignamos las variables exactas que ya esperan tu plantilla HTML y el JSON de WhatsApp
-        item.precio_aplicado = item.precio_aplicado()  # <-- Ejecuta el método del modelo
-        item.subtotal_calculado = item.subtotal()      # <-- Ejecuta el método del modelo
-        item.ahorro = item.ahorro()                    # <-- Ejecuta el método del modelo
-        item.tipo_precio = tipo_global                 # Envia el string ("Mayorista", etc.) al HTML
-
-        # Acumulamos el gran total del carrito
+        item.tipo_precio = tipo_global
         total += item.subtotal_calculado
-
+    
     # Indicadores de progreso para las barras informativas en el frontend
     faltan_semi = max(0, 6 - total_articulos)
     faltan_mayor = max(0, 12 - total_articulos)
