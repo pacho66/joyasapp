@@ -113,18 +113,20 @@ class ProductoService:
                         continue
                     ProductoImagen.objects.create(producto=producto, imagen=f)
 
-            # 5. Motor de Variantes SaaS
+            # =======================================================
+            # 5. MOTOR DE VARIANTES SAAS (REFACTORIZADO INDEXADO)
+            # =======================================================
+            indices = data.getlist('v_index[]')
             colores = data.getlist('v_color[]')
             tallas = data.getlist('v_talla[]')
             pesos = data.getlist('v_peso[]')
             stocks = data.getlist('v_stock[]')
             precios = data.getlist('v_precio[]')
             codigos = data.getlist('v_codigo[]')
-            fotos_variantes = files.getlist('v_foto[]')
 
             codigos_procesados = []
 
-            for i in range(len(colores)):
+            for i, index_js in enumerate(indices):
                 try:
                     v_color = colores[i] if i < len(colores) else ''
                     v_talla = tallas[i] if i < len(tallas) else ''
@@ -132,8 +134,15 @@ class ProductoService:
                     codigos_procesados.append(v_codigo)
 
                     v_stock = cls.entero_seguro(stocks[i])
-                    v_precio = cls.decimal_seguro(precios[i], defecto=producto.precio_detal)
                     v_peso = cls.decimal_seguro(pesos[i])
+
+                    # ⚖️ Herencia de precio base inteligente (Gramo vs Unidad)
+                    if producto.tipo_venta == 'gramo':
+                        precio_defecto = producto.precio_por_gramo_detal
+                    else:
+                        precio_defecto = producto.precio_detal
+                    
+                    v_precio = cls.decimal_seguro(precios[i] if i < len(precios) else None, defecto=precio_defecto)
 
                     variante, created = ProductoVariante.objects.get_or_create(
                         producto=producto,
@@ -168,13 +177,16 @@ class ProductoService:
                     variante.usuario_actualizacion = usuario
                     variante.fecha_actualizacion = timezone.now()
 
-                    if i < len(fotos_variantes):
-                        foto_archivo = fotos_variantes[i]
+                    # 📸 Extracción blindada de foto por identificador dinámico de tarjeta
+                    foto_archivo = files.get(f'v_foto_{index_js}')
+                    if foto_archivo:
+                        # 🛡️ ESCUDO ANTI-DUPLICADOS: Si el archivo tiene el mismo nombre que la principal, se salta
                         if not (producto.imagen_principal and foto_archivo.name == producto.imagen_principal.name):
                             variante.foto = foto_archivo
 
                     variante.save()
-                except IndexError:
+                except Exception as var_error:
+                    logger.error(f"Error procesando variante indexada {index_js} en iteración {i}: {str(var_error)}")
                     continue
 
             # Soft Delete de variantes removidas en el frontend

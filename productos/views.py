@@ -457,23 +457,26 @@ def guardar_producto_view(request, pk=None):
             return redirect('mis_productos')
 
         except Exception as e:
-            # UX de Protección: En caso de error, NO redirigimos para no limpiar el formulario del joyero.
-            # Hacemos render directo manteniendo request.POST vivo en los inputs.
             logger.error(f"Error crítico en controlador al procesar producto: {str(e)}")
             messages.error(request, f"⚠️ Error interno: No se guardaron los cambios. Motivo: {str(e)}")
             
-            return render(request, 'productos/editar_producto.html' if pk else 'productos/crear_producto.html', {
+            # ✨ CORRECCIÓN UX: Pasamos request.POST como 'valores' para no limpiar el formulario del usuario
+            return render(request, f'productos/{"editar_producto" if pk else "crear_producto"}.html', {
                 'producto': producto,
+                'valores': request.POST,  # Alimenta los inputs con lo que el usuario ya había digitado
                 'categorias': Categoria.objects.all()
             })
 
-    # Carga por petición GET normal
-    return render(request, 'editar_producto.html' if pk else 'crear_producto.html', {
+    # 🔄 Carga por petición GET normal (Edición o Creación limpia)
+    # Si estamos editando, puedes mapear el producto como 'valores' iniciales si tu HTML así lo requiere
+    valores_iniciales = producto if pk else None
+
+    return render(request, f'productos/{"editar_producto" if pk else "crear_producto"}.html', {
         'producto': producto,
+        'valores': valores_iniciales,
         'categorias': Categoria.objects.all()
     })
-    
-    
+
 #@login_required
 #def crear_producto(request):
     categorias = Categoria.objects.filter(usuario=request.user)

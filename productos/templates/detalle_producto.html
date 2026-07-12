@@ -14,11 +14,8 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
 
 <div class="carousel-container">
-
     <div class="swiper mySwiper">
-
         <div class="swiper-wrapper">
-
             {% if producto.imagen_principal %}
             <div class="swiper-slide">
                 <img src="{{ producto.imagen_principal.url }}" alt="{{ producto.nombre }}">
@@ -33,20 +30,14 @@
                 {% endif %}
             {% endfor %}
         </div>
-
         <div class="swiper-pagination"></div>
-
         <div class="swiper-button-next"></div>
-
         <div class="swiper-button-prev"></div>
-
     </div>
-
 </div>
 
 {% if producto.video %}
 <div style="margin:20px 0; text-align:center;">
-
   <video 
     width="100%" 
     style="max-width:500px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,.15);" 
@@ -56,7 +47,6 @@
     <source src="{{ producto.video.url }}" type="video/mp4">
     Tu navegador no soporta video.
   </video>
-
 </div>
 {% endif %}
 
@@ -75,73 +65,36 @@ Uso exclusivo para joyas en <strong>oro 18K, diamantes y esmeraldas</strong>.
 {% for p in productos_relacionados %}
 <div style="width:150px; text-align:center;">
 <a href="{% url 'detalle_producto' p.id p.slug %}">
+<!-- ✨ CORRECCIÓN: Añadido .url para evitar imágenes rotas -->
 {% if p.imagen_principal %}
-<img src="{{ p.imagen_principal }}" width="120">
+<img src="{{ p.imagen_principal.url }}" width="120" style="object-fit: contain; height: 120px; border-radius: 6px;">
 {% endif %}
-<p>{{ p.nombre }}</p>
-<p>$ {{ p.precio_detal|moneda }}</p>
+<p style="margin: 5px 0 2px 0; font-size: 14px; font-weight: 500;">{{ p.nombre }}</p>
+<p style="font-weight: bold; color: #111;">$ {{ p.precio_detal|moneda }}</p>
+
 {% if p.stock_total > 10 %}
-<p style="color:green;font-weight:bold;">
-✅ Disponible
-</p>
-
+<p style="color:green;font-weight:bold; font-size: 12px;">✅ Disponible</p>
 {% elif p.stock_total > 3 %}
-<p style="color:orange;font-weight:bold;">
-⚠️ Quedan {{ p.stock_total }} unidades
-</p>
-
+<p style="color:orange;font-weight:bold; font-size: 12px;">⚠️ Quedan {{ p.stock_total }} un.</p>
 {% elif p.stock_total > 0 %}
-<p style="color:red;font-weight:bold;">
-🔥 Solo quedan {{ p.stock_total }} unidades
-</p>
-
+<p style="color:red;font-weight:bold; font-size: 12px;">🔥 Solo quedan {{ p.stock_total }} un.</p>
 {% else %}
-<p style="color:red;font-weight:bold;">
-❌ Producto agotado
-</p>
+<p style="color:red;font-weight:bold; font-size: 12px;">❌ Agotado</p>
 {% endif %}
-
 </a>
 </div>
 {% endfor %}
 </div>
 
-<h3>Precios</h3>
-
+<h3>Precios de Escala</h3>
 {% if producto.tipo_venta == "gramo" %}
-
-<p>
-<strong>Precio Detal (por gramo):</strong>
-$ {{ producto.precio_por_gramo_detal|default_if_none:0|moneda }}
-</p>
-
-<p style="color:#0a7;">
-Semi-mayorista (6g+):
-$ {{ producto.precio_por_gramo_semimayor|default_if_none:0|moneda }}
-</p>
-
-<p style="color:#0a7;">
-Mayorista (12g+):
-$ {{ producto.precio_por_gramo_mayor|default_if_none:0|moneda }}
-</p>
-
+<p><strong>Precio Detal (por gramo):</strong> $ {{ producto.precio_por_gramo_detal|default_if_none:0|moneda }}</p>
+<p style="color:#0a7;">Semi-mayorista (6g+): $ {{ producto.precio_por_gramo_semimayor|default_if_none:0|moneda }}</p>
+<p style="color:#0a7;">Mayorista (12g+): $ {{ producto.precio_por_gramo_mayor|default_if_none:0|moneda }}</p>
 {% else %}
-
-<p>
-Detal:
-<strong>$ {{ producto.precio_detal|default:0|moneda }}</strong>
-</p>
-
-<p style="color:#0a7;">
-Semi-mayorista (6+):
-$ {{ producto.precio_semimayor|default:0|moneda }}
-</p>
-
-<p style="color:#0a7;">
-Mayorista (12+):
-$ {{ producto.precio_mayor|default:0|moneda }}
-</p>
-
+<p>Detal: <strong>$ {{ producto.precio_detal|default:0|moneda }}</strong></p>
+<p style="color:#0a7;">Semi-mayorista (6+): $ {{ producto.precio_semimayor|default:0|moneda }}</p>
+<p style="color:#0a7;">Mayorista (12+): $ {{ producto.precio_mayor|default:0|moneda }}</p>
 {% endif %}
 
 <form method="POST" action="{% url 'agregar_al_carrito' producto.id %}">
@@ -151,7 +104,6 @@ $ {{ producto.precio_mayor|default:0|moneda }}
         <label><strong>Cantidad:</strong></label>
         <div style="display:flex; align-items:center; gap:10px; margin-top: 5px;">
             <button type="button" onclick="cambiarCantidad(-1)" style="padding:10px 18px; font-size:18px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer; user-select: none;">➖</button>
-            
             <input 
                 type="number"
                 id="cantidad"
@@ -159,17 +111,17 @@ $ {{ producto.precio_mayor|default:0|moneda }}
                 value="1"
                 min="1"
                 step="1"
-                oninput="validarCantidad(); actualizarPrecio();"
+                oninput="validarCantidad();"
                 style="width:70px; text-align:center; padding:10px; font-size:16px; font-weight:bold; border: 1px solid #ccc; border-radius: 6px;"
             >
-
             <button type="button" onclick="cambiarCantidad(1)" style="padding:10px 18px; font-size:18px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer; user-select: none;">➕</button>
         </div>
     </div>
 
     <div style="margin-bottom: 15px;">
         <label><strong>Color / Variante:</strong></label>
-        <select id="color" name="color" required onchange="actualizarStockDisponible(); actualizarTallas();" style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
+        <!-- ✨ CORRECCIÓN: Se eliminó el onchange inline ruidoso. El script de abajo maneja el evento de forma limpia -->
+        <select id="color" name="color" required style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
           <option value="">Seleccione color</option>
           {% for variante in producto.variantes.all|dictsort:"color" %}
             {% ifchanged variante.color %}
@@ -181,7 +133,8 @@ $ {{ producto.precio_mayor|default:0|moneda }}
 
     <div id="contenedor-talla" style="margin-bottom: 15px;">
         <label id="label-talla"><strong>Talla:</strong></label>
-        <select id="talla" name="talla" onchange="actualizarStockDisponible();" style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
+        <!-- ✨ CORRECCIÓN: Se eliminó el onchange inline para unificar el control de stock en JS nativo -->
+        <select id="talla" name="talla" style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
           <option value="">Seleccione un color primero</option>
         </select>
     </div>
@@ -189,37 +142,26 @@ $ {{ producto.precio_mayor|default:0|moneda }}
     <p id="stock-info" style="font-weight:bold; margin-top:5px; font-size:14px; min-height:20px;"></p>
 
     {% if producto.tipo_venta == "gramo" %}
-    <p>
-    <strong>Peso por unidad:</strong> {{ producto.peso_producto|default:0 }} g
-    </p>
-
-    <p>
-    <strong>Total gramos:</strong>
-    <span id="total-gramos">{{ producto.peso_producto|default:0 }}</span> g
-    </p>
+    <p><strong>Peso por unidad:</strong> {{ producto.peso_producto|default:0 }} g</p>
+    <p><strong>Total gramos:</strong> <span id="total-gramos">{{ producto.peso_producto|default:0 }}</span> g</p>
     {% endif %}
 
-    <p>
-    <strong>Subtotal:</strong> $
-    <span id="subtotal">0</span>
-    </p>
-
+    <p><strong>Subtotal:</strong> $ <span id="subtotal">0</span></p>
     <p id="detalle-calculo" style="font-size:14px;color:#555;"></p>
     <p id="mensaje-mayorista" style="color:green;font-weight:bold;"></p>
 
-    <input type="hidden" id="url-carrito" value="{% url 'agregar_al_carrito' producto.id %}">
+    <!-- 📦 CONTROL DE STOCK UNIFICADO (UN SOLO BOTÓN REAL) -->
+    <input type="hidden" id="whatsapp-numero" value="{{ perfil_tienda.whatsapp }}">
 
-    {% if stock_disponible is not None %}
-        
-        {% if stock_disponible > 0 %}
-            <button type="submit" id="btn-carrito"
-            style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;">
-                🛒 Agregar al carrito
-            </button>
-        {% else %}
-            <p style="color:red;font-weight:bold;">Producto agotado</p>
-        {% endif %}
-
+    {% if tiene_stock or stock_disponible > 0 %}
+        <button type="submit" id="btn-carrito"
+            style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;width:100%;">
+            🛒 Agregar al carrito
+        </button>
+    {% else %}
+        <p id="mensaje-agotado-backend" style="color:red;font-weight:bold;padding:12px 0;">❌ Producto agotado temporalmente</p>
+    {% endif %}
+    
         {% elif tiene_stock %}
 
         <input type="hidden"
