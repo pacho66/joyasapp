@@ -7,12 +7,15 @@
     margin:auto;
     padding:25px;
     font-family:Arial,sans-serif;
+    /* Espacio de seguridad por si tienes barras flotantes abajo */
+    margin-bottom: 60px; 
 }
 
 .titulo{
     font-size:30px;
     margin-bottom:20px;
     color:#111;
+    font-weight: 700;
 }
 
 .grid{
@@ -53,6 +56,14 @@
     box-shadow:0 4px 14px rgba(0,0,0,.08);
 }
 
+/* 📱 Contenedor preventivo para evitar que la tabla rompa el diseño en celular */
+.tabla-responsiva {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 15px;
+}
+
 table{
     width:100%;
     border-collapse:collapse;
@@ -63,10 +74,13 @@ th,td{
     border-bottom:1px solid #eee;
     text-align:left;
     font-size:14px;
+    white-space: nowrap; /* Evita que los textos se partan feo en columnas angostas */
 }
 
 th{
     background:#f8f8f8;
+    color: #444;
+    font-weight: 600;
 }
 
 .stock-ok{
@@ -92,12 +106,19 @@ th{
     padding:10px 15px;
     border-radius:8px;
     text-decoration:none;
+    font-weight: 600;
+    transition: background 0.2s ease;
+}
+
+.btn:hover {
+    background: #333;
 }
 
 @media(max-width:768px){
     .titulo{font-size:24px;}
     .card h2{font-size:22px;}
     table{font-size:13px;}
+    th, td{padding: 10px 8px;}
 }
 </style>
 
@@ -107,75 +128,86 @@ th{
 
 <!-- MÉTRICAS -->
 <div class="grid">
+    <div class="card azul">
+        <h4>Total Productos</h4>
+        <h2>{{ total_productos }}</h2>
+    </div>
 
-<div class="card azul">
-<h4>Total Productos</h4>
-<h2>{{ total_productos }}</h2>
-</div>
+    <div class="card verde">
+        <h4>Con Stock</h4>
+        <h2>{{ productos_stock }}</h2>
+    </div>
 
-<div class="card verde">
-<h4>Con Stock</h4>
-<h2>{{ productos_stock }}</h2>
-</div>
+    <div class="card naranja">
+        <h4>Stock Bajo</h4>
+        <h2>{{ stock_bajo }}</h2>
+    </div>
 
-<div class="card naranja">
-<h4>Stock Bajo</h4>
-<h2>{{ stock_bajo }}</h2>
-</div>
-
-<div class="card rojo">
-<h4>Agotados</h4>
-<h2>{{ agotados }}</h2>
-</div>
-
+    <div class="card rojo">
+        <h4>Agotados</h4>
+        <h2>{{ agotados }}</h2>
+    </div>
 </div>
 
 <!-- TABLA -->
 <div class="tabla">
 
-<h3>🛍️ Productos</h3>
+    <h3 style="margin: 0; font-size: 18px; color: #111;">🛍️ Lista de Productos</h3>
 
-<table>
+    <div class="tabla-responsiva">
+        <table>
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Precio Real</th>
+                    <th>Stock</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for producto in productos %}
+                <tr>
+                    <!-- Nombre -->
+                    <td style="font-weight: 500; color: #222;">{{ producto.nombre }}</td>
 
-<tr>
-<th>Producto</th>
-<th>Precio</th>
-<th>Stock</th>
-<th>Estado</th>
-</tr>
+                    <!-- 🎯 PRECIO INTELIGENTE CORREGIDO -->
+                    <td>
+                        {% if producto.tipo_venta == 'gramo' %}
+                            <!-- Si es por gramos, muestra el valor real calculado de la pieza -->
+                            ${{ producto.precio_calculado_detal|floatformat:0 }}
+                            <small style="display: block; color: #666; font-size: 11px; font-weight: normal; margin-top: 2px;">
+                                ({{ producto.peso_producto }}g)
+                            </small>
+                        {% else %}
+                            <!-- Si es por unidad, muestra su precio estándar -->
+                            ${{ producto.precio_detal|floatformat:0 }}
+                        {% endif %}
+                    </td>
 
-{% for producto in productos %}
-<tr>
+                    <!-- Stock -->
+                    <td>{{ producto.stock }} uds</td>
 
-<td>{{ producto.nombre }}</td>
+                    <!-- Estado -->
+                    <td>
+                        {% if producto.stock == 0 %}
+                            <span class="stock-agotado">Agotado</span>
+                        {% elif producto.stock <= 5 %}
+                            <span class="stock-bajo">Bajo</span>
+                        {% else %}
+                            <span class="stock-ok">Disponible</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; color: #888; padding: 30px 0;">No hay productos registrados</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-<td>${{ producto.precio_detal|floatformat:0 }}</td>
-
-<td>{{ producto.stock }}</td>
-
-<td>
-{% if producto.stock == 0 %}
-<span class="stock-agotado">Agotado</span>
-
-{% elif producto.stock <= 5 %}
-<span class="stock-bajo">Bajo</span>
-
-{% else %}
-<span class="stock-ok">Disponible</span>
-{% endif %}
-</td>
-
-</tr>
-
-{% empty %}
-<tr>
-<td colspan="4">No hay productos registrados</td>
-</tr>
-{% endfor %}
-
-</table>
-
-<a href="{% url 'dashboard' %}" class="btn">⬅️ Volver al Dashboard</a>
+    <a href="{% url 'dashboard' %}" class="btn">⬅️ Volver al Dashboard</a>
 
 </div>
 
