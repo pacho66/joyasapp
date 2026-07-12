@@ -111,10 +111,11 @@ class Categoria(models.Model):
         return self.nombre
 
 class Producto(models.Model):
+    # --- Campos Base ---
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     nombre = models.CharField(max_length=200)
-    slug = models.SlugField(max_length=220,blank=True,null=True)
-    referencia = models.CharField(max_length=50,blank=True,null=True,verbose_name="SKU")
+    slug = models.SlugField(max_length=220, blank=True, null=True)
+    referencia = models.CharField(max_length=50, blank=True, null=True, verbose_name="SKU")
     descripcion = models.TextField()
     categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE)
     destacado = models.BooleanField(default=False)
@@ -124,47 +125,69 @@ class Producto(models.Model):
     talla = models.CharField(max_length=50, null=True, blank=True)
     colores_disponibles = models.JSONField(default=list, blank=True)
     tallas_disponibles = models.JSONField(default=list, blank=True)
-    imagen_principal = CloudinaryField('imagen',blank=True,null=True)
+    imagen_principal = CloudinaryField('imagen', blank=True, null=True)
     video = models.FileField(upload_to='productos/videos/', blank=True, null=True)
     certificado = models.FileField(upload_to='certificados/', blank=True, null=True)
-    tipo_venta = models.CharField(max_length=20,choices=[('unidad', 'Por unidad'), ('gramo', 'Por gramos')],default='unidad')
-    peso_producto = models.DecimalField(max_digits=6,decimal_places=2,null=True,blank=True,help_text="Peso del producto en gramos")
-    precio_costo = models.DecimalField(max_digits=12,decimal_places=2,default=0,verbose_name="Precio de costo")
     
-     # =======================================================================
-    # 📊 UTILIDADES CORREGIDAS (Sincronizadas con los gramos)
+    # --- Configuración de Venta ---
+    tipo_venta = models.CharField(max_length=20, choices=[('unidad', 'Por unidad'), ('gramo', 'Por gramos')], default='unidad')
+    peso_producto = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, help_text="Peso del producto en gramos")
+    cantidad_mayorista = models.IntegerField(default=6)
+
+    # --- Precios Base (Costo y Unidad) ---
+    precio_costo = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Precio de costo")
+    precio_detal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    precio_semimayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    precio_mayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    
+    # --- Precios por Gramo ---
+    precio_por_gramo_detal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    precio_por_gramo_semimayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    precio_por_gramo_mayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # =======================================================================
+    # 📊 MOTORES DE CÁLCULO DINÁMICO (Sincronizados con Decimales)
     # =======================================================================
     @property
     def precio_calculado_detal(self):
-        """Retorna el precio total al detal de una sola pieza (peso x gramo o precio fijo)."""
         if self.tipo_venta == 'gramo':
             return Decimal(str(self.precio_por_gramo_detal or 0)) * Decimal(str(self.peso_producto or 0))
         return Decimal(str(self.precio_detal or 0))
     
     @property
-    def precio_total_detal_dinamico(self):
+    def precio_calculado_semimayor(self):
         if self.tipo_venta == 'gramo':
-            return (self.precio_por_gramo_detal or 0) * (self.peso_producto or 0)
-        return self.precio_detal or 0
+            return Decimal(str(self.precio_por_gramo_semimayor or 0)) * Decimal(str(self.peso_producto or 0))
+        return Decimal(str(self.precio_semimayor or 0))
 
-    # En tu modelo ProductoVariante
     @property
-    def precio_total_dinamico(self):
-        if self.producto.tipo_venta == 'gramo':
-            return (self.precio_venta or 0) * (self.peso or 0)
-        return self.precio_venta or 0
-    
+    def precio_calculado_mayor(self):
+        if self.tipo_venta == 'gramo':
+            return Decimal(str(self.precio_por_gramo_mayor or 0)) * Decimal(str(self.peso_producto or 0))
+        return Decimal(str(self.precio_mayor or 0))
+
+    # --- Aliases para soporte dinámico en Plantillas HTML de Catálogos ---
+    @property
+    def precio_total_detal_dinamico(self): return self.precio_calculado_detal
+    @property
+    def precio_total_semimayor_dinamico(self): return self.precio_calculado_semimayor
+    @property
+    def precio_total_mayor_dinamico(self): return self.precio_calculado_mayor
+
+    # =======================================================================
+    # 📈 INDICADORES DE RENTABILIDAD (AUDITORÍA FINANCIERA)
+    # =======================================================================
     @property
     def utilidad_detal(self):
-        return self.precio_calculado_detal - (self.precio_costo or 0)
+        return self.precio_calculado_detal - Decimal(str(self.precio_costo or 0))
 
     @property
     def utilidad_semimayor(self):
-        return self.precio_calculado_semimayor - (self.precio_costo or 0)
+        return self.precio_calculado_semimayor - Decimal(str(self.precio_costo or 0))
 
     @property
     def utilidad_mayor(self):
-        return self.precio_calculado_mayor - (self.precio_costo or 0)
+        return self.precio_calculado_mayor - Decimal(str(self.precio_costo or 0))
     
     @property
     def stock_total(self):
@@ -172,33 +195,15 @@ class Producto(models.Model):
             return sum(v.stock for v in self.variantes.all())
         return self.stock
 
-    def __str__(self):
-        return self.nombre
-
-    precio_detal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    precio_semimayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    precio_mayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    cantidad_mayorista = models.IntegerField(default=6)
-    # 🔥 PRECIOS POR GRAMO
-    precio_por_gramo_detal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    precio_por_gramo_semimayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    precio_por_gramo_mayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    
-     # =======================================================================
-    # 🔥 LÓGICA CENTRAL UNIFICADA (El motor del sistema)
+    # =======================================================================
+    # 🔥 LÓGICA CENTRAL DE ESCALAS (Carrito y Facturación)
     # =======================================================================
     def precio_por_cantidad(self, cantidad):
-        """
-        Devuelve el precio final de UNA UNIDAD del producto adaptado a la cantidad de la compra.
-        Garantiza que el Carrito y la Factura solo multipliquen: cantidad * precio_por_cantidad.
-        """
-        # 🔵 VENTA POR GRAMOS
         if self.tipo_venta == 'gramo':
             if not self.peso_producto:
-                return 0
+                return Decimal('0')
 
-            # Calculamos el volumen total de gramos en el pedido para definir la escala de precios
-            total_gramos = cantidad * self.peso_producto
+            total_gramos = Decimal(str(cantidad)) * Decimal(str(self.peso_producto))
 
             if total_gramos >= 12:
                 precio_gramo = self.precio_por_gramo_mayor or 0
@@ -207,42 +212,34 @@ class Producto(models.Model):
             else:
                 precio_gramo = self.precio_por_gramo_detal or 0
             
-            # ✨ CORRECCIÓN CRÍTICA: Retornamos el valor real de la joya (Peso * Precio Gramo)
-            return self.peso_producto * precio_gramo
-
-        # 🟡 VENTA POR UNIDAD
+            return Decimal(str(self.peso_producto)) * Decimal(str(precio_gramo))
         else:
             if cantidad >= 12:
-                return self.precio_mayor or self.precio_detal or 0
+                precio_unidad = self.precio_mayor or self.precio_detal or 0
             elif cantidad >= 6:
-                return self.precio_semimayor or self.precio_detal or 0
+                precio_unidad = self.precio_semimayor or self.precio_detal or 0
             else:
-                return self.precio_detal or 0
+                precio_unidad = self.precio_detal or 0
+            return Decimal(str(precio_unidad))
+
+    def _str_(self):
+        return self.nombre
+
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=['usuario', 'referencia'],
-                name='unique_referencia_por_usuario'
-            ),
-            models.UniqueConstraint(
-                fields=['usuario', 'slug'],
-                name='unique_slug_por_usuario'
-            ),
+            models.UniqueConstraint(fields=['usuario', 'referencia'], name='unique_referencia_por_usuario'),
+            models.UniqueConstraint(fields=['usuario', 'slug'], name='unique_slug_por_usuario'),
         ]
+
     def save(self, *args, **kwargs):
         if not self.slug:
             base_slug = slugify(self.nombre)
             slug = base_slug
             contador = 1
-
-            while Producto.objects.filter(
-                slug=slug
-             ).exclude(pk=self.pk).exists():
+            while Producto.objects.filter(slug=slug).exclude(pk=self.pk).exists():
                 slug = f"{base_slug}-{contador}"
                 contador += 1
-
             self.slug = slug
-
         super().save(*args, **kwargs)
 
 class ProductoImagen(models.Model):
@@ -265,6 +262,12 @@ class ProductoVariante(models.Model):
     talla = models.CharField(max_length=50, null=True, blank=True)
     stock = models.PositiveIntegerField(default=0)
     precio_venta = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, blank=True, null=True)
+
+    @property
+    def precio_total_dinamico(self):
+        if self.producto.tipo_venta == 'gramo':
+            return (self.precio_venta or 0) * (self.peso or 0)
+        return self.precio_venta or 0
     
     # 💎 NUEVOS PARÁMETROS DE ESPECIFICACIÓN (JSVE™)
     peso = models.DecimalField(max_digits=6, decimal_places=2, default=0.00, blank=True, null=True) # En gramos (ej: 4.50)
