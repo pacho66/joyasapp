@@ -3,34 +3,190 @@
 {% block content %}
 {% load moneda %}
 
-<div style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: system-ui, -apple-system, sans-serif;">
+<style>
+    /* --- Contenedor Principal --- */
+    .inventory-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: system-ui, -apple-system, sans-serif;
+        /* Deja espacio al final para que la barra flotante de WhatsApp no tape los botones */
+        margin-bottom: 90px; 
+    }
+
+    .inventory-header {
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        margin-bottom: 25px; 
+        flex-wrap: wrap; 
+        gap: 15px;
+    }
+
+    /* --- Tarjeta de Producto Inteligente --- */
+    .product-card {
+        background: white; 
+        border: 1px solid #e5e7eb; 
+        padding: 20px; 
+        margin-bottom: 20px; 
+        border-radius: 12px; 
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04); 
+        display: flex; 
+        gap: 20px;
+    }
+
+    .card-left {
+        flex: 0 0 130px; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        gap: 8px;
+    }
+
+    .card-left img {
+        width: 130px; 
+        height: 130px; 
+        object-fit: cover; 
+        border-radius: 8px; 
+        border: 1px solid #f0f0f0;
+    }
+
+    .card-right {
+        flex: 1; 
+        display: flex; 
+        flex-direction: column; 
+        justify-content: space-between;
+        min-width: 0; /* Evita desbordamiento de textos largos */
+    }
+
+    /* --- Matriz Financiera Responsiva --- */
+    .financial-box {
+        background: #f8fafc; 
+        border: 1px solid #e2e8f0; 
+        border-radius: 8px; 
+        padding: 14px; 
+        margin-bottom: 15px; 
+        display: grid; 
+        grid-template-columns: repeat(5, 1fr); 
+        gap: 12px;
+    }
+
+    .financial-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .financial-label {
+        color: #64748b; 
+        font-size: 12px; 
+        margin-bottom: 2px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .financial-value {
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    /* --- Fila de Botones --- */
+    .actions-box {
+        display: flex; 
+        gap: 10px; 
+        flex-wrap: wrap; 
+        justify-content: flex-end; 
+        border-top: 1px solid #f3f4f6; 
+        padding-top: 14px;
+    }
+
+    .btn-action {
+        padding: 9px 16px; 
+        text-decoration: none; 
+        border-radius: 6px; 
+        font-size: 13px; 
+        font-weight: 600;
+        text-align: center;
+        transition: background 0.2s ease;
+    }
+
+    /* ==========================================
+       📱 ADAPTACIÓN ABSOLUTA PARA CELULARES
+       ========================================== */
+    @media (max-width: 768px) {
+        .product-card {
+            flex-direction: column;
+            padding: 15px;
+        }
+
+        .card-left {
+            flex: 1;
+            width: 100%;
+            flex-direction: row;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 1px solid #f3f4f6;
+            padding-bottom: 12px;
+        }
+
+        .card-left img {
+            width: 90px;
+            height: 90px;
+        }
+
+        .financial-box {
+            grid-template-columns: repeat(2, 1fr); /* 2 columnas en celular para que respire el texto */
+            gap: 12px;
+            padding: 10px;
+        }
+
+        /* La tercera utilidad (Mayorista) ocupa el ancho completo abajo para no descuadrar */
+        .financial-item:nth-child(5) {
+            grid-column: span 2;
+        }
+
+        .actions-box {
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .btn-action {
+            flex: 1; /* Los botones se distribuyen el espacio equitativamente */
+            min-width: 105px;
+            padding: 10px 8px;
+            font-size: 12px;
+        }
+    }
+</style>
+
+<div class="inventory-container">
 
     <!-- Cabecera de Control -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
-        <h2 style="margin: 0; font-size: 24px; color: #111;">📦 Panel de Inventario</h2>
+    <div class="inventory-header">
+        <h2 style="margin: 0; font-size: 24px; color: #111; font-weight: 700;">📦 Panel de Inventario</h2>
         <a href="{% url 'crear_producto' %}" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: #25D366; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.2);">
             ➕ Nuevo Producto
         </a>
     </div>
 
     {% for producto in productos %}
-    <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; margin-bottom: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; gap: 20px; flex-wrap: wrap;">
+    <div class="product-card">
         
-        <!-- Contenedor Izquierdo: Imagen Principal -->
-        <div style="flex: 0 0 120px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+        <!-- Bloque Izquierdo: Imagen y Conteo -->
+        <div class="card-left">
             {% if producto.imagen_principal %}
-                <img src="{{ producto.imagen_principal.url }}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid #f0f0f0;">
+                <img src="{{ producto.imagen_principal.url }}" alt="{{ producto.nombre }}">
             {% else %}
-                <div style="width: 120px; height: 120px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 12px;">Sin foto</div>
+                <div style="width: 100%; aspect-ratio: 1; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 12px;">Sin foto</div>
             {% endif %}
-            
             <span style="font-size: 12px; color: #6b7280; font-weight: 500;">📷 {{ producto.imagenes.count }} fotos</span>
         </div>
 
-        <!-- Contenedor Derecho: Información de Negocio -->
-        <div style="flex: 1; min-width: 280px; display: flex; flex-direction: column; justify-content: space-between;">
+        <!-- Bloque Derecho: Métricas e Información de Venta -->
+        <div class="card-right">
             
-            <!-- Título y Badges -->
+            <!-- Encabezados primarios -->
             <div>
                 <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 5px;">
                     <h3 style="margin: 0; font-size: 18px; color: #111; font-weight: 700;">{{ producto.nombre }}</h3>
@@ -46,8 +202,8 @@
                 </div>
             </div>
 
-            <!-- Gestión de Stock con Alert Visual -->
-            <div style="margin-bottom: 15px; padding: 8px 12px; background: #f9fafb; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; font-size: 14px;">
+            <!-- Semáforo de Stock -->
+            <div style="margin-bottom: 12px; padding: 8px 12px; background: #f9fafb; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; font-size: 14px;">
                 <span><strong>Stock Total:</strong> {{ producto.stock }} uds</span>
                 <div>
                     {% if producto.stock_total > 20 %}
@@ -62,43 +218,42 @@
                 </div>
             </div>
 
-            <!-- 🔥 MATRIZ FINANCIERA: Muestra los precios y utilidades exactas -->
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 15px; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; font-size: 13px;">
-                <div>
-                    <span style="color: #64748b; display: block;">🏭 Costo Base:</span>
-                    <strong style="color: #334155; font-size: 14px;">$ {{ producto.precio_costo|moneda }}</strong>
+            <!-- 🔥 MATRIZ FINANCIERA PERMANENTE (Sin el símbolo $ repetido) -->
+            <div class="financial-box">
+                <div class="financial-item">
+                    <span class="financial-label">🏭 Costo:</span>
+                    <span class="financial-value" style="color: #475569;">{{ producto.precio_costo|moneda }}</span>
                 </div>
-                <div>
-                    <span style="color: #64748b; display: block;">💰 Precio Detal:</span>
-                    <!-- ✨ CORRECCIÓN CRÍTICA: Invoca la matemática dinámica para gramos o unidades sin fallar -->
-                    <strong style="color: #0f172a; font-size: 14px;">$ {{ producto.precio_calculado_detal|moneda }}</strong>
+                <div class="financial-item">
+                    <span class="financial-label">💰 Detal:</span>
+                    <span class="financial-value" style="color: #0f172a;">{{ producto.precio_calculado_detal|moneda }}</span>
                     {% if producto.tipo_venta == 'gramo' %}
-                        <small style="display: block; color: #666; font-size: 10px;">({{ producto.peso_producto }}g x ${{ producto.precio_por_gramo_detal|moneda }}/g)</small>
+                        <small style="color: #64748b; font-size: 10px; margin-top: 1px;">({{ producto.peso_producto }}g x {{ producto.precio_por_gramo_detal|moneda }}/g)</small>
                     {% endif %}
                 </div>
-                <div>
-                    <span style="color: #16a34a; display: block;">📈 Utilidad Detal:</span>
-                    <strong style="color: #16a34a; font-size: 14px;">$ {{ producto.utilidad_detal|moneda }}</strong>
+                <div class="financial-item">
+                    <span class="financial-label">📈 U. Detal:</span>
+                    <span class="financial-value" style="color: #16a34a;">{{ producto.utilidad_detal|moneda }}</span>
                 </div>
-                <div>
-                    <span style="color: #2563eb; display: block;">📈 Util. Semimayor:</span>
-                    <strong style="color: #2563eb; font-size: 14px;">$ {{ producto.utilidad_semimayor|moneda }}</strong>
+                <div class="financial-item">
+                    <span class="financial-label">📈 U. Semi:</span>
+                    <span class="financial-value" style="color: #2563eb;">{{ producto.utilidad_semimayor|moneda }}</span>
                 </div>
-                <div>
-                    <span style="color: #7c3aed; display: block;">📈 Util. Mayorista:</span>
-                    <strong style="color: #7c3aed; font-size: 14px;">$ {{ producto.utilidad_mayor|moneda }}</strong>
+                <div class="financial-item">
+                    <span class="financial-label">📈 U. Mayor:</span>
+                    <span class="financial-value" style="color: #7c3aed;">{{ producto.utilidad_mayor|moneda }}</span>
                 </div>
             </div>
 
-            <!-- Acciones Operativas -->
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; border-top: 1px solid #f3f4f6; padding-top: 12px;">
-                <a href="{% url 'editar_producto' producto.id %}" style="background: #007bff; color: white; padding: 8px 14px; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 500;">
+            <!-- Botonera de Acciones -->
+            <div class="actions-box">
+                <a href="{% url 'editar_producto' producto.id %}" class="btn-action" style="background: #007bff; color: white;">
                     ✏️ Editar
                 </a>
-                <a href="{% url 'eliminar_imagen_producto' producto.id %}" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 8px 14px; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 500;">
+                <a href="{% url 'eliminar_imagen_producto' producto.id %}" class="btn-action" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a;">
                     🖼️ Quitar Imagen
                 </a>
-                <a href="{% url 'eliminar_producto' producto.id %}" style="background: #dc3545; color: white; padding: 8px 14px; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 500;">
+                <a href="{% url 'eliminar_producto' producto.id %}" class="btn-action" style="background: #dc3545; color: white;">
                     🗑️ Eliminar
                 </a>
             </div>
@@ -106,8 +261,8 @@
         </div>
     </div>
     {% empty %}
-    <div style="text-align: center; padding: 40px; background: #f9fafb; border-radius: 12px; border: 2px dashed #e5e7eb; color: #6b7280;">
-        <p style="margin: 0; font-size: 16px;">No tienes productos registrados en tu inventario aún.</p>
+    <div style="text-align: center; padding: 45px; background: #f9fafb; border-radius: 12px; border: 2px dashed #e5e7eb; color: #6b7280;">
+        <p style="margin: 0; font-size: 16px; font-weight: 500;">No tienes productos registrados en tu inventario aún.</p>
     </div>
     {% endfor %}
 
