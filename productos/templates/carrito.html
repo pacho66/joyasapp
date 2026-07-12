@@ -324,7 +324,7 @@
                             {% endif %}
                         </div>
                     </div>
-                </td> <td>
+                <td>
                     <div class="precio-antiguo">
                         {% if item.producto.tipo_venta == "gramo" %}
                             $ {{ item.producto.precio_por_gramo_detal|default:0|moneda }}
@@ -332,14 +332,15 @@
                             $ {{ item.producto.precio_detal|default:0|moneda }}
                         {% endif %}
                     </div>
+                    <!-- ✨ LIMPIEZO DE PARCHE: Usamos directamente la variable calculada por el servidor -->
                     <div class="precio-actual">
-                        $ {{ item.precio_applied|default:item.precio_aplicado|moneda }}{% if item.producto.tipo_venta == "gramo" %}/g{% endif %}
+                        $ {{ item.precio_aplicado|moneda }}{% if item.producto.tipo_venta == "gramo" %}/g{% endif %}
                     </div>
                     <small style="color: #666; font-size: 11px; display: block; margin-top: 2px;">
                         {{ item.tipo_precio }}
                     </small>
                 </td>
-
+                    
                 <td>
                     <div class="controles-cantidad">
                         <a href="{% url 'disminuir_cantidad' item.id %}" class="btn-cant">-</a>

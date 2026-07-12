@@ -1551,14 +1551,9 @@ def ver_carrito(request):
     else:
         items = CarritoItem.objects.filter(session_key=session_key).select_related('producto', 'variante')
 
-    total_articulos = 0
-    total = Decimal('0.00')
+    # 1. Contamos el total de artículos físicos combinados para definir la escala comercial
+    total_articulos = sum(item.cantidad or 0 for item in items)
 
-    # 🔥 TU CONTAR TOTAL GLOBAL ORIGINAL
-    for item in items:
-        total_articulos += item.cantidad or 0
-
-    # 🔥 TU DEFINIR NIVEL GLOBAL ORIGINAL
     if total_articulos >= 12:
         tipo_global = "Mayorista"
     elif total_articulos >= 6:
@@ -1566,82 +1561,42 @@ def ver_carrito(request):
     else:
         tipo_global = "Detal"
 
-    # 🔥 TU CALCULAR CADA ITEM ORIGINAL
+    total = Decimal('0.00')
+
+    # 2. Procesamos cada artículo delegando la matemática en el modelo
     for item in items:
-        cantidad = item.cantidad or 0
-        producto = item.producto
+        # Inyectamos el nivel global en memoria para que el modelo lo sepa usar
+        item._tipo_global = tipo_global
 
-        tipo = tipo_global  # 👈 ESTE MANDA TODO
-
-        # =========================
-        # PRODUCTOS POR GRAMOS
-        # =========================
-        if producto.tipo_venta == "gramo":
-
-            peso = producto.peso_producto or 0
-            total_gramos = Decimal(cantidad) * Decimal(peso)
-            item.total_gramos = total_gramos
-
-            if tipo == "Mayorista":
-                precio = producto.precio_por_gramo_mayor or 0
-            elif tipo == "Semi-Mayorista":
-                precio = producto.precio_por_gramo_semimayor or 0
-            else:
-                precio = producto.precio_por_gramo_detal or 0
-
-            item.precio_aplicado = Decimal(precio)
-            item.subtotal_calculado = total_gramos * Decimal(precio)
-
-            # ahorro gramos
-            precio_base = producto.precio_por_gramo_detal or 0
-            item.ahorro = (Decimal(precio_base) - Decimal(precio)) * total_gramos
-
-        # =========================
-        # PRODUCTOS POR UNIDADES
-        # =========================
+        # Calculamos los gramos totales si el producto los requiere (para la plantilla y el JSON)
+        if item.producto.tipo_venta == "gramo":
+            item.total_gramos = Decimal(str(item.cantidad or 0)) * Decimal(str(item.producto.peso_producto or 0))
         else:
-
             item.total_gramos = None
 
-            if tipo == "Mayorista":
-                precio = producto.precio_mayor or 0
-            elif tipo == "Semi-Mayorista":
-                precio = producto.precio_semimayor or 0
-            else:
-                precio = producto.precio_detal or 0
+        # Asignamos las variables exactas que ya esperan tu plantilla HTML y el JSON de WhatsApp
+        item.precio_aplicado = item.precio_aplicado()  # <-- Ejecuta el método del modelo
+        item.subtotal_calculado = item.subtotal()      # <-- Ejecuta el método del modelo
+        item.ahorro = item.ahorro()                    # <-- Ejecuta el método del modelo
+        item.tipo_precio = tipo_global                 # Envia el string ("Mayorista", etc.) al HTML
 
-            item.precio_aplicado = Decimal(precio)
-            item.subtotal_calculado = Decimal(cantidad) * Decimal(precio)
-
-            # ahorro unidades
-            precio_base = producto.precio_detal or 0
-            item.ahorro = (Decimal(precio_base) - Decimal(precio)) * Decimal(cantidad)
-
-        # 🔥 ESTO VA FUERA DEL IF
-        item.tipo_precio = tipo
-
+        # Acumulamos el gran total del carrito
         total += item.subtotal_calculado
 
-    # =========================
-    # PROGRESO ORIGINAL
-    # =========================
+    # Indicadores de progreso para las barras informativas en el frontend
     faltan_semi = max(0, 6 - total_articulos)
     faltan_mayor = max(0, 12 - total_articulos)
 
-    # =======================================================================
-    # 🔥 ÚNICO CAMBIO: Forzar float() solo dentro del JSON para que Render no tire Error 500
-    # =======================================================================
+    # Convertimos a tipos nativos para el script de WhatsApp (se mantiene idéntico y seguro)
     carrito_json = json.dumps([
         {
-            "producto": {"nombre": item.producto.nombre},
-            "color": item.variante.color if item.variante and hasattr(item.variante, 'color') else getattr(item, 'color', None),
-            "talla": item.variante.talla if item.variante and hasattr(item.variante, 'talla') else getattr(item, 'talla', None),
-            "cantidad": float(item.cantidad) if item.cantidad else 0,
-            "subtotal": float(item.subtotal_calculado) if item.subtotal_calculado else 0,
+            "nombre": item.producto.nombre,
+            "cantidad": int(item.cantidad or 0),
+            "subtotal": float(item.subtotal_calculado),
             "total_gramos": float(item.total_gramos) if item.total_gramos else None
         } for item in items
     ], cls=DjangoJSONEncoder)
-
+    
     return render(request, 'carrito.html', {
         'items': items,
         'total': total,

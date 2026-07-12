@@ -110,7 +110,6 @@ class Categoria(models.Model):
     def __str__(self):
         return self.nombre
 
-
 class Producto(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     nombre = models.CharField(max_length=200)
@@ -131,38 +130,31 @@ class Producto(models.Model):
     tipo_venta = models.CharField(max_length=20,choices=[('unidad', 'Por unidad'), ('gramo', 'Por gramos')],default='unidad')
     peso_producto = models.DecimalField(max_digits=6,decimal_places=2,null=True,blank=True,help_text="Peso del producto en gramos")
     precio_costo = models.DecimalField(max_digits=12,decimal_places=2,default=0,verbose_name="Precio de costo")
+    
+     # =======================================================================
+    # 📊 UTILIDADES CORREGIDAS (Sincronizadas con los gramos)
+    # =======================================================================
     @property
     def utilidad_detal(self):
-        if self.precio_detal and self.precio_costo:
-            return self.precio_detal - self.precio_costo
-        return 0
+        return self.precio_calculado_detal - (self.precio_costo or 0)
 
     @property
     def utilidad_semimayor(self):
-        if self.precio_semimayor and self.precio_costo:
-            return self.precio_semimayor - self.precio_costo
-        return 0
+        return self.precio_calculado_semimayor - (self.precio_costo or 0)
 
     @property
     def utilidad_mayor(self):
-        if self.precio_mayor and self.precio_costo:
-            return self.precio_mayor - self.precio_costo
-        return 0
+        return self.precio_calculado_mayor - (self.precio_costo or 0)
     
     @property
     def stock_total(self):
-
         if self.variantes.exists():
-            return sum(
-                v.stock
-                for v in self.variantes.all()
-        )
-
+            return sum(v.stock for v in self.variantes.all())
         return self.stock
 
     def __str__(self):
         return self.nombre
-    
+
     precio_detal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     precio_semimayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     precio_mayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -171,35 +163,41 @@ class Producto(models.Model):
     precio_por_gramo_detal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     precio_por_gramo_semimayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     precio_por_gramo_mayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    # 🔥 LÓGICA CENTRAL (LA IMPORTANTE)
-
+    
+     # =======================================================================
+    # 🔥 LÓGICA CENTRAL UNIFICADA (El motor del sistema)
+    # =======================================================================
     def precio_por_cantidad(self, cantidad):
-
-    # 🔵 VENTA POR GRAMOS
+        """
+        Devuelve el precio final de UNA UNIDAD del producto adaptado a la cantidad de la compra.
+        Garantiza que el Carrito y la Factura solo multipliquen: cantidad * precio_por_cantidad.
+        """
+        # 🔵 VENTA POR GRAMOS
         if self.tipo_venta == 'gramo':
-
             if not self.peso_producto:
-                return 0  # seguridad
+                return 0
 
+            # Calculamos el volumen total de gramos en el pedido para definir la escala de precios
             total_gramos = cantidad * self.peso_producto
 
             if total_gramos >= 12:
-                return self.precio_por_gramo_mayor or 0
+                precio_gramo = self.precio_por_gramo_mayor or 0
             elif total_gramos >= 6:
-                return self.precio_por_gramo_semimayor or 0
+                precio_gramo = self.precio_por_gramo_semimayor or 0
             else:
-                return self.precio_por_gramo_detal or 0
+                precio_gramo = self.precio_por_gramo_detal or 0
+            
+            # ✨ CORRECCIÓN CRÍTICA: Retornamos el valor real de la joya (Peso * Precio Gramo)
+            return self.peso_producto * precio_gramo
 
-    # 🟡 VENTA POR UNIDAD
+        # 🟡 VENTA POR UNIDAD
         else:
-
             if cantidad >= 12:
-                return self.precio_mayor
+                return self.precio_mayor or self.precio_detal or 0
             elif cantidad >= 6:
-                return self.precio_semimayor or self.precio_detal
+                return self.precio_semimayor or self.precio_detal or 0
             else:
-                return self.precio_detal
-
+                return self.precio_detal or 0
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -262,8 +260,8 @@ class ProductoVariante(models.Model):
     def __str__(self):
         return f"{self.producto.nombre} | {self.color or 'U'}-{self.talla or 'U'} | ${self.precio_venta} ({self.stock} unds)"
 
-
 class CarritoItem(models.Model):
+    # ... tus campos se quedan exactamente igual ...
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
     variante = models.ForeignKey(ProductoVariante, null=True, blank=True, on_delete=models.CASCADE)
@@ -275,39 +273,54 @@ class CarritoItem(models.Model):
 
     def precio_aplicado(self):
         """
-        Retorna el precio unitario correcto (por gramo o por escala de unidad).
+        Retorna el precio unitario correcto respetando la escala global del carrito
+        si fue calculada por la vista, o evaluando el item individualmente como respaldo.
         """
+        # ✨ EL TRUCO MAESTRO: Si la vista le inyectó el tipo global en memoria, lo usamos.
+        # Si no (ej. desde el admin o un script), lo calcula por su propia cantidad.
+        tipo = getattr(self, '_tipo_global', None)
+        if not tipo:
+            if self.cantidad >= 12: tipo = "Mayorista"
+            elif self.cantidad >= 6: tipo = "Semi-Mayorista"
+            else: tipo = "Detal"
+
+        # 🔵 MONTAJE PARA PRODUCTOS POR GRAMOS
         if self.producto.tipo_venta == 'gramo':
-            # Usa el precio por gramo original configurado en el producto
-            return Decimal(str(self.producto.precio_por_gramo_detal or 0))
+            if tipo == "Mayorista":
+                precio = self.producto.precio_por_gramo_mayor
+            elif tipo == "Semi-Mayorista":
+                precio = self.producto.precio_por_gramo_semimayor
+            else:
+                precio = self.producto.precio_por_gramo_detal
+            
+            # Si el precio de la escala es None, retrocedemos al detal por seguridad
+            return Decimal(str(precio or self.producto.precio_por_gramo_detal or 0))
         
-        # Productos por unidad: usa tus escalas y rescata con precio_detal si falla o da None
-        try:
-            precio = self.producto.precio_por_cantidad(self.cantidad)
-            if precio is None:
-                precio = self.producto.precio_detal or 0
-            return Decimal(str(precio))
-        except Exception:
-            return Decimal(str(self.producto.precio_detal or 0))
+        # 🟡 MONTAJE PARA PRODUCTOS POR UNIDAD
+        else:
+            if tipo == "Mayorista":
+                precio = self.producto.precio_mayor
+            elif tipo == "Semi-Mayorista":
+                precio = self.producto.precio_semimayor
+            else:
+                precio = self.producto.precio_detal
+                
+            return Decimal(str(precio or self.producto.precio_detal or 0))
 
     def subtotal(self):
-        """
-        Calcula el subtotal real multiplicando por gramos o por unidades fijas.
-        """
-        precio = self.precio_aplicado()
+        """Calcula el subtotal real multiplicando gramos totales o unidades fijas."""
+        precio_uni = self.precio_aplicado()
         cantidad_val = Decimal(str(self.cantidad or 1))
 
         if self.producto.tipo_venta == 'gramo':
             peso_val = Decimal(str(self.producto.peso_producto or 0))
             total_gramos = cantidad_val * peso_val
-            return total_gramos * precio
+            return total_gramos * precio_uni
 
-        return cantidad_val * precio
+        return cantidad_val * precio_uni
 
     def ahorro(self):
-        """
-        Calcula cuánto se está ahorrando el cliente según el tipo de venta.
-        """
+        """Calcula cuánto se está ahorrando el cliente real contra el precio detal base."""
         precio_act = self.precio_aplicado()
         cantidad_val = Decimal(str(self.cantidad or 1))
 
@@ -320,7 +333,7 @@ class CarritoItem(models.Model):
         precio_or = Decimal(str(self.producto.precio_detal or 0))
         return (precio_or - precio_act) * cantidad_val
 
-    def __str__(self):
+    def _str_(self):
         return f"{self.cantidad} x {self.producto.nombre}"
 
 class Cliente(models.Model):
