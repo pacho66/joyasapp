@@ -460,18 +460,18 @@ def guardar_producto_view(request, pk=None):
             logger.error(f"Error crítico en controlador al procesar producto: {str(e)}")
             messages.error(request, f"⚠️ Error interno: No se guardaron los cambios. Motivo: {str(e)}")
             
-            # ✨ CORRECCIÓN UX: Pasamos request.POST como 'valores' para no limpiar el formulario del usuario
-            return render(request, f'productos/{"editar_producto" if pk else "crear_producto"}.html', {
+            # ✨ RUTAS CORREGIDAS: Apuntando a la raíz de templates para evitar el TemplateDoesNotExist
+            return render(request, f'{"editar_producto" if pk else "crear_producto"}.html', {
                 'producto': producto,
-                'valores': request.POST,  # Alimenta los inputs con lo que el usuario ya había digitado
+                'valores': request.POST,  
                 'categorias': Categoria.objects.all()
             })
 
     # 🔄 Carga por petición GET normal (Edición o Creación limpia)
-    # Si estamos editando, puedes mapear el producto como 'valores' iniciales si tu HTML así lo requiere
     valores_iniciales = producto if pk else None
 
-    return render(request, f'productos/{"editar_producto" if pk else "crear_producto"}.html', {
+    # ✨ RUTAS CORREGIDAS: Apuntando a la raíz de templates para evitar el TemplateDoesNotExist
+    return render(request, f'{"editar_producto" if pk else "crear_producto"}.html', {
         'producto': producto,
         'valores': valores_iniciales,
         'categorias': Categoria.objects.all()
