@@ -142,6 +142,19 @@ class Producto(models.Model):
         return Decimal(str(self.precio_detal or 0))
     
     @property
+    def precio_total_detal_dinamico(self):
+        if self.tipo_venta == 'gramo':
+            return (self.precio_por_gramo_detal or 0) * (self.peso_producto or 0)
+        return self.precio_detal or 0
+
+    # En tu modelo ProductoVariante
+    @property
+    def precio_total_dinamico(self):
+        if self.producto.tipo_venta == 'gramo':
+            return (self.precio_venta or 0) * (self.peso or 0)
+        return self.precio_venta or 0
+    
+    @property
     def utilidad_detal(self):
         return self.precio_calculado_detal - (self.precio_costo or 0)
 

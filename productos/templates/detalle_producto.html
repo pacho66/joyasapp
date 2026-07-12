@@ -88,13 +88,15 @@ Uso exclusivo para joyas en <strong>oro 18K, diamantes y esmeraldas</strong>.
 
 <h3>Precios de Escala</h3>
 {% if producto.tipo_venta == "gramo" %}
-<p><strong>Precio Detal (por gramo):</strong> $ {{ producto.precio_por_gramo_detal|default_if_none:0|moneda }}</p>
-<p style="color:#0a7;">Semi-mayorista (6g+): $ {{ producto.precio_por_gramo_semimayor|default_if_none:0|moneda }}</p>
-<p style="color:#0a7;">Mayorista (12g+): $ {{ producto.precio_por_gramo_mayor|default_if_none:0|moneda }}</p>
+    <!-- 💎 Precios calculados dinámicamente: Peso x Valor del Gramo -->
+    <p><strong>Precio Detal (Total pieza):</strong> $ {{ producto.precio_total_detal_dinamico|default_if_none:0|moneda }} <small style="color:#666; font-weight:normal;">(${{ producto.precio_por_gramo_detal|moneda }}/g)</small></p>
+    <p style="color:#0a7;">Semi-mayorista (6g+): <strong>$ {{ producto.precio_total_semimayor_dinamico|default_if_none:0|moneda }}</strong> <small style="color:#666; font-weight:normal;">(${{ producto.precio_por_gramo_semimayor|moneda }}/g)</small></p>
+    <p style="color:#0a7;">Mayorista (12g+): <strong>$ {{ producto.precio_total_mayor_dinamico|default_if_none:0|moneda }}</strong> <small style="color:#666; font-weight:normal;">(${{ producto.precio_por_gramo_mayor|moneda }}/g)</small></p>
 {% else %}
-<p>Detal: <strong>$ {{ producto.precio_detal|default:0|moneda }}</strong></p>
-<p style="color:#0a7;">Semi-mayorista (6+): $ {{ producto.precio_semimayor|default:0|moneda }}</p>
-<p style="color:#0a7;">Mayorista (12+): $ {{ producto.precio_mayor|default:0|moneda }}</p>
+    <!-- 📦 Precios estándar por Unidad -->
+    <p>Detal: <strong>$ {{ producto.precio_detal|default:0|moneda }}</strong></p>
+    <p style="color:#0a7;">Semi-mayorista (6+): $ {{ producto.precio_semimayor|default:0|moneda }}</p>
+    <p style="color:#0a7;">Mayorista (12+): $ {{ producto.precio_mayor|default:0|moneda }}</p>
 {% endif %}
 
 <form method="POST" action="{% url 'agregar_al_carrito' producto.id %}">
@@ -120,7 +122,6 @@ Uso exclusivo para joyas en <strong>oro 18K, diamantes y esmeraldas</strong>.
 
     <div style="margin-bottom: 15px;">
         <label><strong>Color / Variante:</strong></label>
-        <!-- ✨ CORRECCIÓN: Se eliminó el onchange inline ruidoso. El script de abajo maneja el evento de forma limpia -->
         <select id="color" name="color" required style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
           <option value="">Seleccione color</option>
           {% for variante in producto.variantes.all|dictsort:"color" %}
@@ -133,7 +134,6 @@ Uso exclusivo para joyas en <strong>oro 18K, diamantes y esmeraldas</strong>.
 
     <div id="contenedor-talla" style="margin-bottom: 15px;">
         <label id="label-talla"><strong>Talla:</strong></label>
-        <!-- ✨ CORRECCIÓN: Se eliminó el onchange inline para unificar el control de stock en JS nativo -->
         <select id="talla" name="talla" style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
           <option value="">Seleccione un color primero</option>
         </select>
@@ -142,15 +142,15 @@ Uso exclusivo para joyas en <strong>oro 18K, diamantes y esmeraldas</strong>.
     <p id="stock-info" style="font-weight:bold; margin-top:5px; font-size:14px; min-height:20px;"></p>
 
     {% if producto.tipo_venta == "gramo" %}
-    <p><strong>Peso por unidad:</strong> {{ producto.peso_producto|default:0 }} g</p>
-    <p><strong>Total gramos:</strong> <span id="total-gramos">{{ producto.peso_producto|default:0 }}</span> g</p>
+        <p><strong>Peso por unidad:</strong> {{ producto.peso_producto|default:0 }} g</p>
+        <p><strong>Total gramos:</strong> <span id="total-gramos">{{ producto.peso_producto|default:0 }}</span> g</p>
     {% endif %}
 
     <p><strong>Subtotal:</strong> $ <span id="subtotal">0</span></p>
     <p id="detalle-calculo" style="font-size:14px;color:#555;"></p>
     <p id="mensaje-mayorista" style="color:green;font-weight:bold;"></p>
 
-    <!-- 📦 CONTROL DE STOCK UNIFICADO (UN SOLO BOTÓN REAL) -->
+    <!-- 📦 CONTROL DE STOCK UNIFICADO Y SANEADO -->
     <input type="hidden" id="whatsapp-numero" value="{{ perfil_tienda.whatsapp }}">
 
     {% if tiene_stock or stock_disponible > 0 %}
@@ -161,25 +161,9 @@ Uso exclusivo para joyas en <strong>oro 18K, diamantes y esmeraldas</strong>.
     {% else %}
         <p id="mensaje-agotado-backend" style="color:red;font-weight:bold;padding:12px 0;">❌ Producto agotado temporalmente</p>
     {% endif %}
-    
-        {% elif tiene_stock %}
-
-        <input type="hidden"
-        id="whatsapp-numero"
-        value="{{ perfil_tienda.whatsapp }}">
-
-        <button type="submit" id="btn-carrito"
-            style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;">
-            🛒 Agregar al carrito
-        </button>
-
-        {% else %}
-
-        <p style="color:red;font-weight:bold;">Producto agotado</p>
-
-    {% endif %}
 
 </form>
+
 <br><br>
 <button onclick="comprarWhatsApp()"
 style="
