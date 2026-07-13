@@ -1285,24 +1285,21 @@ def ganancias(request):
 # ==========================================
 @login_required
 def inventario(request):
-    # Traemos los productos del usuario cargando sus variantes en una sola consulta (eficiencia)
-    productos = Producto.objects.filter(usuario=request.user).prefetch_related('variantes').order_by('nombre')
+    # 1. Traemos la base completa para calcular métricas globales reales
+    productos_base = Producto.objects.filter(usuario=request.user).prefetch_related('variantes').order_by('nombre')
 
-    total_productos = productos.count()
+    total_productos = productos_base.count()
     
-    # 🌟 CORRECCIÓN PRO: Evaluamos el stock real (del producto o de la suma de sus variantes)
     productos_stock = 0
     stock_bajo = 0
     agotados = 0
 
-    for p in productos:
-        # Si el producto tiene variantes, su stock real es la suma de ellas
+    for p in productos_base:
         if p.variantes.exists():
             stock_real = p.variantes.aggregate(total=Sum('stock'))['total'] or 0
         else:
             stock_real = p.stock or 0
 
-        # Clasificación exacta para los contadores del HTML
         if stock_real > 5:
             productos_stock += 1
         elif 0 < stock_real <= 5:
@@ -1310,12 +1307,20 @@ def inventario(request):
         else:
             agotados += 1
 
+    # 🔍 2. SISTEMA DE BÚSQUEDA DEL INVENTARIO
+    q = request.GET.get('q', '').strip()
+    productos = productos_base # Por defecto muestra todos
+    
+    if q:
+        productos = productos_base.filter(nombre__icontains=q)
+
     context = {
         'productos': productos,
         'total_productos': total_productos,
         'productos_stock': productos_stock,  
         'stock_bajo': stock_bajo,            
-        'agotados': agotados,                
+        'agotados': agotados,
+        'q': q,  # Enviamos la query de vuelta para mantener el texto en el input
     }
     return render(request, 'inventario.html', context)
 
@@ -2501,15 +2506,21 @@ def detalle_pedido(request, pedido_id):
 
     items = pedido.items.select_related('producto', 'variante').all()
 
-    # ===============================
-    # 🔢 TOTALES
-    # ===============================
-    subtotal = sum(Decimal(item.subtotal or 0) for item in items)
-    iva_total = sum(Decimal(item.iva or 0) for item in items)
-    descuento_total = sum(Decimal(item.descuento or 0) for item in items)
-    retefuente_total = sum(Decimal(item.retefuente or 0) for item in items)
-    envio = Decimal(pedido.costo_envio or 0)
-    total_final = Decimal(pedido.total or 0)
+    # =======================================================
+    # 🔢 MATEMÁTICA FISCAL DINÁMICA (Sincronizada e infalible)
+    # =======================================================
+    subtotal = sum(Decimal(str(item.subtotal or 0)) for item in items)
+    iva_total = sum(Decimal(str(item.iva or 0)) for item in items)
+    retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
+    
+    # Soporta descuento por ítem o descuento global por porcentaje
+    porcentaje_desc = getattr(pedido, 'porcentaje_descuento', 0) or 0
+    descuento_total = sum(Decimal(str(item.descuento or 0)) for item in items)
+    if porcentaje_desc and descuento_total == 0:
+        descuento_total = subtotal * (Decimal(str(porcentaje_desc)) / Decimal('100'))
+        
+    envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
+    total_final = subtotal + iva_total + envio - descuento_total - retefuente_total
 
     # 🔗 ENLACES NATIVOS
     link_pdf = request.build_absolute_uri(reverse('pedido_pdf', args=[pedido.id]))
@@ -2539,7 +2550,7 @@ def detalle_pedido(request, pedido_id):
     total_abonado = sum(a.monto for a in abonos) if abonos else 0
 
     # ===============================
-    # 📦 CONTEXT COPIADO TAL CUAL
+    # 📦 PERFIL DE LA TIENDA
     # ===============================
     logo_path = None
     try:
@@ -2564,7 +2575,8 @@ def detalle_pedido(request, pedido_id):
         'iva_total': iva_total,
         'descuento_total': descuento_total,
         'retefuente_total': retefuente_total,
-        'envio': envio,
+        'envio': envio,            # Clave 1 para el template
+        'costo_envio': envio,      # Clave 2 (Doble protección anti-mismatch)
         'total_final': total_final,
         'link_pdf': link_pdf,
         'link_publico': link_publico,
@@ -2583,8 +2595,8 @@ def detalle_pedido(request, pedido_id):
     print("DETALLE PEDIDO OK - CRM SINCRONIZADO")
     return render(request, 'detalle_pedido.html', context)
 
+
 def pedido_pdf(request, pedido_id):
-    # (Todo el código de tu función pedido_pdf se queda idéntico, no requiere cambios)
     pedido = get_object_or_404(Pedido, id=pedido_id)
     items = pedido.items.select_related('producto', 'variante').all()
     usuario_pedido = pedido.usuario
@@ -2610,26 +2622,19 @@ def pedido_pdf(request, pedido_id):
     color_primario = perfil.color_primario if perfil else "#111111"
     color_secundario = perfil.color_secundario if perfil else "#333333"
 
-    subtotal = Decimal('0')
-    iva_total = Decimal('0')
-    descuento_total = Decimal('0')
-    retefuente_total = Decimal('0')
-
-    for item in items:
-        if item.subtotal:
-            subtotal += Decimal(str(item.subtotal))
-        if item.iva:
-            iva_total += Decimal(str(item.iva))
-        if item.descuento:
-            descuento_total += Decimal(str(item.descuento))
-        if item.retefuente:
-            retefuente_total += Decimal(str(item.retefuente))
+    # =======================================================
+    # 🔢 MATEMÁTICA FISCAL DINÁMICA EN EL PDF (Mismo motor)
+    # =======================================================
+    subtotal = sum(Decimal(str(item.subtotal or 0)) for item in items)
+    iva_total = sum(Decimal(str(item.iva or 0)) for item in items)
+    retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
 
     porcentaje_desc = getattr(pedido, 'porcentaje_descuento', 0) or 0
+    descuento_total = sum(Decimal(str(item.descuento or 0)) for item in items)
     if porcentaje_desc and descuento_total == 0:
         descuento_total = subtotal * (Decimal(str(porcentaje_desc)) / Decimal('100'))
         
-    envio = Decimal(str(pedido.costo_envio or 0))
+    envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
     total_final = subtotal + iva_total + envio - descuento_total - retefuente_total
 
     if hasattr(pedido, 'fecha') and pedido.fecha:
@@ -2660,7 +2665,8 @@ def pedido_pdf(request, pedido_id):
         'iva_total': iva_total,
         'descuento_total': descuento_total,
         'retefuente_total': retefuente_total,
-        'envio': envio,
+        'envio': envio,            # Clave 1 para el template HTML del PDF
+        'costo_envio': envio,      # Clave 2 (Doble protección)
         'total_final': total_final,
         'fecha_str': fecha_str,
     }

@@ -7,7 +7,6 @@
     margin:auto;
     padding:25px;
     font-family:Arial,sans-serif;
-    /* Espacio de seguridad por si tienes barras flotantes abajo */
     margin-bottom: 60px; 
 }
 
@@ -49,6 +48,88 @@
 .azul{border-left:5px solid #007bff;}
 .naranja{border-left:5px solid #ff9800;}
 
+/* 🔍 NUEVOS ESTILOS PARA EL SECTOR DE BÚSQUEDA */
+.tabla-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.buscador-form {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    max-width: 400px;
+}
+
+.input-buscar {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.input-buscar:focus {
+    border-color: #111;
+}
+
+.btn-buscar {
+    background: #111;
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-buscar:hover {
+    background: #333;
+}
+
+.btn-limpiar {
+    background: #f0f0f0;
+    color: #333;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-limpiar:hover {
+    background: #e0e0e0;
+}
+
+/* ✏️ BOTÓN EDITAR NATIVO */
+.btn-editar {
+    background: #f4f4f5;
+    color: #18181b;
+    padding: 6px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid #e4e4e7;
+    transition: all 0.2s ease;
+}
+
+.btn-editar:hover {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+}
+
 .tabla{
     background:#fff;
     border-radius:14px;
@@ -56,12 +137,10 @@
     box-shadow:0 4px 14px rgba(0,0,0,.08);
 }
 
-/* 📱 Contenedor preventivo para evitar que la tabla rompa el diseño en celular */
 .tabla-responsiva {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    margin-top: 15px;
 }
 
 table{
@@ -74,7 +153,7 @@ th,td{
     border-bottom:1px solid #eee;
     text-align:left;
     font-size:14px;
-    white-space: nowrap; /* Evita que los textos se partan feo en columnas angostas */
+    white-space: nowrap; 
 }
 
 th{
@@ -119,6 +198,7 @@ th{
     .card h2{font-size:22px;}
     table{font-size:13px;}
     th, td{padding: 10px 8px;}
+    .buscador-form { max-width: 100%; }
 }
 </style>
 
@@ -152,7 +232,18 @@ th{
 <!-- TABLA -->
 <div class="tabla">
 
-    <h3 style="margin: 0; font-size: 18px; color: #111;">🛍️ Lista de Productos</h3>
+    <!-- 🔍 CONTROL SUPERIOR FLUIDO: TÍTULO Y BUSCADOR -->
+    <div class="tabla-header-flex">
+        <h3 style="margin: 0; font-size: 18px; color: #111;">🛍️ Lista de Productos</h3>
+        
+        <form method="GET" action="{% url 'inventario' %}" class="buscador-form">
+            <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre..." class="input-buscar">
+            <button type="submit" class="btn-buscar">🔍 Buscar</button>
+            {% if q %}
+                <a href="{% url 'inventario' %}" class="btn-limpiar" title="Limpiar filtro">❌</a>
+            {% endif %}
+        </form>
+    </div>
 
     <div class="tabla-responsiva">
         <table>
@@ -162,6 +253,7 @@ th{
                     <th>Precio Real</th>
                     <th>Stock</th>
                     <th>Estado</th>
+                    <th style="text-align: center;">Acciones</th> <!-- ✏️ Nueva Columna -->
                 </tr>
             </thead>
             <tbody>
@@ -170,16 +262,14 @@ th{
                     <!-- Nombre -->
                     <td style="font-weight: 500; color: #222;">{{ producto.nombre }}</td>
 
-                    <!-- 🎯 PRECIO INTELIGENTE CORREGIDO -->
+                    <!-- PRECIO INTELIGENTE -->
                     <td>
                         {% if producto.tipo_venta == 'gramo' %}
-                            <!-- Si es por gramos, muestra el valor real calculado de la pieza -->
                             ${{ producto.precio_calculado_detal|floatformat:0 }}
                             <small style="display: block; color: #666; font-size: 11px; font-weight: normal; margin-top: 2px;">
                                 ({{ producto.peso_producto }}g)
                             </small>
                         {% else %}
-                            <!-- Si es por unidad, muestra su precio estándar -->
                             ${{ producto.precio_detal|floatformat:0 }}
                         {% endif %}
                     </td>
@@ -197,10 +287,22 @@ th{
                             <span class="stock-ok">Disponible</span>
                         {% endif %}
                     </td>
+
+                    <!-- ✏️ BOTÓN EDITAR -->
+                    <td style="text-align: center;">
+                        <!-- Ajusta 'editar_producto' por el nombre real de tu ruta de edición -->
+                        <a href="{% url 'editar_producto' producto.id %}" class="btn-editar">✏️ Editar</a>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4" style="text-align: center; color: #888; padding: 30px 0;">No hay productos registrados</td>
+                    <td colspan="5" style="text-align: center; color: #888; padding: 30px 0;">
+                        {% if q %}
+                            No se encontraron productos para "{{ q }}"
+                        {% else %}
+                            No hay productos registrados
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
