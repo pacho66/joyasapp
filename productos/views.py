@@ -2595,12 +2595,12 @@ def detalle_pedido(request, pedido_id):
     print("DETALLE PEDIDO OK - CRM SINCRONIZADO")
     return render(request, 'detalle_pedido.html', context)
 
-
 def pedido_pdf(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
     items = pedido.items.select_related('producto', 'variante').all()
     usuario_pedido = pedido.usuario
 
+    # 🏢 1. OBTENCIÓN DEL PERFIL
     try:
         perfil = Perfil.objects.get(user=usuario_pedido)
     except Perfil.DoesNotExist:
@@ -2611,38 +2611,54 @@ def pedido_pdf(request, pedido_id):
     empresa_telefono = perfil.whatsapp if perfil else ""
     empresa_direccion = perfil.direccion if perfil else ""
     empresa_email = perfil.email_empresa if perfil else ""
-    
-    empresa_logo = None
-    if perfil and perfil.logo:
-        try:
-            empresa_logo = perfil.logo.url
-        except Exception:
-            empresa_logo = None
-
     color_primario = perfil.color_primario if perfil else "#111111"
     color_secundario = perfil.color_secundario if perfil else "#333333"
 
-    # =======================================================
-    # 🔢 MATEMÁTICA FISCAL DINÁMICA EN EL PDF (Mismo motor)
-    # =======================================================
-    subtotal = sum(Decimal(str(item.subtotal or 0)) for item in items)
-    iva_total = sum(Decimal(str(item.iva or 0)) for item in items)
-    retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
-
+    # 📊 2. MOTOR FISCAL DEL PERFIL (Reglas de negocio sincronizadas)
+    subtotal_base = sum(Decimal(str(item.subtotal or 0)) for item in items)
+    
+    # Descuento
     porcentaje_desc = getattr(pedido, 'porcentaje_descuento', 0) or 0
-    descuento_total = sum(Decimal(str(item.descuento or 0)) for item in items)
-    if porcentaje_desc and descuento_total == 0:
-        descuento_total = subtotal * (Decimal(str(porcentaje_desc)) / Decimal('100'))
-        
-    envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
-    total_final = subtotal + iva_total + envio - descuento_total - retefuente_total
+    if not porcentaje_desc and perfil and getattr(perfil, 'aplicar_descuentos', False):
+        porcentaje_desc = getattr(perfil, 'porcentaje_descuento_promo', 0) or 0
+    descuento_total = subtotal_base * (Decimal(str(porcentaje_desc)) / Decimal('100')) if porcentaje_desc else Decimal('0')
 
-    if hasattr(pedido, 'fecha') and pedido.fecha:
-        fecha_str = pedido.fecha.strftime('%Y-%m-%d')
-    elif hasattr(pedido, 'fecha_creacion') and pedido.fecha_creacion:
-        fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d')
+    # Envío
+    envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
+    if envio == 0 and perfil and getattr(perfil, 'cobrar_envio', False):
+        limite_gratis = Decimal(str(getattr(perfil, 'envio_gratis_desde', 0) or 0))
+        if subtotal_base < limite_gratis:
+            envio = Decimal(str(getattr(perfil, 'costo_envio_estandar', 0) or 0))
+
+    # IVA
+    es_responsable_iva = perfil and getattr(perfil, 'responsable_iva', False)
+    mostrar_iva_disc = perfil and getattr(perfil, 'mostrar_iva_discriminado', False)
+    porcentaje_iva = Decimal(str(getattr(perfil, 'porcentaje_iva', 19) or 19))
+    
+    iva_total = sum(Decimal(str(item.iva or 0)) for item in items)
+
+    if es_responsable_iva:
+        if iva_total == 0:
+            if mostrar_iva_disc:
+                iva_total = subtotal_base - (subtotal_base / (Decimal('1') + (porcentaje_iva / Decimal('100'))))
+                subtotal_render = subtotal_base - iva_total
+                total_final = subtotal_base + envio - descuento_total
+            else:
+                iva_total = subtotal_base * (porcentaje_iva / Decimal('100'))
+                subtotal_render = subtotal_base
+                total_final = subtotal_base + iva_total + envio - descuento_total
+        else:
+            subtotal_render = subtotal_base - iva_total if mostrar_iva_disc else subtotal_base
+            total_final = subtotal_base + (0 if mostrar_iva_disc else iva_total) + envio - descuento_total
     else:
-        fecha_str = "S/F"
+        iva_total = Decimal('0')
+        subtotal_render = subtotal_base
+        total_final = subtotal_base + envio - descuento_total
+
+    retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
+    total_final = total_final - retefuente_total
+
+    fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d') if pedido.fecha_creacion else "S/F"
 
     context = {
         'pedido': pedido,
@@ -2658,15 +2674,19 @@ def pedido_pdf(request, pedido_id):
         'empresa_telefono': empresa_telefono,
         'empresa_direccion': empresa_direccion,
         'empresa_email': empresa_email,
-        'empresa_logo': empresa_logo,
         'color_primario': color_primario,
         'color_secundario': color_secundario,
-        'subtotal': subtotal,
+        # Inyección de totales controlados
+        'subtotal': subtotal_render,
         'iva_total': iva_total,
+        'porcentaje_iva': porcentaje_iva,
+        'es_responsable_iva': es_responsable_iva,
+        'mostrar_iva_discriminado': mostrar_iva_disc,
         'descuento_total': descuento_total,
+        'porcentaje_descuento': porcentaje_desc,
         'retefuente_total': retefuente_total,
-        'envio': envio,            # Clave 1 para el template HTML del PDF
-        'costo_envio': envio,      # Clave 2 (Doble protección)
+        'envio': envio,
+        'costo_envio': envio,
         'total_final': total_final,
         'fecha_str': fecha_str,
     }
@@ -3035,46 +3055,77 @@ def cartera_clientes(request):
 
 def factura_publica(request, token):
     """
-    Vista que renderiza el recibo público para el cliente mediante el token UUID.
+    Vista del recibo público totalmente gobernada por la configuración del negocio.
     """
     pedido = get_object_or_404(Pedido, token_publico=token)
     items = pedido.items.select_related('producto', 'variante').all()
     
-    # 🛡️ PROTECCIÓN CRÍTICA: Obtención segura del perfil
+    # 🏢 1. OBTENCIÓN DEL PERFIL (La fuente de la verdad)
     usuario_pedido = pedido.usuario
     try:
         perfil = Perfil.objects.get(user=usuario_pedido)
     except Perfil.DoesNotExist:
         perfil = None
 
+    # Datos básicos de la empresa
     empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
     empresa_nit = perfil.nit if perfil else ""
     empresa_telefono = perfil.whatsapp if perfil else ""
     empresa_direccion = getattr(perfil, 'direccion', getattr(perfil, 'ciudad', '')) or ""
     empresa_email = perfil.email_empresa if perfil else ""
-    
-    empresa_logo = ""
-    if perfil and hasattr(perfil, 'logo') and perfil.logo:
-        try:
-            empresa_logo = perfil.logo.url
-        except Exception:
-            empresa_logo = ""
-
     color_primario = perfil.color_primario if perfil else "#000000"
     color_secundario = perfil.color_secundario if perfil else "#333333"
 
-    # 🛡️ PROTECCIÓN DE CÁLCULOS MATEMÁTICOS CONTRA VALORES NULL (Unificado)
-    subtotal = sum(Decimal(str(item.subtotal or 0)) for item in items)
-    iva_total = sum(Decimal(str(item.iva or 0)) for item in items)
+    # 📊 2. MOTOR FISCAL DEL PERFIL (Cálculos inteligentes en caliente)
+    subtotal_base = sum(Decimal(str(item.subtotal or 0)) for item in items)
     
+    # Regla de Descuento (Pedido manual > Configuración del Negocio)
     porcentaje_desc = getattr(pedido, 'porcentaje_descuento', 0) or 0
-    descuento_total = subtotal * (Decimal(str(porcentaje_desc)) / Decimal('100')) if porcentaje_desc else Decimal('0')
-    
-    retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
-    envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
-    total_final = subtotal + iva_total + envio - descuento_total - retefuente_total
+    if not porcentaje_desc and perfil and getattr(perfil, 'aplicar_descuentos', False):
+        porcentaje_desc = getattr(perfil, 'porcentaje_descuento_promo', 0) or 0
+    descuento_total = subtotal_base * (Decimal(str(porcentaje_desc)) / Decimal('100')) if porcentaje_desc else Decimal('0')
 
-    # Motor de estados
+    # Regla de Envío (Costo real del pedido > Costo estándar del negocio con umbral gratis)
+    envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
+    if envio == 0 and perfil and getattr(perfil, 'cobrar_envio', False):
+        limite_gratis = Decimal(str(getattr(perfil, 'envio_gratis_desde', 0) or 0))
+        if subtotal_base < limite_gratis:
+            envio = Decimal(str(getattr(perfil, 'costo_envio_estandar', 0) or 0))
+
+    # Regla de IVA Inteligente (Revisa si el negocio cobra IVA y si es discriminado)
+    es_responsable_iva = perfil and getattr(perfil, 'responsable_iva', False)
+    mostrar_iva_disc = perfil and getattr(perfil, 'mostrar_iva_discriminado', False)
+    porcentaje_iva = Decimal(str(getattr(perfil, 'porcentaje_iva', 19) or 19))
+    
+    iva_total = sum(Decimal(str(item.iva or 0)) for item in items)
+
+    if es_responsable_iva:
+        if iva_total == 0:  # Si no viene calculado desde el checkout, lo extraemos/calculamos aquí
+            if mostrar_iva_disc:
+                # El IVA ya está dentro del precio del producto, lo desglosamos matemáticamente
+                iva_total = subtotal_base - (subtotal_base / (Decimal('1') + (porcentaje_iva / Decimal('100'))))
+                subtotal_render = subtotal_base - iva_total
+                total_final = subtotal_base + envio - descuento_total
+            else:
+                # El IVA se le suma encima al valor del producto
+                iva_total = subtotal_base * (porcentaje_iva / Decimal('100'))
+                subtotal_render = subtotal_base
+                total_final = subtotal_base + iva_total + envio - descuento_total
+        else:
+            # Si el IVA ya venía calculado por ítem
+            subtotal_render = subtotal_base - iva_total if mostrar_iva_disc else subtotal_base
+            total_final = subtotal_base + (0 if mostrar_iva_disc else iva_total) + envio - descuento_total
+    else:
+        # Si NO es responsable de IVA en Configuración, todo se apaga y queda limpio ($0)
+        iva_total = Decimal('0')
+        subtotal_render = subtotal_base
+        total_final = subtotal_base + envio - descuento_total
+
+    # Deducciones finales
+    retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
+    total_final = total_final - retefuente_total
+
+    # Motor de estados y URLs de comunicación
     if pedido.estado == "pendiente":
         estado = "pendiente"
     elif pedido.saldo_pendiente is not None and pedido.saldo_pendiente <= 0:
@@ -3084,57 +3135,46 @@ def factura_publica(request, token):
     else:
         estado = pedido.estado
 
-    # Integración de WhatsApp
-    mensaje = f"Hola! Adjunto el comprobante de pago del pedido #{pedido.numero_orden} por valor de ${total_final:,.0f}".replace(",", ".")
+    mensaje = f"Hola! Adjunto el comprobante del pedido #{pedido.numero_orden} por valor de ${total_final:,.0f}".replace(",", ".")
     whatsapp_num = empresa_telefono if empresa_telefono != "-" else ""
     whatsapp_url = f"https://wa.me/{whatsapp_num}?text={urllib.parse.quote(mensaje)}"
     qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(whatsapp_url)}"
 
-    # Control de fechas seguro
-    if getattr(pedido, 'fecha', None):
-        fecha_str = pedido.fecha.strftime('%Y-%m-%d')
-    elif getattr(pedido, 'fecha_creacion', None):
-        fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d')
-    else:
-        fecha_str = timezone.now().strftime('%Y-%m-%d')
-
-    # Datos del cliente
-    c_nombre = getattr(pedido, 'cliente_nombre', None) or (pedido.cliente.nombre if getattr(pedido, 'cliente', None) else 'Consumidor Final')
-    c_email = getattr(pedido, 'cliente_email', None) or (pedido.cliente.email if getattr(pedido, 'cliente', None) else '')
-    c_telefono = getattr(pedido, 'cliente_telefono', None) or (pedido.cliente.telefono if getattr(pedido, 'cliente', None) else '')
-    c_direccion = getattr(pedido, 'cliente_direccion', None) or (pedido.cliente.direccion if getattr(pedido, 'cliente', None) else '')
-    c_ciudad = getattr(pedido, 'cliente_ciudad', None) or (pedido.cliente.ciudad if getattr(pedido, 'cliente', None) else '')
-    c_nit = getattr(pedido, 'cliente_nit', None) or (pedido.cliente.nit if getattr(pedido, 'cliente', None) else '')
+    fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d') if pedido.fecha_creacion else timezone.now().strftime('%Y-%m-%d')
 
     context = {
         'pedido': pedido,
         'items': items,
-        'cliente_nombre': c_nombre,
-        'cliente_email': c_email,
-        'cliente_telefono': c_telefono,
-        'cliente_direccion': c_direccion,
-        'cliente_ciudad': c_ciudad,
-        'cliente_nit': c_nit,
+        'cliente_nombre': getattr(pedido, 'cliente_nombre', 'Consumidor Final'),
+        'cliente_email': getattr(pedido, 'cliente_email', ''),
+        'cliente_telefono': getattr(pedido, 'cliente_telefono', ''),
+        'cliente_direccion': getattr(pedido, 'cliente_direccion', ''),
+        'cliente_ciudad': getattr(pedido, 'cliente_ciudad', ''),
+        'cliente_nit': getattr(pedido, 'cliente_nit', ''),
         'empresa_nombre': empresa_nombre,
         'empresa_nit': empresa_nit,
         'empresa_telefono': empresa_telefono,
         'empresa_direccion': empresa_direccion,
         'empresa_email': empresa_email,
-        'empresa_logo': empresa_logo,
         'color_primario': color_primario,
         'color_secundario': color_secundario,
         'fecha_str': fecha_str,
-        'subtotal': subtotal,
+        # Variables numéricas calculadas bajo reglas del perfil
+        'subtotal': subtotal_render,
         'iva_total': iva_total,
+        'porcentaje_iva': porcentaje_iva,
+        'es_responsable_iva': es_responsable_iva,
+        'mostrar_iva_discriminado': mostrar_iva_disc,
         'total_final': total_final,
         'descuento_total': descuento_total,
+        'porcentaje_descuento': porcentaje_desc,
         'retefuente_total': retefuente_total,
         'envio': envio,   
+        'costo_envio': envio,   
         'qr_pago_url': qr_url,  
         'whatsapp_url': whatsapp_url,
         'estado': estado,
     }
-    
     return render(request, 'factura_publica.html', context)
 
 @login_required
