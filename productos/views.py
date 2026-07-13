@@ -2708,7 +2708,6 @@ def factura_publica(request, token):
     
     return render(request, 'factura_publica.html', context)
 
-
 def pedido_pdf(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
     items = pedido.items.select_related('producto', 'variante').all()
@@ -2765,62 +2764,6 @@ def pedido_pdf(request, pedido_id):
     except Exception as e:
         return HttpResponse(f"Error interno: {str(e)}", status=500)
 
-def pedido_pdf(request, pedido_id):
-    pedido = get_object_or_404(Pedido, id=pedido_id)
-    items = pedido.items.select_related('producto', 'variante').all()
-    usuario_pedido = pedido.usuario
-
-    try:
-        perfil = Perfil.objects.get(user=usuario_pedido)
-    except Perfil.DoesNotExist:
-        perfil = None
-
-    empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
-    empresa_nit = perfil.nit if perfil else ""
-    empresa_telefono = perfil.whatsapp if perfil else ""
-    empresa_direccion = perfil.direccion if perfil else ""
-    empresa_email = perfil.email_empresa if perfil else ""
-    color_primario = perfil.color_primario if perfil else "#111111"
-    color_secundario = perfil.color_secundario if perfil else "#333333"
-
-    # ⚡ LLAMADA AL MOTOR FISCAL ÚNICO
-    totales = calcular_totales_pedido(pedido, perfil, items)
-
-    fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d') if pedido.fecha_creacion else "S/F"
-
-    context = {
-        'pedido': pedido,
-        'items': items,
-        'cliente_nombre': pedido.cliente_nombre,
-        'cliente_email': pedido.cliente_email,
-        'cliente_telefono': pedido.cliente_telefono,
-        'cliente_direccion': pedido.cliente_direccion,
-        'cliente_ciudad': pedido.cliente_ciudad,
-        'cliente_nit': pedido.cliente_nit,
-        'empresa_nombre': empresa_nombre,
-        'empresa_nit': empresa_nit,
-        'empresa_telefono': empresa_telefono,
-        'empresa_direccion': empresa_direccion,
-        'empresa_email': empresa_email,
-        'color_primario': color_primario,
-        'color_secundario': color_secundario,
-        'fecha_str': fecha_str,
-    }
-    # Inyectamos exactamente los mismos totales
-    context.update(totales)
-
-    try:
-        template = get_template('pedido_pdf.html')
-        html = template.render(context)
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="pedido_{pedido.numero_orden}.pdf"'
-        pdf = pisa.CreatePDF(html, dest=response)
-        if pdf.err:
-            return HttpResponse(f"Error generando PDF: {pdf.err}", status=500)
-        return response
-    except Exception as e:
-        return HttpResponse(f"Error interno: {str(e)}", status=500)
-    
 @login_required
 def generar_factura(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
@@ -2995,14 +2938,26 @@ def generar_factura(request, pedido_id):
     return response
 
 @login_required(login_url='/login/')
-def lista_gastos(request):
+def gastos(request): # 🎯 Nombre unificado para cumplir con urls.py y Render
     usuario = request.user
     _asegurar_gastos_basicos(usuario)
 
-    # Filtro base: Solo registros contables en estado 'Activo'
+    # 1. 📥 PROCESAR CREACIÓN DE GASTO (Rescatado de la vista vieja)
+    if request.method == 'POST':
+        form = GastoForm(request.POST)
+        if form.is_valid():
+            gasto = form.save(commit=False)
+            gasto.usuario = usuario
+            gasto.save()
+            messages.success(request, f"Gasto '{gasto.nombre}' registrado correctamente.")
+            return redirect('gastos')
+    else:
+        form = GastoForm()
+
+    # 2. 🔍 FILTRO BASE Y CONSULTA (Nueva estructura de analítica)
     gastos_query = Gasto.objects.filter(usuario=usuario, activo=True)
 
-    # 📊 CÁLCULO DE METRICAS KPI CONTINUAS (Para las Tarjetas Superiores)
+    # 📊 CÁLCULO DE MÉTRICAS KPI CONTINUAS
     metricas = gastos_query.aggregate(
         total_global=Sum('monto'),
         total_fijo=Sum('monto', filter=Q(categoria='fijo')),
@@ -3015,12 +2970,11 @@ def lista_gastos(request):
     total_fab = metricas['total_fab'] or 0
     total_mkt = metricas['total_mkt'] or 0
 
-    # 🔢 Obtención de porcentajes reales para analítica visual
     porcentaje_fijo = (total_fijo / total_global * 100) if total_global > 0 else 0
     porcentaje_fab = (total_fab / total_global * 100) if total_global > 0 else 0
     porcentaje_mkt = (total_mkt / total_global * 100) if total_global > 0 else 0
 
-    # Procesar filtros de búsqueda de la UI si existen
+    # 🔢 Procesar filtros de búsqueda desde la UI si existen
     buscar = request.GET.get('buscar')
     categoria_filtrada = request.GET.get('categoria')
 
@@ -3030,14 +2984,13 @@ def lista_gastos(request):
         gastos_query = gastos_query.filter(categoria__iexact=categoria_filtrada)
 
     gastos_filtrados = gastos_query.order_by('-fecha')
-    form = GastoForm()
 
     return render(request, "gastos.html", {
         "gastos": gastos_filtrados,
         "categoria_filtrada": categoria_filtrada,
         "total_gastos": total_global,
         
-        # Datos empaquetados para las Tarjetas KPI
+        # Datos para las tarjetas analíticas superiores
         "total_fijo": total_fijo, "porcentaje_fijo": porcentaje_fijo,
         "total_fab": total_fab, "porcentaje_fab": porcentaje_fab,
         "total_mkt": total_mkt, "porcentaje_mkt": porcentaje_mkt,
@@ -3045,62 +2998,43 @@ def lista_gastos(request):
         "form": form,
     })
 
+# ✏️ Ajustamos los redireccionamientos de las acciones para que apunten a 'gastos'
 @login_required(login_url='/login/')
 def editar_gasto(request, id):
     gasto = get_object_or_404(Gasto, id=id, usuario=request.user, activo=True)
-    
     if request.method == 'POST':
         form = GastoForm(request.POST, instance=gasto)
         if form.is_valid():
             form.save()
             messages.success(request, f"Gasto '{gasto.nombre}' actualizado correctamente.")
-            return redirect('lista_gastos')
-        else:
-            # ❌ Si hay errores, volvemos a renderizar la lista pasándole el formulario fallido con sus alertas
-            gastos = Gasto.objects.filter(usuario=request.user, activo=True).order_by('-fecha')
-            total_gastos = gastos.aggregate(total=Sum("monto"))["total"] or 0
-            messages.error(request, "Por favor corrige los errores en el formulario.")
-            return render(request, "lista_gastos.html", {
-                "gastos": gastos, "total_gastos": total_gastos, "form": form
-            })
-    return redirect('lista_gastos')
+            return redirect('gastos')
+    return redirect('gastos')
 
 @login_required(login_url='/login/')
 def duplicar_gasto(request, id):
     gasto_original = get_object_or_404(Gasto, id=id, usuario=request.user, activo=True)
-    
-    # 🔢 Buscar el número de copia incremental
     nombre_base = re.sub(r' \(Copia \d+\)$', '', gasto_original.nombre)
-    coincidencias = Gasto.objects.filter(
-        usuario=request.user, 
-        nombre__startswith=nombre_base,
-        activo=True
-    ).count()
+    coincidencias = Gasto.objects.filter(usuario=request.user, nombre__startswith=nombre_base, activo=True).count()
     
     nuevo_nombre = f"{nombre_base} (Copia {coincidencias})"
-    
-    gasto_nuevo = Gasto(
+    Gasto.objects.create(
         usuario=request.user,
         nombre=nuevo_nombre,
         monto=gasto_original.monto,
         categoria=gasto_original.categoria,
         observaciones=gasto_original.observaciones
     )
-    gasto_nuevo.save()
     messages.success(request, f"Duplicado como: '{nuevo_nombre}'")
-    return redirect('lista_gastos')
+    return redirect('gastos')
 
 @login_required(login_url='/login/')
 def eliminar_gasto(request, id):
     gasto = get_object_or_404(Gasto, id=id, usuario=request.user)
     nombre_eliminado = gasto.nombre
-    
-    # 📉 BORRADO LÓGICO: Mantiene el registro intacto para no quebrar estadísticas históricas
     gasto.activo = False
     gasto.save()
-    
-    messages.warning(request, f"Gasto '{nombre_eliminado}' archivado/eliminado del panel.")
-    return redirect('lista_gastos')
+    messages.warning(request, f"Gasto '{nombre_eliminado}' archivado del panel.")
+    return redirect('gastos')
 
 @login_required
 def registrar_abono(request, pedido_id):
@@ -3142,7 +3076,6 @@ def registrar_abono(request, pedido_id):
             messages.success(request, "Abono registrado correctamente")
 
     return redirect('detalle_pedido', pedido_id=pedido.id)
-
 
 @login_required
 def cobrar_whatsapp(request, pedido_id):

@@ -202,7 +202,7 @@
 
     function abrirModalCrear() {
         titulo.innerText = "➕ Registrar Operación de Gasto";
-        formulario.setAttribute("action", "{% url 'lista_gastos' %}");
+        formulario.setAttribute("action", "{% url 'gastos' %}");
         document.getElementById("id_nombre").value = "";
         document.getElementById("id_monto").value = "0";
         document.getElementById("id_categoria").value = "fabricacion";
