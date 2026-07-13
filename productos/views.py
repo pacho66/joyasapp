@@ -3057,7 +3057,7 @@ def factura_publica(request, token):
     color_primario = perfil.color_primario if perfil else "#000000"
     color_secundario = perfil.color_secundario if perfil else "#333333"
 
-    # 🛡️ PROTECCIÓN DE CÁLCULOS MATEMÁTICOS CONTRA VALORES NULL
+    # 🛡️ PROTECCIÓN DE CÁLCULOS MATEMÁTICOS CONTRA VALORES NULL (Unificado)
     subtotal = sum(Decimal(str(item.subtotal or 0)) for item in items)
     iva_total = sum(Decimal(str(item.iva or 0)) for item in items)
     
@@ -3084,7 +3084,7 @@ def factura_publica(request, token):
     whatsapp_url = f"https://wa.me/{whatsapp_num}?text={urllib.parse.quote(mensaje)}"
     qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(whatsapp_url)}"
 
-    # Control de fechas seguro para evitar 'NoneType' object has no attribute 'strftime'
+    # Control de fechas seguro
     if getattr(pedido, 'fecha', None):
         fecha_str = pedido.fecha.strftime('%Y-%m-%d')
     elif getattr(pedido, 'fecha_creacion', None):
@@ -3092,7 +3092,7 @@ def factura_publica(request, token):
     else:
         fecha_str = timezone.now().strftime('%Y-%m-%d')
 
-    # Extraemos de forma segura los datos del cliente, soportando si vienen por relación externa
+    # Datos del cliente
     c_nombre = getattr(pedido, 'cliente_nombre', None) or (pedido.cliente.nombre if getattr(pedido, 'cliente', None) else 'Consumidor Final')
     c_email = getattr(pedido, 'cliente_email', None) or (pedido.cliente.email if getattr(pedido, 'cliente', None) else '')
     c_telefono = getattr(pedido, 'cliente_telefono', None) or (pedido.cliente.telefono if getattr(pedido, 'cliente', None) else '')
@@ -3123,7 +3123,7 @@ def factura_publica(request, token):
         'total_final': total_final,
         'descuento_total': descuento_total,
         'retefuente_total': retefuente_total,
-        'costo_envio': envio,   
+        'envio': envio,   
         'qr_pago_url': qr_url,  
         'whatsapp_url': whatsapp_url,
         'estado': estado,
@@ -3142,7 +3142,7 @@ def generar_factura(request, pedido_id):
     PAGE_WIDTH, PAGE_HEIGHT = letter
     LINE_HEIGHT = 18
 
-    # 🛡️ OBTENCIÓN SEGURA DEL PERFIL PARA EVITAR EL ERROR 500
+    # 🛡️ OBTENCIÓN SEGURA DEL PERFIL
     perfil = getattr(request.user, 'perfil', None)
     nombre_tienda = getattr(perfil, 'nombre_tienda', 'Mi Joyería') or "Mi Joyería"
     nit_tienda = getattr(perfil, 'nit', '') or ""
@@ -3150,9 +3150,19 @@ def generar_factura(request, pedido_id):
     ciudad_tienda = getattr(perfil, 'ciudad', '') or ""
     correo_empresa = getattr(perfil, 'email_empresa', None) or request.user.email or 'correo@empresa.com'
 
+    # 📊 MATEMÁTICA UNIFICADA SÍNCRONA CON LA WEB
+    subtotal_general = sum(Decimal(str(item.subtotal or 0)) for item in items)
+    iva_total = sum(Decimal(str(item.iva or 0)) for item in items)
+    retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
+    
+    porcentaje_desc = getattr(pedido, 'porcentaje_descuento', 0) or 0
+    descuento_total = subtotal_general * (Decimal(str(porcentaje_desc)) / Decimal('100')) if porcentaje_desc else Decimal('0')
+    
+    costo_envio_num = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
+    total_final = subtotal_general + iva_total + costo_envio_num - descuento_total - retefuente_total
+
     def draw_header():
         y = 760
-        # EMPRESA (Dueño del SaaS)
         p.setFont("Helvetica-Bold", 16)
         p.drawString(50, y, nombre_tienda)
 
@@ -3162,7 +3172,6 @@ def generar_factura(request, pedido_id):
         p.drawString(50, y - 41, f"Email: {correo_empresa}")
         p.drawString(50, y - 54, f"{ciudad_tienda}")
 
-        # FACTURA DERECHA
         p.setFont("Helvetica-Bold", 11)
         p.drawString(390, y, "FACTURA")
 
@@ -3179,7 +3188,6 @@ def generar_factura(request, pedido_id):
 
         p.line(50, y - 65, 550, y - 65)
 
-        # 🎯 FIX DE CAMPOS: Sincronización con las columnas reales de tu base de datos
         yc = y - 85
         p.drawString(50, yc, f"Cliente: {getattr(pedido, 'cliente_nombre', '') or ''}")
         p.drawString(50, yc - 14, f"NIT/CC: {getattr(pedido, 'cliente_nit', '') or ''}")
@@ -3207,14 +3215,8 @@ def generar_factura(request, pedido_id):
         draw_header()
         return draw_table_header(560)
 
-    # EJECUCIÓN DEL PDF
     draw_header()
     y = draw_table_header(560)
-
-    subtotal_general = Decimal('0')
-    iva_total = Decimal('0')
-    descuento_total = Decimal('0')
-    retefuente_total = Decimal('0')
 
     for item in items:
         if y < 100:
@@ -3238,14 +3240,9 @@ def generar_factura(request, pedido_id):
         p.drawRightString(390, y, f"${precio:,.0f}".replace(",", "."))
         p.drawRightString(540, y, f"${total_item:,.0f}".replace(",", "."))
 
-        subtotal_general += Decimal(str(item.subtotal or 0))
-        iva_total += Decimal(str(item.iva or 0))
-        descuento_total += Decimal(str(item.descuento_total or item.descuento or 0))
-        retefuente_total += Decimal(str(item.retefuente or 0))
-
         y -= LINE_HEIGHT
 
-    # TOTALES
+    # TOTALES EN EL PDF (Espacio de seguridad)
     y -= 20
     if y < 160:
         draw_footer()
@@ -3257,23 +3254,21 @@ def generar_factura(request, pedido_id):
 
     if iva_total > 0:
         y -= 15
-        p.drawString(340, y, "IVA (19%):")
+        p.drawString(340, y, "IVA:")
         p.drawRightString(540, y, f"${iva_total:,.0f}".replace(",", "."))
+
+    if descuento_total > 0 or porcentaje_desc > 0:
+        y -= 15
+        p.drawString(340, y, f"Descuento ({porcentaje_desc}%):")
+        p.drawRightString(540, y, f"-${descuento_total:,.0f}".replace(",", "."))
 
     if retefuente_total > 0:
         y -= 15
         p.drawString(340, y, "ReteFuente:")
         p.drawRightString(540, y, f"-${retefuente_total:,.0f}".replace(",", "."))
 
-    porcentaje_desc = getattr(pedido, 'porcentaje_descuento', 0) or 0
-    if porcentaje_desc > 0 or descuento_total > 0:
-        y -= 15
-        p.drawString(340, y, f"Descuento ({porcentaje_desc}%):")
-        p.drawRightString(540, y, f"-${descuento_total:,.0f}".replace(",", "."))
-
     y -= 15
     p.drawString(340, y, "Envío:")
-    costo_envio_num = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
     if costo_envio_num == 0:
         p.drawRightString(540, y, "GRATIS")
     else:
@@ -3282,8 +3277,8 @@ def generar_factura(request, pedido_id):
     y -= 22
     p.setFont("Helvetica-Bold", 12)
     p.drawString(340, y, "TOTAL:")
-    pedido_total_num = Decimal(str(getattr(pedido, 'total', 0) or 0))
-    p.drawRightString(540, y, f"${pedido_total_num:,.0f}".replace(",", "."))
+    # 🎯 CORRECCIÓN: Renderiza el valor real calculado dinámicamente
+    p.drawRightString(540, y, f"${total_final:,.0f}".replace(",", "."))
 
     draw_footer()
     p.save()
