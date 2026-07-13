@@ -374,6 +374,7 @@ h2 {
     {% endif %}
 </div>
 
+<!-- --- Buscador --- -->
 <div class="buscador">
     <form method="GET">
         <input type="text" name="q" placeholder="Buscar productos..." aria-label="Buscar productos">
@@ -381,10 +382,14 @@ h2 {
     </form>
 </div>
 
+<!-- ==========================================
+     ⭐ SECCIÓN 1: PRODUCTOS DESTACADOS
+     ========================================== -->
 <h2>⭐ Productos destacados</h2>
 <div class="destacados-scroll">
     {% for producto in destacados %}
     <div class="producto-card">
+        <!-- Imagen Destacados -->
         <div class="producto-img-wrapper" style="position: relative; overflow: hidden; background: #fbfbfb;">
             {% if producto.imagen_principal %}
                 <img src="{{ producto.imagen_principal.url }}" class="producto-img" alt="{{ producto.nombre }}">
@@ -395,34 +400,53 @@ h2 {
             {% endif %}
         </div>
 
+        <!-- Info Destacados -->
         <div class="producto-info">
             <h4>{{ producto.nombre }}</h4>
             
-            <p class="precio">
-                {% if producto.tipo_venta == 'gramo' and producto.precio_por_gramo_detal %}
-                    ${{ producto.precio_por_gramo_detal|floatformat:"0" }} <span style="font-size: 11px; opacity: 0.7;">/g (Detal)</span>
-                <span class="badge-gramos" style="font-size: 11px; opacity: 0.7; display: block; color: #666;">
-                     Peso aprox: {{ producto.peso_producto }}g
-                </span>
+            <!-- 🎯 Precio Real Sincronizado -->
+            <p class="precio" style="font-size: 18px; font-weight: bold; color: #12a165; line-height: 1.3; margin-bottom: 12px;">
+                {% if producto.tipo_venta == 'gramo' %}
+                    ${{ producto.precio_calculado_detal|floatformat:"0" }}
+                    <span class="badge-gramos" style="font-size: 11px; opacity: 0.8; display: block; color: #666; font-weight: normal; margin-top: 3px;">
+                        ${{ producto.precio_por_gramo_detal|floatformat:"0" }}/g • Peso aprox: {{ producto.peso_producto }}g
+                    </span>
                 {% elif producto.precio_detal %}
-                    ${{ producto.precio_detal|floatformat:"0" }} <span style="font-size: 11px; opacity: 0.7;">(Detal)</span>
+                    ${{ producto.precio_detal|floatformat:"0" }} <span style="font-size: 11px; opacity: 0.7; font-weight: normal; color: #666;">(Detal)</span>
                 {% else %}
-                <span style="color: #999; font-size: 14px;">Consultar precio</span>
+                    <span style="color: #999; font-size: 14px; font-weight: normal;">Consultar precio</span>
                 {% endif %}
             </p>
 
+            <!-- Semáforo Stock Destacados -->
+            {% if producto.stock > 10 %}
+                <p class="stock-status stock-ok">✅ Disponible</p>
+            {% elif producto.stock > 0 %}
+                <p class="stock-status stock-poco">🔥 Últimas unidades ({{ producto.stock }})</p>
+            {% else %}
+                <p class="stock-status stock-agotado">❌ Agotado</p>
+            {% endif %}
+
             <div class="acciones-producto">
-                <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-carrito">🛒 Ver Opciones</a>
+                <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-carrito" style="width: 100%; text-align: center; font-weight: 600;">
+                    💎 Elegir y Comprar
+                </a>
             </div>
         </div>
     </div>
+    {% empty %}
+    <p style="text-align: center; color: #666; padding: 20px 0; width: 100%;">No hay productos destacados en este momento.</p>
     {% endfor %}
 </div>
 
+<!-- ==========================================
+     🛍️ SECCIÓN 2: TODOS LOS PRODUCTOS
+     ========================================== -->
 <h2 id="productos">🛍️ Todos los productos</h2>
 <div class="producto-grid">
     {% for producto in productos %}
     <div class="producto-card">
+        <!-- Imagen Todos los Productos -->
         <div class="producto-img-wrapper" style="position: relative; overflow: hidden; background: #fbfbfb;">
             {% if producto.imagen_principal %}
                 <img src="{{ producto.imagen_principal.url }}" class="producto-img" alt="{{ producto.nombre }}">
@@ -433,22 +457,25 @@ h2 {
             {% endif %}
         </div>
 
+        <!-- Info Todos los Productos -->
         <div class="producto-info">
             <h4>{{ producto.nombre }}</h4>
-            
-            <p class="precio">
-                {% if producto.tipo_venta == 'gramo' and producto.precio_por_gramo_detal %}
-                    ${{ producto.precio_por_gramo_detal|floatformat:"0" }} <span style="font-size: 11px; opacity: 0.7;">/g (Detal)</span>
-                <span class="badge-gramos" style="font-size: 11px; opacity: 0.7; display: block; color: #666;">
-                    Peso aprox: {{ producto.peso_producto }}g
-                </span>
+    
+            <!-- 🎯 Precio Real Sincronizado -->
+            <p class="precio" style="font-size: 18px; font-weight: bold; color: #12a165; line-height: 1.3; margin-bottom: 12px;">
+                {% if producto.tipo_venta == 'gramo' %}
+                    ${{ producto.precio_calculado_detal|floatformat:"0" }}
+                    <span class="badge-gramos" style="font-size: 11px; opacity: 0.8; display: block; color: #666; font-weight: normal; margin-top: 3px;">
+                        ${{ producto.precio_por_gramo_detal|floatformat:"0" }}/g • Peso aprox: {{ producto.peso_producto }}g
+                    </span>
                 {% elif producto.precio_detal %}
-                    ${{ producto.precio_detal|floatformat:"0" }} <span style="font-size: 11px; opacity: 0.7;">(Detal)</span>
+                    ${{ producto.precio_detal|floatformat:"0" }} <span style="font-size: 11px; opacity: 0.7; font-weight: normal; color: #666;">(Detal)</span>
                 {% else %}
-                <span style="color: #999; font-size: 14px;">Consultar precio</span>
+                    <span style="color: #999; font-size: 14px; font-weight: normal;">Consultar precio</span>
                 {% endif %}
             </p>
-            
+    
+            <!-- Semáforo Stock Todos los Productos -->
             {% if producto.stock > 10 %}
                 <p class="stock-status stock-ok">✅ Disponible</p>
             {% elif producto.stock > 0 %}
@@ -469,8 +496,8 @@ h2 {
     {% endfor %}
 </div>
 
+<!-- --- Botón Flotante WhatsApp --- -->
 {% if perfil.whatsapp %}
-<!-- Enlace de WhatsApp corregido con código de país para evitar fallas de redirección internacional -->
 <a href="https://wa.me/57{{ perfil.whatsapp }}" target="_blank" class="btn-whatsapp" aria-label="Contacto por WhatsApp">💬</a>
 {% endif %}
 
