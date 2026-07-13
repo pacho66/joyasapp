@@ -63,7 +63,7 @@
         text-align: right;
     }
     .tabla-totales {
-        width: 260px;
+        width: 280px;
         margin-left: auto;
         border-collapse: collapse;
     }
@@ -75,7 +75,8 @@
         background-color: #111111;
         color: #ffffff;
         font-weight: bold;
-        padding: 10px 8px;
+        padding: 12px 8px;
+        font-size: 14px;
     }
     .btn {
         display: block;
@@ -199,21 +200,41 @@
                 <td style="text-align: left; color: #555;">Subtotal:</td>
                 <td style="text-align: right; font-weight: bold;">${{ subtotal|floatformat:"0" }}</td>
             </tr>
+            
+            <!-- 📉 CORREGIDO: Bloque de descuento añadido para la web -->
+            {% if pedido.porcentaje_descuento > 0 or descuento_total > 0 %}
+            <tr>
+                <td style="text-align: left; color: #C0392B;">Descuento ({% if pedido.porcentaje_descuento %}{{ pedido.porcentaje_descuento }}{% else %}0{% endif %}%):</td>
+                <td style="text-align: right; color: #C0392B;">-${{ descuento_total|floatformat:"0" }}</td>
+            </tr>
+            {% endif %}
+            
             {% if iva_total > 0 %}
             <tr>
                 <td style="text-align: left; color: #555;">IVA:</td>
                 <td style="text-align: right;">+${{ iva_total|floatformat:"0" }}</td>
             </tr>
             {% endif %}
+            
+            <!-- 💸 CORREGIDO: Bloque de retefuente añadido para la web -->
+            {% if retefuente_total > 0 %}
+            <tr>
+                <td style="text-align: left; color: #C0392B;">Retefuente:</td>
+                <td style="text-align: right; color: #C0392B;">-${{ retefuente_total|floatformat:"0" }}</td>
+            </tr>
+            {% endif %}
+            
             <tr>
                 <td style="text-align: left; color: #555; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">Envío:</td>
                 <td style="text-align: right; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">
                     {% if pedido.tipo_envio == "recogida" %}
                         Recoge en tienda
-                    {% elif pedido.costo_envio %}
-                        ${{ pedido.costo_envio|floatformat:"0" }}
+                    {% elif envio and envio > 0 %}
+                        +${{ envio|floatformat:"0" }}
+                    {% elif pedido.costo_envio and pedido.costo_envio > 0 %}
+                        +${{ pedido.costo_envio|floatformat:"0" }}
                     {% else %}
-                        Valor definido por el vendedor según destino.
+                        Gratis
                     {% endif %}
                 </td>
             </tr>
