@@ -99,12 +99,12 @@ urlpatterns = [
     # ===============================
     # 💸 GASTOS
     # ===============================
+    # 🏦 Rutas de control financiero unificadas
     path('gastos/', views.gastos, name='gastos'),
-    path('lista-gastos/', views.lista_gastos, name='lista_gastos'),
     path('lista-gastos/editar/<int:id>/', views.editar_gasto, name='editar_gasto'),
     path('lista-gastos/duplicar/<int:id>/', views.duplicar_gasto, name='duplicar_gasto'),
     path('lista-gastos/eliminar/<int:id>/', views.eliminar_gasto, name='eliminar_gasto'),
-
+   
     # ===============================
     # 📲 MARKETING
     # ===============================
