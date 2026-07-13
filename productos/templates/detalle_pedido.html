@@ -251,7 +251,13 @@
                             <br><small style="color:#6c757d;">Variante: {{ item.variante.nombre }}</small>
                         {% endif %}
                     </td>
-                    <td class="al-cen">{{ item.cantidad }} u</td>
+                    <td class="al-cen">
+                        {% if item.total_gramos and item.total_gramos > 0 %}
+                            {{ item.total_gramos }}g
+                        {% else %}
+                            {{ item.cantidad|floatformat:0 }} u
+                        {% endif %}
+                    </td>
                     <td class="al-der">${{ item.precio|floatformat:"0" }}</td> <td class="al-der">${{ item.subtotal|floatformat:"0" }}</td>  </tr>
                 {% endfor %}
             </tbody>

@@ -274,14 +274,14 @@ th{
                         {% endif %}
                     </td>
 
-                    <!-- Stock -->
-                    <td>{{ producto.stock }} uds</td>
+                    <!-- Columna de Stock -->
+                    <td>{{ producto.stock_real }} uds</td>
 
-                    <!-- Estado -->
+                    <!-- Columna de Estado -->
                     <td>
-                        {% if producto.stock == 0 %}
+                        {% if producto.stock_real == 0 %}
                             <span class="stock-agotado">Agotado</span>
-                        {% elif producto.stock <= 5 %}
+                        {% elif producto.stock_real <= 5 %}
                             <span class="stock-bajo">Bajo</span>
                         {% else %}
                             <span class="stock-ok">Disponible</span>
