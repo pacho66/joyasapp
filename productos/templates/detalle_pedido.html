@@ -264,34 +264,29 @@
         </table>
 
         <div class="liquidacion-wrapper">
-            
-            
             <div class="liq-bloque-izq">
-
                 <div style="padding-right:20px;">
 
-                    {% if pedido.tipo_envio == "recogida" %}
-
+                    {% if pedido.tipo_envio == "domicilio" or pedido.tipo_envio == "transportadora" %}
+                        <p style="font-size:14px;margin:5px 0;">
+                            <strong>🚚 Envío:</strong>
+                            {% if envio > 0 or pedido.costo_envio > 0 %}
+                                ${{ envio|default:pedido.costo_envio|floatformat:"0" }}
+                            {% else %}
+                                <span style="color:#28a745; font-weight:bold;">¡Gratis! (Compra mayor a $300.000)</span>
+                            {% endif %}
+                        </p>
+                    {% elif pedido.tipo_envio == "recogida" %}
                         <p style="font-size:14px;margin:5px 0;color:#28a745;">
                             <strong>🏬 Entrega:</strong> Recoge en tienda
                         </p>
-
-                    {% elif envio and envio > 0 %}
-
-                        <p style="font-size:14px;margin:5px 0;">
-                            <strong>🚚 Envío:</strong>
-                            ${{ envio|floatformat:"0" }}
-                        </p>
-
                     {% else %}
-
                         <p style="font-size:14px;margin:5px 0;color:#555;">
                             <strong>🚚 Entrega:</strong>
                             Valor del envío por acordar con el vendedor.
                         </p>
-
                     {% endif %}
-
+        
                     <div style="margin-top:25px;
                     border:1px solid #edf2f7;
                     padding:12px;

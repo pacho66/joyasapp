@@ -191,12 +191,28 @@
             <td style="text-align: right; color: #C0392B; padding-right: 15px;">-${{ retefuente_total|floatformat:"0" }}</td>
         </tr>
         {% endif %}
+        <!-- 📦 ENVÍO EN PDF -->
         <tr>
             <td style="text-align: left; color: #555555; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">Envío</td>
             <td style="text-align: right; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px; padding-right: 15px;">
-                {% if envio > 0 %}+${{ envio|floatformat:"0" }}{% else %}Recoge en tienda u gratis{% endif %}
+                {% if pedido.tipo_envio == "domicilio" or pedido.tipo_envio == "transportadora" %}
+                    {% if envio > 0 or pedido.costo_envio > 0 %}
+                        <!-- Si se cobraron los $15.000 de envío -->
+                        +${{ envio|default:pedido.costo_envio|floatformat:"0" }}
+                    {% else %}
+                        <!-- Si el envío es de $0 porque superó los $300.000 -->
+                        <span style="color: #28a745; font-weight: bold;">¡Gratis!</span>
+                    {% endif %}
+                {% elif pedido.tipo_envio == "recogida" %}
+                    <!-- Retira en punto físico -->
+                    <span style="color: #28a745;">Recoge en tienda / Gratis</span>
+                {% else %}
+                    <!-- En caso de que no venga el tipo de envío en el pedido -->
+                    <span style="color: #555555;">Por acordar</span>
+                {% endif %}
             </td>
         </tr>
+        
     </table>
 
     <div class="total-box" style="color: #111111;">
