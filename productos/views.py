@@ -48,6 +48,9 @@ from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm, ProductoFo
 from django.db import IntegrityError
 from .services.producto_service import ProductoService 
 from .utils import calcular_totales_con_reglas_fiscales
+from django.conf import settings
+from django.contrib.staticfiles import finders
+from django.template.loader import get_template
 
 from .utils import generar_link_whatsapp, generar_numero_orden 
 from .utils import generar_link_whatsapp, generar_numero_orden, generar_pdf_pedido
@@ -2708,6 +2711,42 @@ def factura_publica(request, token):
     
     return render(request, 'factura_publica.html', context)
 
+# ────────────────────────────────────────────────────────────────
+# 🛠️ FUNCIÓN AUXILIAR: TRADUCTOR DE RUTAS ESTÁTICAS PARA EL PDF
+# ────────────────────────────────────────────────────────────────
+def link_callback(uri, rel):
+    """
+    Convierte rutas relativas de estáticos y media de Django en rutas 
+    absolutas del sistema operativo para que xhtml2pdf las encuentre en Render.
+    """
+    # 1. Buscar el archivo usando el motor de estáticos de Django
+    result = finders.find(uri)
+    if result:
+        if not isinstance(result, (list, tuple)):
+            result = [result]
+        path = result[0]
+    else:
+        # 2. Si no lo encuentra, construir la ruta usando settings
+        s_url = settings.STATIC_URL
+        s_root = settings.STATIC_ROOT
+        m_url = settings.MEDIA_URL
+        m_root = settings.MEDIA_ROOT
+
+        if uri.startswith(m_url):
+            path = os.path.join(m_root, uri.replace(m_url, ""))
+        elif uri.startswith(s_url):
+            path = os.path.join(s_root, uri.replace(s_url, ""))
+        else:
+            return uri
+
+    # Asegurarnos de que el archivo físico realmente existe en el servidor
+    if not os.path.isfile(path):
+        return uri
+    return path
+
+# ────────────────────────────────────────────────────────────────
+# 📄 VISTA PRINCIPAL: GENERACIÓN DE PDF
+# ────────────────────────────────────────────────────────────────
 def pedido_pdf(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id)
     items = pedido.items.select_related('producto', 'variante').all()
@@ -2757,11 +2796,17 @@ def pedido_pdf(request, pedido_id):
         html = template.render(context)
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="pedido_{pedido.numero_orden}.pdf"'
-        pdf = pisa.CreatePDF(html, dest=response)
+        
+        # 🎯 CAMBIO CLAVE: Agregamos el parámetro link_callback aquí abajo
+        pdf = pisa.CreatePDF(html, dest=response, link_callback=link_callback)
+        
         if pdf.err:
             return HttpResponse(f"Error generando PDF: {pdf.err}", status=500)
         return response
     except Exception as e:
+        # Añadido un print para depurar rápido en la consola de Render si algo más falla
+        print(f"💥 ERROR EN GENERACIÓN PDF: {str(e)}")
+        traceback.print_exc()
         return HttpResponse(f"Error interno: {str(e)}", status=500)
 
 @login_required
