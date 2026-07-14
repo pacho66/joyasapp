@@ -1891,7 +1891,6 @@ def pagar_pedido(request):
     if request.method != 'POST':
         return redirect('ver_carrito')
 
-    # 🔥 BLINDAJE TOTAL DESDE EL PRIMER MILISEGUNDO
     try:
         session_key = request.session.session_key
         if not session_key:
@@ -1914,6 +1913,10 @@ def pagar_pedido(request):
         ciudad = request.POST.get('ciudad', '').strip()
         direccion = request.POST.get('direccion', '').strip()
         nit = request.POST.get('nit', '').strip()
+        
+        # 🎯 CAPTURA REAL DEL TIPO DE ENVÍO SELECCIONADO POR EL USUARIO
+        # Si no viene en el POST, por defecto asumimos 'domicilio'
+        tipo_envio_seleccionado = request.POST.get('tipo_envio', 'domicilio').strip()
 
         # 🛠️ ESCUDO CONTRA CORREOS VACÍOS O ANÓNIMOS
         email_input = request.POST.get('email', '').strip()
@@ -1936,11 +1939,10 @@ def pagar_pedido(request):
 
         porcentaje_descuento = max(Decimal('0'), min(Decimal('100'), porcentaje_descuento))
 
-        # Primero calculamos el subtotal acumulado bruto de los productos
+        # Calcular precios bases y gramos de cada ítem
         subtotal_general = Decimal('0')
         lineas_items = []
 
-        # 🔄 PASO 1: Calcular precios bases y gramos de cada ítem
         for item in items:
             cantidad_fisica = Decimal(str(item.cantidad or 1))
             
@@ -1972,31 +1974,34 @@ def pagar_pedido(request):
                 'subtotal_item': subtotal_item
             })
 
-        # 💰 PASO 2: Calcular la estructura de totales global con el Descuento aplicado
+        # Calcular la estructura de totales global con el Descuento aplicado
         descuento_pesos = subtotal_general * (porcentaje_descuento / Decimal('100'))
         subtotal_con_descuento = subtotal_general - descuento_pesos
 
         iva_total = subtotal_con_descuento * Decimal('0.19') if aplica_iva else Decimal('0')
         retefuente_total = subtotal_con_descuento * Decimal('0.025') if es_retenedor else Decimal('0')
         
-        # 🚚 DETERMINACIÓN DINÁMICA DEL TIPO DE ENVÍO
-        # Intentamos traer la configuración del negocio de este usuario
-        from .models import ConfiguracionNegocio # Asegúrate de mapear bien el import de tu modelo
+        # 🚚 DETERMINACIÓN DINÁMICA DEL TIPO DE ENVÍO Y SU COSTO
+        from .models import ConfiguracionNegocio 
         config = ConfiguracionNegocio.objects.filter(usuario=usuario).first()
         
-        costo_envio = calcular_envio(ciudad, subtotal_con_descuento)
-        
-        # Evaluamos las reglas de negocio para romper el "default" del modelo
-        tipo_envio = 'recogida'
-        if config and config.cobrar_envio:
-            # Si el negocio tiene activo el cobro, la orden nace como Domicilio
-            tipo_envio = 'domicilio'
-            # Forzamos que sea 0 si la matemática del subtotal superó el umbral gratuito
-            if subtotal_con_descuento >= config.envio_gratis_desde:
-                costo_envio = Decimal('0')
-        elif costo_envio > 0:
-            # Salvavidas: si por alguna razón no hay config pero calcular_envio dio un costo mayor a cero
-            tipo_envio = 'domicilio'
+        costo_envio = Decimal('0')
+        tipo_envio = tipo_envio_seleccionado  # Respetamos la decisión del cliente
+
+        if tipo_envio in ['domicilio', 'transportadora']:
+            # 1. Si el negocio tiene habilitado el cobro de envío estándar
+            if config and config.cobrar_envio:
+                # Validamos si califica para envío gratis por superar el umbral
+                if subtotal_con_descuento >= config.envio_gratis_desde:
+                    costo_envio = Decimal('0')
+                else:
+                    costo_envio = Decimal(str(config.costo_envio_estandar or 0))
+            else:
+                # 2. Si no cobra estándar o no hay configuración, usamos la función auxiliar calcular_envio
+                costo_envio = calcular_envio(ciudad, subtotal_con_descuento)
+        else:
+            # Si el cliente seleccionó "recogida", el costo de envío siempre es $0
+            costo_envio = Decimal('0')
 
         total_final = subtotal_con_descuento + iva_total - retefuente_total + costo_envio
 
@@ -2019,7 +2024,7 @@ def pagar_pedido(request):
             cliente.direccion = direccion
             cliente.save()
 
-        # 📦 PASO 3: Crear el Pedido Maestro con los totales de verdad
+        # 📦 Crear el Pedido Maestro
         pedido = Pedido.objects.create(
             usuario=usuario,
             cliente=cliente,
@@ -2034,15 +2039,13 @@ def pagar_pedido(request):
             porcentaje_descuento=porcentaje_descuento,
             descuento_total=descuento_pesos,
             costo_envio=costo_envio,
-            tipo_envio=tipo_envio, # 👈 ¡EL INFILTRADO QUE HACÍA FALTA AQUÍ!
+            tipo_envio=tipo_envio,  # Guardamos la opción real del usuario
             aplica_iva=aplica_iva,             
             es_retenedor=es_retenedor,     
             estado="pendiente" 
         )
-        print("✅ Cliente asociado:", pedido.cliente)
-        print("✅ Tipo de Envío Asignado:", pedido.tipo_envio)    
 
-        # 🔄 PASO 4: Registrar cada PedidoItem y actualizar inventarios
+        # 🔄 Registrar cada PedidoItem y descontar inventarios (Reserva de stock)
         for linea in lineas_items:
             item = linea['item_carrito']
             sub_item = linea['subtotal_item']
@@ -2064,6 +2067,7 @@ def pagar_pedido(request):
                 total_final=total_item
             )
 
+            # Descontamos el stock aquí para apartar la mercancía
             if item.variante:
                 item.variante.stock -= item.cantidad
                 item.variante.save()
@@ -2085,6 +2089,7 @@ def pagar_pedido(request):
         
         return HttpResponse(f"Error detectado en el proceso de pago: {str(e)}", status=500)
 
+
 def confirmar_pago_publico(request, token):
     """ El cliente avisa de forma anónima que ya transfirió """
     pedido = get_object_or_404(Pedido, token_publico=token)
@@ -2092,23 +2097,15 @@ def confirmar_pago_publico(request, token):
     pedido.save()
     return redirect('factura_publica', token=token)
 
+
 @login_required
 @transaction.atomic
 def confirmar_pago(request, pedido_id):
-    """ El administrador aprueba el pago desde su panel privado e impacta inventarios """
+    """ El administrador aprueba el pago desde su panel privado """
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
     
-    # 🌟 Evitamos procesar dos veces si el administrador da clic doble
+    # 🌟 Cambiamos el estado del pedido a pagado sin volver a restar stock
     if pedido.estado != "pagado":
-        # Recorremos los ítems del pedido para restar el stock real en este preciso momento
-        for item in pedido.items.all():  # Ajusta 'items' según el related_name en tu PedidoItem
-            if item.variante:
-                item.variante.stock -= item.cantidad
-                item.variante.save()
-            elif item.producto.tipo_venta != "gramo":
-                item.producto.stock -= item.cantidad
-                item.producto.save()
-        
         pedido.estado = "pagado"
         pedido.save()
         
