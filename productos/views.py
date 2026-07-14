@@ -2768,7 +2768,21 @@ def pedido_pdf(request, pedido_id):
     # ⚡ LLAMADA AL MOTOR FISCAL ÚNICO
     totales = calcular_totales_pedido(pedido, perfil, items)
 
-    fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d') if pedido.fecha_creacion else "S/F"
+    # 🕵️‍♂️ Buscamos de forma segura el campo de fecha real que tiene tu modelo Pedido
+    fecha_obj = getattr(
+        pedido, 'created_at', 
+        getattr(pedido, 'fecha', 
+        getattr(pedido, 'fecha_registro', None))
+    )
+    
+    # Si encuentra el campo, lo formatea. Si no, pone "S/F" de forma segura
+    if fecha_obj:
+        try:
+            fecha_str = fecha_obj.strftime('%Y-%m-%d')
+        except AttributeError:
+            fecha_str = str(fecha_obj)
+    else:
+        fecha_str = "S/F"
 
     context = {
         'pedido': pedido,
@@ -2808,7 +2822,7 @@ def pedido_pdf(request, pedido_id):
         print(f"💥 ERROR EN GENERACIÓN PDF: {str(e)}")
         traceback.print_exc()
         return HttpResponse(f"Error interno: {str(e)}", status=500)
-
+    
 @login_required
 def generar_factura(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
