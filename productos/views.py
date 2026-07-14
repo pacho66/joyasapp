@@ -1904,7 +1904,7 @@ def pagar_pedido(request):
             messages.error(request, "Tu carrito está vacío.")
             return redirect('ver_carrito')
 
-        # 🏪 Detectamos el usuario dueño de la joyería (Dentro del try por seguridad)
+        # 🏪 Detectamos el usuario dueño de la joyería
         usuario = items.first().producto.usuario
         numero = generar_numero_orden(usuario)
 
@@ -1922,7 +1922,7 @@ def pagar_pedido(request):
         elif request.user.is_authenticated:
             cliente_email = request.user.email
         else:
-            cliente_email = "cliente_pasarela@joyasapp.com" # Evita que colapse PostgreSQL por campos vacíos
+            cliente_email = "cliente_pasarela@joyasapp.com"
 
         # 📊 CAPTURA DINÁMICA DE IMPUESTOS Y DESCUENTO
         aplica_iva = request.POST.get('aplica_iva') == 'on' or request.POST.get('aplica_iva') == 'true'
@@ -1940,7 +1940,7 @@ def pagar_pedido(request):
         subtotal_general = Decimal('0')
         lineas_items = []
 
-        # 🔄 PASO 1: Calcular precios bases y gramos de cada ítem (Tu lógica intacta)
+        # 🔄 PASO 1: Calcular precios bases y gramos de cada ítem
         for item in items:
             cantidad_fisica = Decimal(str(item.cantidad or 1))
             
@@ -1979,22 +1979,39 @@ def pagar_pedido(request):
         iva_total = subtotal_con_descuento * Decimal('0.19') if aplica_iva else Decimal('0')
         retefuente_total = subtotal_con_descuento * Decimal('0.025') if es_retenedor else Decimal('0')
         
+        # 🚚 DETERMINACIÓN DINÁMICA DEL TIPO DE ENVÍO
+        # Intentamos traer la configuración del negocio de este usuario
+        from .models import ConfiguracionNegocio # Asegúrate de mapear bien el import de tu modelo
+        config = ConfiguracionNegocio.objects.filter(usuario=usuario).first()
+        
         costo_envio = calcular_envio(ciudad, subtotal_con_descuento)
+        
+        # Evaluamos las reglas de negocio para romper el "default" del modelo
+        tipo_envio = 'recogida'
+        if config and config.cobrar_envio:
+            # Si el negocio tiene activo el cobro, la orden nace como Domicilio
+            tipo_envio = 'domicilio'
+            # Forzamos que sea 0 si la matemática del subtotal superó el umbral gratuito
+            if subtotal_con_descuento >= config.envio_gratis_desde:
+                costo_envio = Decimal('0')
+        elif costo_envio > 0:
+            # Salvavidas: si por alguna razón no hay config pero calcular_envio dio un costo mayor a cero
+            tipo_envio = 'domicilio'
+
         total_final = subtotal_con_descuento + iva_total - retefuente_total + costo_envio
 
         # 👤 Buscar o crear cliente
         cliente, creado = Cliente.objects.get_or_create(
-        usuario=usuario,
-        telefono=telefono,
-        defaults={
-        "nombre": nombre,
-        "email": cliente_email,
-        "ciudad": ciudad,
-        "direccion": direccion,
-        }
+            usuario=usuario,
+            telefono=telefono,
+            defaults={
+                "nombre": nombre,
+                "email": cliente_email,
+                "ciudad": ciudad,
+                "direccion": direccion,
+            }
         )
 
-        # Si ya existe, actualizamos sus datos
         if not creado:
             cliente.nombre = nombre
             cliente.email = cliente_email
@@ -2017,12 +2034,13 @@ def pagar_pedido(request):
             porcentaje_descuento=porcentaje_descuento,
             descuento_total=descuento_pesos,
             costo_envio=costo_envio,
+            tipo_envio=tipo_envio, # 👈 ¡EL INFILTRADO QUE HACÍA FALTA AQUÍ!
             aplica_iva=aplica_iva,             
             es_retenedor=es_retenedor,     
             estado="pendiente" 
         )
         print("✅ Cliente asociado:", pedido.cliente)
-        print("✅ Nombre:", pedido.cliente.nombre if pedido.cliente else "NINGUNO")    
+        print("✅ Tipo de Envío Asignado:", pedido.tipo_envio)    
 
         # 🔄 PASO 4: Registrar cada PedidoItem y actualizar inventarios
         for linea in lineas_items:
@@ -2059,7 +2077,6 @@ def pagar_pedido(request):
         return render(request, 'pago.html', {'pedido': pedido})
 
     except Exception as e:
-        # 🔥 SI ALGO REVIENTA, OBLIGAMOS A RENDER A PINTAR EL TRACEBACK
         print("\n" + "🚨" * 30)
         print(f"💥 ERROR CRÍTICO EN /PAGAR/: {str(e)}")
         print("-" * 60)
