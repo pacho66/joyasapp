@@ -230,21 +230,34 @@
                 <td style="text-align: right; color: #C0392B;">-${{ retefuente_total|floatformat:"0" }}</td>
             </tr>
             {% endif %}
-            
+                        
             <!-- 📦 ENVÍO CALCULADO POR BACKEND -->
             <tr>
                 <td style="text-align: left; color: #555; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">Envío:</td>
                 <td style="text-align: right; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">
-                    {% if pedido.tipo_envio == "recogida" or pedido.costo_envio == 0 and envio == 0 %}
-                        Recoge en tienda / Gratis
+                    <!-- 1️⃣ Si el pedido es para despacho a domicilio -->
+                    {% if pedido.tipo_envio == "domicilio" or pedido.tipo_envio == "transportadora" %}
+                        {% if pedido.costo_envio > 0 %}
+                            +${{ pedido.costo_envio|floatformat:"0" }}
+                        {% elif envio and envio > 0 %}
+                            +${{ envio|floatformat:"0" }}
+                        {% else %}
+                            <span style="color: #28a745; font-weight: bold;">¡Gratis!</span>
+                        {% endif %}
+        
+                    <!-- 2️⃣ Si el cliente realmente seleccionó retirar en tienda -->
+                    {% elif pedido.tipo_envio == "recogida" %}
+                        <span style="color: #28a745;">Recoge en tienda / Gratis</span>
+            
+                    <!-- 3️⃣ Caso de respaldo -->
                     {% else %}
-                        +${{ envio|floatformat:"0" }}
+                        <span style="color: #555;">Por acordar</span>
                     {% endif %}
                 </td>
             </tr>
             <tr>
                 <td style="text-align: left; font-weight: bold; padding-top: 8px;">TOTAL:</td>
-                <td class="total-box">${{ total_final|floatformat:"0" }} COP</td>
+                <td class="total-box">${{ pedido.total|floatformat:"0" }} COP</td>
             </tr>
         </table>
     </div>
