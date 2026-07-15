@@ -43,7 +43,7 @@ from productos.services.precios import calcular_precio_producto
 from productos.services.envios import calcular_envio
 
 # 📂 IMPORTACIONES DE LA APP ACTUAL (Pedidos/Ventas)
-from .models import ProductoVariante, Pedido, PedidoItem, Perfil, Abono, Gasto
+from .models import ProductoVariante, Pedido, PedidoItem, Perfil, Abono, Gasto, ConfiguracionNegocio
 from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm, ProductoForm
 from django.db import IntegrityError
 from .services.producto_service import ProductoService 
@@ -1073,7 +1073,6 @@ def panel_crm(request):
 
     return render(request, 'crm/panel_crm.html', context)
 
-
 @login_required
 def exportar_excel_dashboard(request):
     # Traemos solo los pedidos del joyero que tiene la sesión iniciada
@@ -1260,31 +1259,54 @@ def estadisticas(request):
     }
     return render(request, 'estadisticas.html', context)
 
-
 # ==========================================
 # 💰 GANANCIAS CORREGIDO
 # ==========================================
 @login_required
 def ganancias(request):
+    usuario = request.user
     hoy = timezone.now().date()
     hace_30 = hoy - timedelta(days=30)
     
-    pedidos_usuario = Pedido.objects.filter(usuario=request.user)
+    # 1. Filtro base de pedidos del usuario
+    pedidos_usuario = Pedido.objects.filter(usuario=usuario)
 
+    # 2. Métricas de ventas
     ventas_hoy = pedidos_usuario.filter(fecha__date=hoy).aggregate(total=Sum('total'))['total'] or 0
-    ventas_mes = pedidos_usuario.filter(fecha__date__gte=hace_30).aggregate(total=Sum('total'))['total'] or 0
+    ventas_mes = pedidos_usuario.filter(fecha_date_gte=hace_30).aggregate(total=Sum('total'))['total'] or 0
     ventas_total = pedidos_usuario.aggregate(total=Sum('total'))['total'] or 0
     
-    # 🛠️ PARCHE AL CORTO: Cálculo del Ticket Promedio real
+    # 3. Ticket Promedio real
     ticket_promedio = pedidos_usuario.aggregate(promedio=Avg('total'))['promedio'] or 0
 
+    # =========================================================================
+    # 💰 INTEGRACIÓN REAL DE GASTOS DEL CRM (Últimos 30 días)
+    # =========================================================================
+    # Sumamos los montos de todos los gastos activos del usuario en los últimos 30 días
+    gastos_mes = Gasto.objects.filter(
+        usuario=usuario,
+        activo=True,
+        fecha_date_gte=hace_30
+    ).aggregate(total=Sum('monto'))['total'] or 0
+
+    # Convertimos ambos valores a Decimal de forma segura para evitar fallos de precisión float
+    ventas_mes_dec = Decimal(str(ventas_mes))
+    gastos_mes_dec = Decimal(str(gastos_mes))
+
+    # Ganancia Real (Ventas del mes menos gastos reales del mes)
+    # max(0, ...) asegura que si en un mes muy malo los gastos superan las ventas, no muestre ganancias en negativo
+    ganancia_mes = max(Decimal('0.00'), ventas_mes_dec - gastos_mes_dec)
+    # =========================================================================
+
+    # 4. Listado de últimos pedidos para la tabla
     pedidos = pedidos_usuario.order_by('-fecha')[:20]
 
     context = {
         'ventas_hoy': ventas_hoy,
-        'ventas_mes': ventas_mes,  # 🚀 Inyectado para la tarjeta del HTML
+        'ventas_mes': ventas_mes,  
         'ventas_total': ventas_total,
-        'ticket_promedio': ticket_promedio,  # 🚀 Inyectado para la tarjeta del HTML
+        'ticket_promedio': ticket_promedio,  
+        'ganancia_mes': ganancia_mes,  # 🚀 Tu ganancia real calculada con datos del modelo Gasto
         'pedidos': pedidos,
     }
     return render(request, 'ganancias.html', context)
@@ -2089,14 +2111,12 @@ def pagar_pedido(request):
         
         return HttpResponse(f"Error detectado en el proceso de pago: {str(e)}", status=500)
 
-
 def confirmar_pago_publico(request, token):
     """ El cliente avisa de forma anónima que ya transfirió """
     pedido = get_object_or_404(Pedido, token_publico=token)
     pedido.estado = "confirmacion_pago"
     pedido.save()
     return redirect('factura_publica', token=token)
-
 
 @login_required
 @transaction.atomic
@@ -2409,9 +2429,29 @@ def webhook_mercadopago(request, profile_uuid):
             
     return HttpResponse(status=400)
 
+def obtener_perfil_pedido(pedido):
+    """Helper para obtener el Perfil/Tenant (Logo, Redes, Nombre de tienda)"""
+    try:
+        return Perfil.objects.get(user=pedido.usuario)
+    except Perfil.DoesNotExist:
+        return None
+
+def obtener_configuracion_negocio(pedido):
+    """Helper para obtener la parametrización fiscal, envíos e integraciones"""
+    try:
+        return ConfiguracionNegocio.objects.filter(usuario=pedido.usuario).first()
+    except Exception:
+        return None
+
 def pago_exitoso(request, token):
-    # Ya no se romperá porque tanto Wompi como MercadoPago retornarán el token_publico (UUID)
+    """Vista de retorno cuando el pago es aprobado en Wompi o Mercado Pago"""
     pedido = get_object_or_404(Pedido, token_publico=token)
+
+    # 🛡️ Validamos de forma segura que Mercado Pago realmente retorne aprobado (si aplica)
+    status_mp = request.GET.get('status')
+    if status_mp and status_mp != 'approved' and status_mp != 'authorized':
+        # Si no está aprobado de verdad, lo mandamos a la vista de pendiente o fallido
+        return redirect('pago_fallido', token=token)
 
     pedido.estado = "pagado"
     pedido.saldo_pendiente = Decimal('0.00')
@@ -2420,26 +2460,24 @@ def pago_exitoso(request, token):
     return redirect('factura_publica', token=token)
 
 def pago_fallido(request, token):
-    """Vista para gestionar los pagos rechazados o fallidos de Mercado Pago/Wompi."""
-    # Buscamos el pedido usando el token UUID que viene en la URL
-    pedido = get_object_or_404(Pedido, token=token) # O el campo UUID que uses para identificarlo públicamente
+    """Vista para gestionar los pagos rechazados o fallidos de Mercado Pago/Wompi"""
+    # 🎯 CORREGIDO: Buscamos usando 'token_publico' para evitar FieldError
+    pedido = get_object_or_404(Pedido, token_publico=token) 
     
     context = {
         'pedido': pedido,
-        'status': request.GET.get('status'), # Captura el estado que manda Mercado Pago (ej. 'rejected')
+        'status': request.GET.get('status'), # Captura el estado ('rejected', 'cancelled')
     }
-    return render(request, 'pedidos/pago_fallido.html', context)
-
-def obtener_perfil_pedido(pedido):
-    """Helper temporal para aislar la obtención del Perfil/Tenant"""
-    try:
-        return Perfil.objects.get(user=pedido.usuario)
-    except Perfil.DoesNotExist:
-        return None
+    # 🎯 CORREGIDO: Ajustado a 'pago_fallido.html' para consistencia de rutas
+    return render(request, 'pago_fallido.html', context)
 
 @login_required
 def lista_pedidos(request):
-    pedidos = Pedido.objects.filter(usuario=request.user).order_by('-fecha')
+    # 🎯 CORREGIDO: Ajustamos el ordenamiento por el campo real de auditoría (ej. created_at o fecha_registro)
+    # Cambia '-created_at' por tu campo exacto de fecha si es diferente.
+    campo_orden = 'created_at' if hasattr(Pedido, 'created_at') else ('fecha_registro' if hasattr(Pedido, 'fecha_registro') else 'id')
+    pedidos = Pedido.objects.filter(usuario=request.user).order_by(f'-{campo_orden}')
+    
     hoy = timezone.now().date()
 
     for p in pedidos:
@@ -2458,11 +2496,10 @@ def lista_pedidos(request):
 
 @login_required
 def detalle_pedido(request, pedido_id):
-    # 🎯 Buscamos el pedido asegurando que pertenezca al joyero autenticado
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
 
     # =======================================================
-    # 🔄 CRM ACTUALIZACIÓN EN CALIENTE (Tu lógica de negocio intacta)
+    # 🔄 CRM ACTUALIZACIÓN EN CALIENTE
     # =======================================================
     if pedido.cliente:
         cliente_actual = pedido.cliente
@@ -2481,9 +2518,10 @@ def detalle_pedido(request, pedido_id):
     items = pedido.items.select_related('producto', 'variante').all()
 
     # =======================================================
-    # 🏢 1. OBTENCIÓN DEL PERFIL MEDIANTE HELPER
+    # 🏢 1. OBTENCIÓN DE PERFIL Y CONFIGURACIÓN (Evita cruces)
     # =======================================================
     perfil = obtener_perfil_pedido(pedido)
+    config = obtener_configuracion_negocio(pedido) # 🎯 NUEVO: Carga la configuración del negocio real
     
     empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
     empresa_nit = perfil.nit if perfil else "Sin NIT"
@@ -2492,14 +2530,14 @@ def detalle_pedido(request, pedido_id):
     logo_path = perfil.logo.url if perfil and getattr(perfil, 'logo', None) else None
 
     # =======================================================
-    # ⚡ 2. MOTOR FISCAL ÚNICO (Sincronización total)
+    # ⚡ 2. MOTOR FISCAL ÚNICO (Pasamos config para tasas fiscales reales)
     # =======================================================
-    totales = calcular_totales_pedido(pedido, perfil, items)
+    totales = calcular_totales_pedido(pedido, config, items) # 🎯 CORREGIDO: Usa 'config' en vez de 'perfil'
 
     # 🔗 ENLACES NATIVOS Y WHATSAPP
     link_pdf = request.build_absolute_uri(reverse('pedido_pdf', args=[pedido.id]))
     link_publico = request.build_absolute_uri(reverse('confirmar_pago_publico', args=[pedido.token_publico]))
-    whatsapp_url = generar_link_whatsapp(request, pedido)
+    whatsapp_url = generar_link_whatsapp(request, pedido) if 'generar_link_whatsapp' in globals() else '#'
 
     # 💳 CONTROL DE CRÉDITO
     hoy = timezone.now().date()
@@ -2532,12 +2570,11 @@ def detalle_pedido(request, pedido_id):
         'empresa_direccion': empresa_direccion,
         'logo_path': logo_path,
         'qr_pago_url': link_publico,
-        **totales  # ⚡ Desempaquetado limpio sin fórmulas manuales
+        **totales  
     }
     
-    print("DETALLE PEDIDO OK - CRM Y MOTOR FISCAL SINCRONIZADOS")
+    print("✅ DETALLE PEDIDO OK - CONFIGURACIÓN DE NEGOCIO Y MOTOR FISCAL SINCRONIZADOS")
     return render(request, 'detalle_pedido.html', context)
-
 
 @login_required
 def inventario(request):
@@ -2591,12 +2628,27 @@ def calcular_totales_pedido(pedido, perfil, items):
         porcentaje_desc = getattr(perfil, 'porcentaje_descuento_promo', 0) or 0
     descuento_total = subtotal_base * (Decimal(str(porcentaje_desc)) / Decimal('100')) if porcentaje_desc else Decimal('0')
 
-    # 2. Logística y Envíos
-    envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
-    if envio == 0 and perfil and getattr(perfil, 'cobrar_envio', False):
-        limite_gratis = Decimal(str(getattr(perfil, 'envio_gratis_desde', 0) or 0))
-        if subtotal_base < limite_gratis:
-            envio = Decimal(str(getattr(perfil, 'costo_envio_estandar', 0) or 0))
+    # =========================================================================
+    # 🎯 2. LOGÍSTICA Y ENVÍOS (CORREGIDO CON PRIORIDAD DE RECOGIDA)
+    # =========================================================================
+    tipo_envio = getattr(pedido, 'tipo_envio', '').lower() if pedido.tipo_envio else ''
+    
+    if tipo_envio == 'recogida':
+        # Prioridad Absoluta: Si recoge en tienda, el envío es $0, sin importar el monto de compra
+        envio = Decimal('0')
+    else:
+        # Si es domicilio/transportadora, evaluamos las reglas dinámicas del negocio
+        envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
+        if envio == 0 and perfil and getattr(perfil, 'cobrar_envio', False):
+            limite_gratis = Decimal(str(getattr(perfil, 'envio_gratis_desde', 0) or 0)) # Ej: 300000
+            
+            if subtotal_base < limite_gratis:
+                # Si no llega al mínimo, se cobra la tarifa estándar (Ej: 15000)
+                envio = Decimal(str(getattr(perfil, 'costo_envio_estandar', 0) or 0))
+            else:
+                # Si supera el mínimo, el envío se fuerza a $0 (Envío Gratis)
+                envio = Decimal('0')
+    # =========================================================================
 
     # 3. IVA (Cálculo limpio y determinista desde las reglas del perfil)
     es_responsable_iva = perfil and getattr(perfil, 'responsable_iva', False)

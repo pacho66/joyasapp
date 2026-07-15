@@ -17,7 +17,8 @@
 
 .grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    /* Cambiado para soportar perfectamente 5 tarjetas en cualquier tamaño de pantalla */
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
     gap:15px;
     margin-bottom:25px;
 }
@@ -46,6 +47,12 @@
 .naranja{border-left:5px solid #ff9800;}
 .morado{border-left:5px solid #6f42c1;}
 
+/* 💰 Nueva tarjeta premium para tus ganancias reales */
+.esmeralda{
+    border-left:5px solid #10b981;
+    background: #f0fdf4; /* Un toque verde muy sutil de fondo */
+}
+
 .tabla{
     background:#fff;
     border-radius:14px;
@@ -53,9 +60,19 @@
     box-shadow:0 4px 14px rgba(0,0,0,.08);
 }
 
+/* 📱 SOLUCIÓN RESPONSIVE PARA EL CELULAR */
+.tabla-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Deslizamiento suave en iOS */
+    margin-bottom: 15px;
+}
+
 table{
     width:100%;
     border-collapse:collapse;
+    /* Evita que las columnas se aplasten en pantallas pequeñas */
+    min-width: 550px; 
 }
 
 th,td{
@@ -90,6 +107,7 @@ th{
 }
 
 @media(max-width:768px){
+    .wrap{padding:15px;}
     .titulo{font-size:24px;}
     .card h2{font-size:22px;}
 }
@@ -102,66 +120,76 @@ th{
 <!-- MÉTRICAS -->
 <div class="grid">
 
-<div class="card verde">
-<h4>Ventas Hoy</h4>
-<h2>${{ ventas_hoy|floatformat:0 }}</h2>
-</div>
+    <div class="card verde">
+        <h4>Ventas Hoy</h4>
+        <h2>${{ ventas_hoy|floatformat:0 }}</h2>
+    </div>
 
-<div class="card azul">
-<h4>Ventas Mes</h4>
-<h2>${{ ventas_mes|floatformat:0 }}</h2>
-</div>
+    <div class="card azul">
+        <h4>Ventas Mes</h4>
+        <h2>${{ ventas_mes|floatformat:0 }}</h2>
+    </div>
 
-<div class="card naranja">
-<h4>Total General</h4>
-<h2>${{ ventas_total|floatformat:0 }}</h2>
-</div>
+    <!-- 🚀 NUEVA TARJETA DE UTILIDAD (GANANCIA NETAS) -->
+    <div class="card esmeralda">
+        <h4 style="color: #047857; font-weight: bold;">💰 Ganancia Real (Mes)</h4>
+        <h2 style="color: #065f46;">${{ ganancia_mes|floatformat:0 }}</h2>
+    </div>
 
-<div class="card morado">
-<h4>Ticket Promedio</h4>
-<h2>${{ ticket_promedio|floatformat:0 }}</h2>
-</div>
+    <div class="card naranja">
+        <h4>Total General</h4>
+        <h2>${{ ventas_total|floatformat:0 }}</h2>
+    </div>
+
+    <div class="card morado">
+        <h4>Ticket Promedio</h4>
+        <h2>${{ ticket_promedio|floatformat:0 }}</h2>
+    </div>
 
 </div>
 
 <!-- TABLA -->
 <div class="tabla">
 
-<h3>📦 Últimos Pedidos</h3>
+    <h3>📦 Últimos Pedidos</h3>
 
-<table>
-<tr>
-<th>Orden</th>
-<th>Total</th>
-<th>Estado</th>
-<th>Fecha</th>
-</tr>
+    <!-- Aplicamos el contenedor responsivo para blindar la tabla en el móvil -->
+    <div class="tabla-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Orden</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pedido in pedidos %}
+                <tr>
+                    <td>{{ pedido.numero_orden }}</td>
+                    <td>${{ pedido.total|floatformat:0 }}</td>
+                    <td>
+                        {% if pedido.estado == 'Pagado' %}
+                        <span class="estado-ok">Pagado</span>
+                        {% else %}
+                        <span class="estado-pendiente">{{ pedido.estado }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ pedido.fecha|date:"d/m/Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; color: #888; padding: 30px;">
+                        No hay pedidos registrados en este momento.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-{% for pedido in pedidos %}
-<tr>
-<td>{{ pedido.numero_orden }}</td>
-<td>${{ pedido.total|floatformat:0 }}</td>
-
-<td>
-{% if pedido.estado == 'Pagado' %}
-<span class="estado-ok">Pagado</span>
-{% else %}
-<span class="estado-pendiente">{{ pedido.estado }}</span>
-{% endif %}
-</td>
-
-<td>{{ pedido.fecha|date:"d/m/Y" }}</td>
-</tr>
-
-{% empty %}
-<tr>
-<td colspan="4">No hay pedidos</td>
-</tr>
-{% endfor %}
-
-</table>
-
-<a href="{% url 'dashboard' %}" class="btn">⬅️ Volver al Dashboard</a>
+    <a href="{% url 'dashboard' %}" class="btn">⬅️ Volver al Dashboard</a>
 
 </div>
 
