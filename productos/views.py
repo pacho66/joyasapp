@@ -43,7 +43,7 @@ from productos.services.precios import calcular_precio_producto
 from productos.services.envios import calcular_envio
 
 # 📂 IMPORTACIONES DE LA APP ACTUAL (Pedidos/Ventas)
-from .models import ProductoVariante, Pedido, PedidoItem, Perfil, Abono, Gasto, ConfiguracionNegocio
+from .models import ProductoVariante, Pedido, PedidoItem, Perfil, Abono, Gasto
 from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm, ProductoForm
 from django.db import IntegrityError
 from .services.producto_service import ProductoService 
@@ -2439,7 +2439,8 @@ def obtener_perfil_pedido(pedido):
 def obtener_configuracion_negocio(pedido):
     """Helper para obtener la parametrización fiscal, envíos e integraciones"""
     try:
-        return ConfiguracionNegocio.objects.filter(usuario=pedido.usuario).first()
+        # 🚀 Cambiamos ConfiguracionNegocio por Perfil, que sí existe y maneja tus valores
+        return Perfil.objects.filter(usuario=pedido.usuario).first()
     except Exception:
         return None
 
