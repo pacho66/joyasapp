@@ -118,6 +118,40 @@ class Perfil(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.nombre_tienda}"
+    
+class ConfiguracionEmpresa(models.Model):
+    # Tipos de envío soportados por el negocio
+    class TipoEnvio(models.TextChoices):
+        RECOGIDA = 'recogida', 'Recogida en tienda (Sin costo)'
+        ESTANDAR = 'estandar', 'Envío Estándar / Transportadora'
+        PERSONALIZADO = 'personalizado', 'Tarifa Especial / Manual'
+
+    perfil = models.OneToOneField('Perfil', on_delete=models.CASCADE, related_name='configuracion_fiscal')
+    
+    # 🏛️ Reglas Fiscales Dinámicas
+    responsable_iva = models.BooleanField(default=False)
+    porcentaje_iva = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('19.00'))
+    mostrar_iva_discriminado = models.BooleanField(default=False)
+    
+    es_retenedor = models.BooleanField(default=False)
+    porcentaje_retefuente = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        default=Decimal('2.50'),
+        help_text="Porcentaje de retención en la fuente (ej. 2.50 o 3.50)"
+    )
+    
+    # 🚚 Reglas de Logística y Descuentos
+    cobrar_envio = models.BooleanField(default=False)
+    costo_envio_estandar = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    envio_gratis_desde = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    
+    aplicar_descuentos = models.BooleanField(default=False)
+    porcentaje_descuento_promo = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
+
+    def __str__(self):
+        return f"Configuración Fiscal - {self.perfil.nombre_tienda}"
+    
 class Categoria(models.Model):
     nombre = models.CharField(max_length=100)
     usuario = models.ForeignKey(
@@ -662,8 +696,18 @@ class Pedido(models.Model):
     
     @property
     def total_limpio(self):
-        """Devuelve el total como un entero para usar fácilmente en HTML o pasarelas"""
+        """Devuelve el total como un entero para usar fácilmente en HTML o pasarelas"""        
         return int(self.total)
+    
+    @property
+    def subtotal_antes_de_descuento(self):
+        """Suma de todos los subtotales de productos antes de aplicar promociones"""
+        return sum(item.subtotal for item in self.items.all())
+
+    @property
+    def subtotal_neto(self):
+        """Base imponible tras aplicar el descuento (Subtotal de factura)"""
+        return self.subtotal_antes_de_descuento - self.descuento_total
 
     def __str__(self):
         return self.numero_orden

@@ -59,11 +59,27 @@ from productos.services.precios import calcular_precio_producto
 from productos.services.envios import calcular_envio
 
 # =========================================================================
-# 📂 IMPORTACIONES DE LA APP ACTUAL (Pedidos/Ventas/Configuración)
+# 📂 IMPORTACIONES LIMPIAS (Para archivos dentro de pgjoyasgonzalez)
 # =========================================================================
-from .models import ProductoVariante, Pedido, PedidoItem, Abono, Gasto
+# 1. Modelos locales de tu app sin duplicar ninguno
+from .models import (
+    Perfil, 
+    ConfiguracionEmpresa, 
+    Pedido, 
+    PedidoItem, 
+    CarritoItem, 
+    Producto, 
+    ProductoVariante,
+    Abono, 
+    Gasto
+)
+
+# 2. Formularios y servicios locales
 from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm, ProductoForm
 from .services.producto_service import ProductoService 
+
+# 3. Tu motor fiscal independiente 🧠
+from motores.fiscal import MotorFiscal
 
 # 🛠️ UTILS LOCALES (Unificados)
 from .utils import (
@@ -1680,10 +1696,6 @@ def eliminar_del_carrito(request, item_id):
 
 @transaction.atomic
 def comprar_whatsapp(request, producto_id=None):
-    """
-    Vista única para procesar compras de WhatsApp mediante POST seguro.
-    Sincronizada con el modelo real de Pedido y PedidoItem.
-    """
     if request.method != "POST":
         messages.error(request, "Acceso no autorizado.")
         return redirect('ver_carrito')
@@ -1693,7 +1705,7 @@ def comprar_whatsapp(request, producto_id=None):
     es_compra_directa = producto_id is not None
 
     # =========================================================
-    # 🛒 PASO 1: MODO DE ENTRADA (DIRECTO O CARRITO)
+    # 🛒 PASO 1: MODO DE ENTRADA (DIRECTO O CARRITO) - (Queda igual, es correcto)
     # =========================================================
     if es_compra_directa:
         producto = get_object_or_404(Producto, id=producto_id)
@@ -1709,7 +1721,6 @@ def comprar_whatsapp(request, producto_id=None):
         if variante_id:
             variante = get_object_or_404(ProductoVariante, id=variante_id, producto=producto)
 
-        # Validar Stock
         if variante:
             if variante.stock < cantidad:
                 messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
@@ -1739,7 +1750,6 @@ def comprar_whatsapp(request, producto_id=None):
             'subtotal': subtotal,
             'linea': linea,
         })
-
     else:
         session_key = request.session.session_key
         if not session_key:
@@ -1794,27 +1804,29 @@ def comprar_whatsapp(request, producto_id=None):
             })
 
     # =========================================================
-    # 📊 PASO 2: CAPTURA SEGURA (Sin autonomía del cliente)
+    # 📊 PASO 2: CONFIGURACIÓN Y MOTORES (Aquí empieza el cambio radical ⚡)
     # =========================================================
     numero = generar_numero_orden(usuario)
-
-    # 🔒 OBTENEMOS LAS REGLAS DIRECTAMENTE DEL PERFIL DEL JOYERO (No del POST)
     perfil, _ = Perfil.objects.get_or_create(user=usuario)
     
-    # Supongamos que en tu modelo Perfil tienes campos como 'cobra_iva' o 'es_autoretenedor'.
-    # Si no existen, puedes dejarlos en False por defecto o usar los atributos correctos de tu modelo:
-    aplica_iva = getattr(perfil, 'cobra_iva', False) 
-    es_retenedor = getattr(perfil, 'es_retenedor', False)
-    porcentaje_descuento = Decimal('0')  # El cliente público no puede auto-asignarse descuentos
+    # 1. Traemos de forma segura la nueva clase de Configuración Fiscal
+    config_fiscal, _ = ConfiguracionEmpresa.objects.get_or_create(perfil=perfil)
+    
+    # 2. Instanciamos el Motor Fiscal pasándole su configuración única
+    motor = MotorFiscal(config_fiscal)
 
-    # Solo capturamos los datos personales y de envío del cliente
+    # 3. Determinamos porcentaje de descuento comercial
+    porcentaje_descuento = Decimal('0')
+    if config_fiscal.aplicar_descuentos:
+        porcentaje_descuento = Decimal(str(config_fiscal.porcentaje_descuento_promo or 0))
+
+    # Captura de datos del cliente enviados por el POST
     nombre_cliente = request.POST.get('nombre', '').strip()
     telefono_cliente = request.POST.get('telefono', '').strip()
     ciudad_destino = request.POST.get('ciudad', '').strip()
     direccion_entrega = request.POST.get('direccion', '').strip()
     nit = request.POST.get('nit', '').strip()
 
-    # 🛠️ PARCHE QUIRÚRGICO CONTRA EL ERROR 500 (Email Blindado)
     email_input = request.POST.get('email', '').strip()
     if email_input:
         cliente_email = email_input
@@ -1823,22 +1835,33 @@ def comprar_whatsapp(request, producto_id=None):
     else:
         cliente_email = "cliente_whatsapp@joyasapp.com"
 
-    # Cálculo de Totales basado en la configuración real del Joyero
-    subtotal_general = Decimal('0')
-    for data in resumen_items:
-        subtotal_general += data['subtotal']
+    # Calculamos el subtotal base neto de los productos
+    subtotal_general = sum(data['subtotal'] for data in resumen_items)
 
-    descuento = subtotal_general * (porcentaje_descuento / Decimal('100'))
-    subtotal_con_descuento = subtotal_general - descuento
+    # 4. Resolvemos el tipo de envío de forma inteligente
+    if config_fiscal.cobrar_envio:
+        # El motor decidirá internamente si aplica tarifa estándar o envío gratis según las reglas del negocio
+        tipo_envio = 'estandar'
+        valor_envio_personalizado = None
+    else:
+        # Si el comercio no tiene reglas automáticas de cobro, aplicamos tu cálculo dinámico por ciudad
+        tipo_envio = 'personalizado'
+        # Calculamos el subtotal tentativo con descuento comercial para pasarlo a la función externa de envíos
+        descuento_tentativo = subtotal_general * (porcentaje_descuento / Decimal('100'))
+        subtotal_con_descuento = subtotal_general - descuento_tentativo
+        valor_envio_personalizado = Decimal(str(calcular_envio(ciudad_destino, subtotal_con_descuento)))
 
-    iva = subtotal_con_descuento * Decimal('0.19') if aplica_iva else Decimal('0')
-    retefuente = subtotal_con_descuento * Decimal('0.025') if es_retenedor else Decimal('0')
-    
-    costo_envio = calcular_envio(ciudad_destino, subtotal_con_descuento)
-    total_final = subtotal_con_descuento + iva - retefuente + costo_envio
+    # 5. ⚡ EJECUTAMOS EL MOTOR FISCAL ⚡
+    # Toda la cascada matemática ocurre en esta sola línea
+    totales = motor.calcular_totales_pedido(
+        subtotal_base=subtotal_general,
+        porcentaje_descuento=porcentaje_descuento,
+        tipo_envio=tipo_envio,
+        valor_envio_personalizado=valor_envio_personalizado
+    )
 
-    # 🕵️ BLOQUE CAPTURADOR PARA EL PROCESO DE GUARDADO
     try:
+        # Guardamos el Pedido utilizando directamente los resultados estructurados del motor
         pedido = Pedido.objects.create(
             usuario=usuario,
             numero_orden=numero,
@@ -1848,21 +1871,19 @@ def comprar_whatsapp(request, producto_id=None):
             cliente_ciudad=ciudad_destino,
             cliente_direccion=direccion_entrega,
             cliente_nit=nit,
-            total=float(total_final),  
-            porcentaje_descuento=float(porcentaje_descuento),  
-            descuento_total=float(descuento),
-            costo_envio=float(costo_envio),
-            aplica_iva=aplica_iva,
-            es_retenedor=es_retenedor,
+            total=float(totales['total_final']),  
+            porcentaje_descuento=float(totales['porcentaje_descuento']),  
+            descuento_total=float(totales['descuento_total']),
+            costo_envio=float(totales['costo_envio']),
+            aplica_iva=config_fiscal.responsable_iva,
+            es_retenedor=config_fiscal.es_retenedor,
+            tipo_envio=totales['tipo_envio'],
             estado="pendiente"
         )
 
-        # Registrar los productos asociados al pedido (PedidoItem)
+        # 6. Guardamos los items de forma inmutable usando los valores de item del motor
         for data in resumen_items:
-            subtotal = data['subtotal']
-            iva_item = subtotal * Decimal('0.19') if aplica_iva else Decimal('0')
-            retefuente_item = subtotal * Decimal('0.025') if es_retenedor else Decimal('0')
-            total_item = subtotal + iva_item - retefuente_item
+            valores_item = motor.calcular_valores_item(subtotal_item=data['subtotal'])
 
             PedidoItem.objects.create(
                 pedido=pedido,
@@ -1871,13 +1892,13 @@ def comprar_whatsapp(request, producto_id=None):
                 cantidad=int(data['cantidad']),
                 total_gramos=float(data['total_gramos']), 
                 precio=float(data['precio']),
-                subtotal=float(subtotal),
-                iva=float(iva_item),
-                retefuente=float(retefuente_item),
-                total_final=float(total_item)
+                subtotal=float(data['subtotal']),
+                iva=float(valores_item['iva_item']),
+                retefuente=float(valores_item['retefuente_item']),
+                total_final=float(valores_item['total_item'])
             )
 
-            # Descontar del inventario/stock
+            # Descuento del stock (Lógica de negocio)
             if data['variante']:
                 data['variante'].stock -= data['cantidad']
                 data['variante'].save()
@@ -1886,7 +1907,7 @@ def comprar_whatsapp(request, producto_id=None):
                 data['producto'].save()
 
         # =========================================================
-        # 🔗 PASO 3: ENLACE SEGURO Y MENSAJE DE WHATSAPP
+        # 🔗 PASO 3: ENLACE SEGURO Y WHATSAPP (Queda igual de limpio)
         # =========================================================
         domain = get_current_site(request).domain
         url_factura = f"https://{domain}{reverse('factura_publica', kwargs={'token': pedido.token_publico})}"
@@ -1895,7 +1916,7 @@ def comprar_whatsapp(request, producto_id=None):
             f"🛍️ ¡Hola! Acabo de confirmar mi pedido.\n\n"
             f"📦 Orden N°: {pedido.numero_orden}\n"
             f"👤 Cliente: {nombre_cliente}\n"
-            f"💰 Total Neto: ${float(total_final):,.0f}\n\n"
+            f"💰 Total Neto: ${float(totales['total_final']):,.0f}\n\n"
             f"📄 Ver detalles y datos de facturación aquí:\n{url_factura}\n\n"
             f"Quedo atento a tus indicaciones para realizar el pago. ¡Muchas gracias!"
         ).replace(",", ".")
@@ -1918,7 +1939,6 @@ def comprar_whatsapp(request, producto_id=None):
         traceback.print_exc()
         print("🚨" * 30 + "\n")
         return HttpResponse(f"Fallo capturado en proceso de guardado: {str(e)}", status=500)
-
 @transaction.atomic
 def pagar_pedido(request):
     """
@@ -1950,8 +1970,7 @@ def pagar_pedido(request):
         direccion = request.POST.get('direccion', '').strip()
         nit = request.POST.get('nit', '').strip()
         
-        # 🎯 CAPTURA REAL DEL TIPO DE ENVÍO SELECCIONADO POR EL USUARIO
-        # Si no viene en el POST, por defecto asumimos 'domicilio'
+        # Tipo de envío seleccionado por el usuario en el frontend
         tipo_envio_seleccionado = request.POST.get('tipo_envio', 'domicilio').strip()
 
         # 🛠️ ESCUDO CONTRA CORREOS VACÍOS O ANÓNIMOS
@@ -1963,7 +1982,7 @@ def pagar_pedido(request):
         else:
             cliente_email = "cliente_pasarela@joyasapp.com"
 
-        # 📊 CAPTURA DINÁMICA DE IMPUESTOS Y DESCUENTO
+        # 📊 CAPTURA DINÁMICA DE IMPUESTOS Y DESCUENTO DESDE EL FORMULARIO
         aplica_iva = request.POST.get('aplica_iva') == 'on' or request.POST.get('aplica_iva') == 'true'
         es_retenedor = request.POST.get('es_retenedor') == 'on' or request.POST.get('es_retenedor') == 'true'
         valor_descuento = request.POST.get('descuento', '0').strip()
@@ -1975,7 +1994,19 @@ def pagar_pedido(request):
 
         porcentaje_descuento = max(Decimal('0'), min(Decimal('100'), porcentaje_descuento))
 
-        # Calcular precios bases y gramos de cada ítem
+        # =========================================================
+        # 🧠 CONFIGURACIÓN DEL MOTOR FISCAL
+        # =========================================================
+        perfil, _ = Perfil.objects.get_or_create(user=usuario)
+        config_fiscal, _ = ConfiguracionEmpresa.objects.get_or_create(perfil=perfil)
+        
+        motor = MotorFiscal(config_fiscal)
+        
+        # El formulario de la transacción específica puede sobreescribir las reglas por defecto
+        motor.aplica_iva = aplica_iva
+        motor.es_retenedor = es_retenedor
+
+        # Calcular precios bases y gramos de cada ítem (Conserva tu lógica de negocio intacta)
         subtotal_general = Decimal('0')
         lineas_items = []
 
@@ -2010,38 +2041,34 @@ def pagar_pedido(request):
                 'subtotal_item': subtotal_item
             })
 
-        # Calcular la estructura de totales global con el Descuento aplicado
-        descuento_pesos = subtotal_general * (porcentaje_descuento / Decimal('100'))
-        subtotal_con_descuento = subtotal_general - descuento_pesos
-
-        iva_total = subtotal_con_descuento * Decimal('0.19') if aplica_iva else Decimal('0')
-        retefuente_total = subtotal_con_descuento * Decimal('0.025') if es_retenedor else Decimal('0')
-        
-        # 🚚 DETERMINACIÓN DINÁMICA DEL TIPO DE ENVÍO Y SU COSTO
-        from .models import ConfiguracionNegocio 
-        config = ConfiguracionNegocio.objects.filter(usuario=usuario).first()
-        
-        costo_envio = Decimal('0')
-        tipo_envio = tipo_envio_seleccionado  # Respetamos la decisión del cliente
-
-        if tipo_envio in ['domicilio', 'transportadora']:
-            # 1. Si el negocio tiene habilitado el cobro de envío estándar
-            if config and config.cobrar_envio:
-                # Validamos si califica para envío gratis por superar el umbral
-                if subtotal_con_descuento >= config.envio_gratis_desde:
-                    costo_envio = Decimal('0')
-                else:
-                    costo_envio = Decimal(str(config.costo_envio_estandar or 0))
-            else:
-                # 2. Si no cobra estándar o no hay configuración, usamos la función auxiliar calcular_envio
-                costo_envio = calcular_envio(ciudad, subtotal_con_descuento)
+        # =========================================================
+        # 🚚 RESOLUCIÓN DE ENVÍOS INTELIGENTE
+        # =========================================================
+        if config_fiscal.cobrar_envio:
+            # Si se configuró cobro de envío automático, respetamos si el cliente prefiere recogerlo
+            tipo_envio = 'recogida' if tipo_envio_seleccionado == 'recogida' else 'estandar'
+            valor_envio_personalizado = None
         else:
-            # Si el cliente seleccionó "recogida", el costo de envío siempre es $0
-            costo_envio = Decimal('0')
+            tipo_envio = 'personalizado'
+            descuento_tentativo = subtotal_general * (porcentaje_descuento / Decimal('100'))
+            subtotal_con_descuento = subtotal_general - descuento_tentativo
+            
+            if tipo_envio_seleccionado == 'recogida':
+                valor_envio_personalizado = Decimal('0.00')
+                tipo_envio = 'recogida'
+            else:
+                # Usamos tu función auxiliar basada en la base de datos de envíos por municipio
+                valor_envio_personalizado = Decimal(str(calcular_envio(ciudad, subtotal_con_descuento)))
 
-        total_final = subtotal_con_descuento + iva_total - retefuente_total + costo_envio
+        # ⚡ CÁLCULO GENERAL DE LA CASCADA MATEMÁTICA
+        totales = motor.calcular_totales_pedido(
+            subtotal_base=subtotal_general,
+            porcentaje_descuento=porcentaje_descuento,
+            tipo_envio=tipo_envio,
+            valor_envio_personalizado=valor_envio_personalizado
+        )
 
-        # 👤 Buscar o crear cliente
+        # 👤 Buscar o crear cliente (Conserva tu lógica)
         cliente, creado = Cliente.objects.get_or_create(
             usuario=usuario,
             telefono=telefono,
@@ -2060,7 +2087,7 @@ def pagar_pedido(request):
             cliente.direccion = direccion
             cliente.save()
 
-        # 📦 Crear el Pedido Maestro
+        # 📦 Crear el Pedido Maestro con datos puros del Motor Fiscal
         pedido = Pedido.objects.create(
             usuario=usuario,
             cliente=cliente,
@@ -2071,39 +2098,39 @@ def pagar_pedido(request):
             cliente_ciudad=ciudad,
             cliente_direccion=direccion,
             cliente_nit=nit,
-            total=total_final,                 
-            porcentaje_descuento=porcentaje_descuento,
-            descuento_total=descuento_pesos,
-            costo_envio=costo_envio,
-            tipo_envio=tipo_envio,  # Guardamos la opción real del usuario
+            total=float(totales['total_final']),                 
+            porcentaje_descuento=float(totales['porcentaje_descuento']),
+            descuento_total=float(totales['descuento_total']),
+            costo_envio=float(totales['costo_envio']),
+            tipo_envio=totales['tipo_envio'],
             aplica_iva=aplica_iva,             
-            es_retenedor=es_retenedor,     
+            es_retenedor=es_retenedor,
+            iva=float(totales['iva_total']),  # Guardamos el IVA consolidado
+            retefuente=float(totales['retefuente_total']),  # Guardamos la Retefuente consolidada
             estado="pendiente" 
         )
 
-        # 🔄 Registrar cada PedidoItem y descontar inventarios (Reserva de stock)
+        # 🔄 Registrar cada PedidoItem calculando valores unitarios inmutables
         for linea in lineas_items:
             item = linea['item_carrito']
-            sub_item = linea['subtotal_item']
             
-            iva_item = sub_item * Decimal('0.19') if aplica_iva else Decimal('0')
-            retefuente_item = sub_item * Decimal('0.025') if es_retenedor else Decimal('0')
-            total_item = sub_item + iva_item - retefuente_item
+            # El motor desglosa el IVA e impuesto de cada ítem de forma aislada
+            valores_item = motor.calcular_valores_item(subtotal_item=linea['subtotal_item'])
 
             PedidoItem.objects.create(
                 pedido=pedido,
                 producto=item.producto,
                 variante=item.variante,
                 cantidad=int(item.cantidad),
-                precio=linea['precio_aplicado'],
-                total_gramos=linea['gramos_totales'],  
-                subtotal=sub_item,
-                iva=iva_item,
-                retefuente=retefuente_item,
-                total_final=total_item
+                precio=float(linea['precio_aplicado']),
+                total_gramos=float(linea['gramos_totales']),  
+                subtotal=float(linea['subtotal_item']),
+                iva=float(valores_item['iva_item']),
+                retefuente=float(valores_item['retefuente_item']),
+                total_final=float(valores_item['total_item'])
             )
 
-            # Descontamos el stock aquí para apartar la mercancía
+            # Descontar existencias del inventario (Apartar mercancía)
             if item.variante:
                 item.variante.stock -= item.cantidad
                 item.variante.save()

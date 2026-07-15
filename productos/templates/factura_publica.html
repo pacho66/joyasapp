@@ -198,58 +198,56 @@
         </tbody>
     </table>
 
+    <!-- ========================================== -->
+    <!-- 📊 CONTENEDOR DE TOTALES (VISTA PÚBLICA)   -->
+    <!-- ========================================== -->
     <div class="contenedor-totales">
         <table class="tabla-totales">
             <tr>
-                <td style="text-align: left; color: #555;">Subtotal:</td>
-                <td style="text-align: right; font-weight: bold;">${{ subtotal|floatformat:"0" }}</td>
+                <td style="text-align: left; color: #555;">Subtotal Productos:</td>
+                <td style="text-align: right; font-weight: bold;">${{ pedido.subtotal_antes_de_descuento|floatformat:"0" }}</td>
             </tr>
-            
-            <!-- 📉 DESCUENTO INTELIGENTE (Lee porcentaje_descuento de la vista si es promo global o manual) -->
-            {% if descuento_total > 0 %}
+        
+            <!-- 📉 DESCUENTO COMERCIAL -->
+            {% if pedido.descuento_total > 0 %}
             <tr>
-                <td style="text-align: left; color: #C0392B;">Descuento ({{ porcentaje_descuento|floatformat:0 }}%):</td>
-                <td style="text-align: right; color: #C0392B;">-${{ descuento_total|floatformat:"0" }}</td>
+                <td style="text-align: left; color: #C0392B;">Descuento ({{ pedido.porcentaje_descuento|floatformat:0 }}%):</td>
+                <td style="text-align: right; color: #C0392B;">-${{ pedido.descuento_total|floatformat:"0" }}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left; color: #555;">Subtotal Neto:</td>
+                <td style="text-align: right; font-weight: bold;">${{ pedido.subtotal_neto|floatformat:"0" }}</td>
             </tr>
             {% endif %}
-            
-            <!-- ⚖️ IVA CONDICIONADO POR EL PERFIL DEL NEGOCIO -->
-            {% if es_responsable_iva and iva_total > 0 %}
+        
+            <!-- ⚖️ IVA DESDE EL PEDIDO -->
+            {% if pedido.aplica_iva and pedido.iva > 0 %}
             <tr>
-                <td style="text-align: left; color: #555;">
-                    IVA ({{ porcentaje_iva|floatformat:0 }}%) {% if mostrar_iva_discriminado %}<small style="color:#888;">Incluido</small>{% endif %}:
-                </td>
-                <td style="text-align: right;">+${{ iva_total|floatformat:"0" }}</td>
+                <td style="text-align: left; color: #555;">IVA:</td>
+                <td style="text-align: right;">+${{ pedido.iva|floatformat:"0" }}</td>
             </tr>
             {% endif %}
-            
-            <!-- 💸 RETEFUENTE -->
-            {% if retefuente_total > 0 %}
+        
+            <!-- 💸 RETEFUENTE DESDE EL PEDIDO -->
+            {% if pedido.es_retenedor and pedido.retefuente > 0 %}
             <tr>
                 <td style="text-align: left; color: #C0392B;">Retefuente:</td>
-                <td style="text-align: right; color: #C0392B;">-${{ retefuente_total|floatformat:"0" }}</td>
+                <td style="text-align: right; color: #C0392B;">-${{ pedido.retefuente|floatformat:"0" }}</td>
             </tr>
             {% endif %}
-                        
-            <!-- 📦 ENVÍO CALCULADO POR BACKEND -->
+                    
+            <!-- 📦 LOGÍSTICA DE ENVÍO -->
             <tr>
                 <td style="text-align: left; color: #555; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">Envío:</td>
                 <td style="text-align: right; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">
-                    <!-- 1️⃣ Si el pedido es para despacho a domicilio -->
-                    {% if pedido.tipo_envio == "domicilio" or pedido.tipo_envio == "transportadora" %}
+                    {% if pedido.tipo_envio == "domicilio" or pedido.tipo_envio == "transportadora" or pedido.tipo_envio == "estandar" or pedido.tipo_envio == "personalizado" %}
                         {% if pedido.costo_envio > 0 %}
                             +${{ pedido.costo_envio|floatformat:"0" }}
-                        {% elif envio and envio > 0 %}
-                            +${{ envio|floatformat:"0" }}
                         {% else %}
                             <span style="color: #28a745; font-weight: bold;">¡Gratis!</span>
                         {% endif %}
-        
-                    <!-- 2️⃣ Si el cliente realmente seleccionó retirar en tienda -->
                     {% elif pedido.tipo_envio == "recogida" %}
                         <span style="color: #28a745;">Recoge en tienda / Gratis</span>
-            
-                    <!-- 3️⃣ Caso de respaldo -->
                     {% else %}
                         <span style="color: #555;">Por acordar</span>
                     {% endif %}
@@ -261,7 +259,7 @@
             </tr>
         </table>
     </div>
-
+    
     {% if estado != 'pagado' %}
         <a href="{% url 'pagar_wompi' pedido.token_publico %}" class="btn btn-pagar">💳 Pagar con Wompi</a>
         <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}" class="btn btn-mercadopago">🔵 Pagar con Mercado Pago</a>
