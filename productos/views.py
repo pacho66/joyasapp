@@ -61,7 +61,7 @@ from productos.services.envios import calcular_envio
 # =========================================================================
 # 📂 IMPORTACIONES DE LA APP ACTUAL (Pedidos/Ventas/Configuración)
 # =========================================================================
-from .models import ProductoVariante, Pedido, PedidoItem, Abono, Gasto, ConfiguracionNegocio
+from .models import ProductoVariante, Pedido, PedidoItem, Abono, Gasto
 from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm, ProductoForm
 from .services.producto_service import ProductoService 
 
