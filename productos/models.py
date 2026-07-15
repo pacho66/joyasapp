@@ -12,6 +12,27 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 
+# =========================================================================
+# ⚙️ CENTRO DE CONTROL DE TARIFAS DEL SAAS (Ubicación segura y limpia)
+# =========================================================================
+PRECIOS_PLANES = {
+    'basico': {
+        'nombre': 'Básico',
+        'precio_mensual': Decimal('50000.00'),  # COP
+        'descripcion': 'Ideal para tiendas que están iniciando.'
+    },
+    'pro': {
+        'nombre': 'Pro',
+        'precio_mensual': Decimal('120000.00'),
+        'descripcion': 'Para joyerías en crecimiento con pasarelas activas.'
+    },
+    'premium': {
+        'nombre': 'Premium',
+        'precio_mensual': Decimal('250000.00'),
+        'descripcion': 'Todo ilimitado + Facturación Electrónica e integración Siigo.'
+    }
+}
+
 class Perfil(models.Model):
     PLANES = [
     ('basico', 'Básico'),
@@ -91,13 +112,12 @@ class Perfil(models.Model):
     @property
     def get_precio_plan(self):
         """Devuelve el costo mensual del plan actual del perfil."""
-        # Importamos el diccionario aquí o desde tus constantes para evitar importaciones circulares
-        from .views import PRECIOS_PLANES 
+        # Al estar en el mismo archivo, ya no necesitas importar nada de las vistas
         plan_info = PRECIOS_PLANES.get(self.plan, PRECIOS_PLANES['basico'])
         return plan_info['precio_mensual']
-    def __str__(self):
-        return f"{self.user.username} - {self.nombre_tienda}"   
 
+    def __str__(self):
+        return f"{self.user.username} - {self.nombre_tienda}"
 class Categoria(models.Model):
     nombre = models.CharField(max_length=100)
     usuario = models.ForeignKey(
@@ -222,7 +242,7 @@ class Producto(models.Model):
                 precio_unidad = self.precio_detal or 0
             return Decimal(str(precio_unidad))
 
-    def _str_(self):
+    def __str__(self):
         return self.nombre
 
     class Meta:
@@ -247,7 +267,7 @@ class ProductoImagen(models.Model):
     # 🚀 Cambiamos ImageField por CloudinaryField
     imagen = CloudinaryField('imagen', blank=True, null=True)
 
-    def _str_(self):
+    def __str__(self):
         return f"Imagen de {self.producto.nombre}"
 
 class ProductoVariante(models.Model):
@@ -363,7 +383,7 @@ class CarritoItem(models.Model):
         precio_or = Decimal(str(self.producto.precio_detal or 0))
         return (precio_or - precio_act) * cantidad_val
 
-    def _str_(self):
+    def __str__(self):
         return f"{self.cantidad} x {self.producto.nombre}"
 
 class Cliente(models.Model):
@@ -464,7 +484,7 @@ class Cliente(models.Model):
 
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
-    def _str_(self):
+    def __str__(self):
         return f"[{self.nivel}] {self.nombre} - {self.telefono}"
         
     @property
@@ -645,7 +665,7 @@ class Pedido(models.Model):
         """Devuelve el total como un entero para usar fácilmente en HTML o pasarelas"""
         return int(self.total)
 
-    def _str_(self):
+    def __str__(self):
         return self.numero_orden
 
     def sincronizar_pedido(self):
@@ -696,7 +716,7 @@ class Abono(models.Model):
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     fecha = models.DateField(auto_now_add=True)
 
-    def _str_(self):
+    def __str__(self):
         return f"Abono {self.monto} - Pedido {self.pedido.numero_orden}"
 
     def save(self, *args, **kwargs):
@@ -776,7 +796,7 @@ class Gasto(models.Model):
     activo = models.BooleanField(default=True)              # ✅ NUEVO: Borrado lógico contable
     fecha = models.DateTimeField(auto_now_add=True)
 
-    def _str_(self):
+    def __str__(self):
         return f"{self.nombre} - {self.monto}"
  
 # ==========================================

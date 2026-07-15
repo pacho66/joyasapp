@@ -1,3 +1,6 @@
+# =========================================================================
+# 🐍 LIBRERÍAS ESTÁNDAR DE PYTHON
+# =========================================================================
 import json
 import os
 import uuid
@@ -5,11 +8,31 @@ import urllib.parse
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 import traceback
+import hashlib
+import time
+import logging
+import re
+
+# =========================================================================
+# 📦 LIBRERÍAS DE TERCEROS (APIs, Reportes, Excel)
+# =========================================================================
 import stripe
 import mercadopago
 import requests
+import openpyxl
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+try:
+    from xhtml2pdf import pisa
+except ImportError:
+    pisa = None
+
+# =========================================================================
+# ⚡ CORE DE DJANGO
+# =========================================================================
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -17,8 +40,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.mail import EmailMessage
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import transaction
-from django.db.models import Sum, Q
+from django.db import transaction, IntegrityError
+from django.db.models import Sum, Q, Avg, Count
 from django.db.models.functions import TruncDate
 from django.http import HttpResponse, Http404
 from django.shortcuts import render, get_object_or_404, redirect
@@ -26,49 +49,40 @@ from django.template.loader import get_template
 from django.urls import reverse
 from django.contrib.sites.shortcuts import get_current_site
 from django.utils import timezone
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from xhtml2pdf import pisa
-import hashlib
 from django.views.decorators.csrf import csrf_exempt
-import openpyxl
-import time
-import logging
-from django.db.models import Sum, Avg, Count
-import re
 
-# 🏪 IMPORTACIONES DE LA APP PRODUCTOS
+# =========================================================================
+# 🏪 IMPORTACIONES DE LA APP PRODUCTOS (Multi-tenant/Catálogo)
+# =========================================================================
 from productos.models import Producto, Categoria, ProductoImagen, CarritoItem, Cliente, Perfil
 from productos.services.precios import calcular_precio_producto
 from productos.services.envios import calcular_envio
 
-# 📂 IMPORTACIONES DE LA APP ACTUAL (Pedidos/Ventas)
-from .models import ProductoVariante, Pedido, PedidoItem, Perfil, Abono, Gasto
+# =========================================================================
+# 📂 IMPORTACIONES DE LA APP ACTUAL (Pedidos/Ventas/Configuración)
+# =========================================================================
+from .models import ProductoVariante, Pedido, PedidoItem, Abono, Gasto, ConfiguracionNegocio
 from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm, ProductoForm
-from django.db import IntegrityError
 from .services.producto_service import ProductoService 
-from .utils import calcular_totales_con_reglas_fiscales
-from django.conf import settings
-from django.contrib.staticfiles import finders
-from django.template.loader import get_template
 
-from .utils import generar_link_whatsapp, generar_numero_orden 
-from .utils import generar_link_whatsapp, generar_numero_orden, generar_pdf_pedido
+# 🛠️ UTILS LOCALES (Unificados)
+from .utils import (
+    calcular_totales_con_reglas_fiscales,
+    generar_link_whatsapp, 
+    generar_numero_orden, 
+    generar_pdf_pedido
+)
 
-try:
-    from xhtml2pdf import pisa
-except ImportError:
-    pisa = None
-
-
-# Configuración del Logger global para este módulo
+# 📡 Configuración del Logger global de auditoría
 logger = logging.getLogger('joyasapp.auditoria')
 
-# Centro de control de tarifas del SaaS
+# =========================================================================
+# ⚙️ CENTRO DE CONTROL DE TARIFAS DEL SAAS (Ubicación segura y limpia)
+# =========================================================================
 PRECIOS_PLANES = {
     'basico': {
         'nombre': 'Básico',
-        'precio_mensual': Decimal('50000.00'),  # Ejemplo en COP
+        'precio_mensual': Decimal('50000.00'),  # COP
         'descripcion': 'Ideal para tiendas que están iniciando.'
     },
     'pro': {
@@ -1273,7 +1287,7 @@ def ganancias(request):
 
     # 2. Métricas de ventas
     ventas_hoy = pedidos_usuario.filter(fecha__date=hoy).aggregate(total=Sum('total'))['total'] or 0
-    ventas_mes = pedidos_usuario.filter(fecha_date_gte=hace_30).aggregate(total=Sum('total'))['total'] or 0
+    ventas_mes = pedidos_usuario.filter(fecha__date__gte=hace_30).aggregate(total=Sum('total'))['total'] or 0
     ventas_total = pedidos_usuario.aggregate(total=Sum('total'))['total'] or 0
     
     # 3. Ticket Promedio real
@@ -1286,7 +1300,7 @@ def ganancias(request):
     gastos_mes = Gasto.objects.filter(
         usuario=usuario,
         activo=True,
-        fecha_date_gte=hace_30
+        fecha__date__gte=hace_30
     ).aggregate(total=Sum('monto'))['total'] or 0
 
     # Convertimos ambos valores a Decimal de forma segura para evitar fallos de precisión float
