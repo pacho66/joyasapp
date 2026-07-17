@@ -668,6 +668,8 @@ class Pedido(models.Model):
     # 🔹 IMPUESTOS Y DESCUENTOS
     aplica_iva = models.BooleanField(default=False)  # 👈 ESTE AGREGAS
     es_retenedor = models.BooleanField(default=False)
+    iva = models.DecimalField(max_digits=12,decimal_places=2,default=0)
+    retefuente = models.DecimalField(max_digits=12,decimal_places=2,default=0)
     descuento_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     porcentaje_descuento = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     tipo_envio = models.CharField(max_length=20,choices=[('recogida', 'Recogida en tienda'),('domicilio', 'Domicilio'),('transportadora', 'Transportadora'),],default='recogida')
@@ -683,7 +685,6 @@ class Pedido(models.Model):
     costo_mano_obra = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     
     # Asegúrate de tener estos campos si usas créditos/descuentos en la sincronización:
-    descuento_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     saldo_pendiente = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     @property
