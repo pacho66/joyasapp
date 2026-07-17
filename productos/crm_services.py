@@ -1,5 +1,6 @@
 from django.utils import timezone
-from .models import Cliente  
+from .models import Cliente 
+from decimal import Decimal 
 
 def registrar_venta_en_crm(usuario_tienda, datos_cliente, datos_factura):
     """
@@ -21,7 +22,7 @@ def registrar_venta_en_crm(usuario_tienda, datos_cliente, datos_factura):
     )
     
     # 2. Inyectar las métricas financieras acumuladas
-    cliente.total_compras += datos_factura['total_factura']
+    cliente.total_compras += Decimal(str(datos_factura.get('total_factura', 0)))
     cliente.saldo_pendiente += datos_factura.get('saldo_pendiente', 0)
     cliente.numero_pedidos += 1
     cliente.ultima_compra = timezone.now()
