@@ -1,27 +1,28 @@
 # =========================================================================
 # 🐍 LIBRERÍAS ESTÁNDAR DE PYTHON
 # =========================================================================
-import json
 import os
-import uuid
-import urllib.parse
-from datetime import timedelta
-from decimal import Decimal, InvalidOperation
-from io import BytesIO
-from urllib.parse import quote, unquote
-import traceback
-import hashlib
-import time
-import logging
 import re
+import json
+import uuid
+import time
+import hashlib
+import logging
+import traceback
+import urllib.parse
+from io import BytesIO
+from decimal import Decimal, InvalidOperation
+from datetime import timedelta
+from urllib.parse import quote, unquote
 
 # =========================================================================
-# 📦 LIBRERÍAS DE TERCEROS (APIs, Reportes, Excel)
+# 📦 LIBRERÍAS DE TERCEROS
 # =========================================================================
+import requests
 import stripe
 import mercadopago
-import requests
 import openpyxl
+
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
@@ -31,66 +32,89 @@ except ImportError:
     pisa = None
 
 # =========================================================================
-# ⚡ CORE DE DJANGO
+# ⚡ DJANGO
 # =========================================================================
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.contrib.staticfiles import finders
+
 from django.core.mail import EmailMessage
-from django.core.serializers.json import DjangoJSONEncoder
+
 from django.db import transaction, IntegrityError
-from django.db.models import Sum, Q, Avg, Count
+from django.db.models import Sum, Avg, Count, Q
 from django.db.models.functions import TruncDate
-from django.http import HttpResponse, Http404
-from django.shortcuts import render, get_object_or_404, redirect
-from django.template.loader import get_template
-from django.urls import reverse
 from django.contrib.sites.shortcuts import get_current_site
+from django.core.serializers.json import DjangoJSONEncoder
+
+from django.http import HttpResponse, Http404
+
+from django.shortcuts import render, redirect, get_object_or_404
+
+from django.template.loader import get_template
+
+from django.urls import reverse
+
 from django.utils import timezone
+
 from django.views.decorators.csrf import csrf_exempt
 
 # =========================================================================
-# 🏪 IMPORTACIONES DE LA APP PRODUCTOS (Multi-tenant/Catálogo)
+# 🏪 MODELOS DE LA APP (UNA SOLA VEZ)
 # =========================================================================
-from productos.models import Producto, Categoria, ProductoImagen, CarritoItem, Cliente, Perfil
-from productos.services.precios import calcular_precio_producto
-from productos.services.envios import calcular_envio
-
-# =========================================================================
-# 📂 IMPORTACIONES LIMPIAS (Para archivos dentro de pgjoyasgonzalez)
-# =========================================================================
-# 1. Modelos locales de tu app sin duplicar ninguno
 from .models import (
-    Perfil, 
-    ConfiguracionEmpresa, 
-    Pedido, 
-    PedidoItem, 
-    CarritoItem, 
-    Producto, 
+    Perfil,
+    Cliente,
+    Categoria,
+    Producto,
+    ProductoImagen,
     ProductoVariante,
-    Abono, 
-    Gasto
+    CarritoItem,
+    Pedido,
+    PedidoItem,
+    ConfiguracionEmpresa,
+    Gasto,
+    Abono,
 )
 
-# 2. Formularios y servicios locales
-from .forms import RegistroForm, ConfiguracionNegocioForm, GastoForm, ProductoForm
-from .services.producto_service import ProductoService 
+# =========================================================================
+# 📝 FORMULARIOS
+# =========================================================================
+from .forms import (
+    RegistroForm,
+    ConfiguracionNegocioForm,
+    ProductoForm,
+    GastoForm,
+)
 
-# 3. Tu motor fiscal independiente 🧠
+# =========================================================================
+# 🧠 SERVICIOS
+# =========================================================================
+from .services.producto_service import ProductoService
+from .services.precios import calcular_precio_producto
+from .services.envios import calcular_envio
+
+# =========================================================================
+# ⚙️ MOTOR FISCAL
+# =========================================================================
 from motores.fiscal import MotorFiscal
 
-# 🛠️ UTILS LOCALES (Unificados)
+# =========================================================================
+# 🧩 UTILIDADES
+# =========================================================================
 from .utils import (
+    generar_numero_orden,
+    generar_pdf_pedido,
+    generar_link_whatsapp,
     calcular_totales_con_reglas_fiscales,
-    generar_link_whatsapp, 
-    generar_numero_orden, 
-    generar_pdf_pedido
 )
 
-# 📡 Configuración del Logger global de auditoría
-logger = logging.getLogger('joyasapp.auditoria')
+# =========================================================================
+# 📡 LOGGER
+# =========================================================================
+logger = logging.getLogger("joyasapp.auditoria")
 
 # =========================================================================
 # ⚙️ CENTRO DE CONTROL DE TARIFAS DEL SAAS (Ubicación segura y limpia)
