@@ -3,17 +3,18 @@ from . import views
 from .views import whatsapp_segmento
 from django.conf import settings
 from django.conf.urls.static import static
+from .views import auth
 
 urlpatterns = [
+
 
     # ===============================
     # 🔓 AUTENTICACIÓN
     # ===============================
-    path('', views.inicio, name='inicio'),
-    path('registro/', views.registro, name='registro'),
-    path('login/', views.iniciar_sesion, name='login'),
-    path('logout/', views.cerrar_sesion, name='logout'),
-
+    path('', auth.inicio, name='inicio'),
+    path('registro/', auth.registro, name='registro'),
+    path('login/', auth.iniciar_sesion, name='login'),
+    path('logout/', auth.cerrar_sesion, name='logout'),
     # ===============================
     # 🛍️ CATÁLOGO / PRODUCTOS
     # ===============================

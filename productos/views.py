@@ -469,7 +469,7 @@ def iniciar_sesion(request):
                 request,
                 'Usuario o contraseña incorrectos'
             )
-    perfil = Perfil.objects.first()        
+    perfil = Perfil.objects.filter(activa=True).first()       
 
     return render(request, 'login.html', {'perfil': perfil})
 
@@ -477,13 +477,6 @@ def iniciar_sesion(request):
 def cerrar_sesion(request):
     logout(request)
     return redirect('login')
-
-@login_required
-def renovar_manual(request):
-    """Vista para forzar la renovación del plan SaaS desde el panel."""
-    perfil = request.user.perfil
-    renovar_plan(perfil)
-    return redirect('dashboard')
 
 def renovar_plan(perfil):
     """Lógica centralizada para extender la vigencia del plan 30 días."""
@@ -498,6 +491,14 @@ def renovar_plan(perfil):
 
     perfil.activa = True
     perfil.save()
+
+@login_required
+def renovar_manual(request):
+    """Vista para forzar la renovación del plan SaaS desde el panel."""
+    perfil = request.user.perfil
+    renovar_plan(perfil)
+    return redirect('dashboard')
+
 
 # =========================================================================
 # 🛍️ BLOQUE 3: CATÁLOGO PÚBLICO DE PRODUCTOS (VISTA DEL CLIENTE)
@@ -3245,7 +3246,6 @@ def cobrar_whatsapp(request, pedido_id):
 
     url = f"https://wa.me/{telefono}?text={quote(mensaje)}"
     return redirect(url)
-
 
 @login_required
 def cobrar_moroso(request, cliente_id):
