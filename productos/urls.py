@@ -2,6 +2,7 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from .views import auth
+from .views import catalogo
 from . import views
 
 urlpatterns = [
@@ -10,15 +11,15 @@ urlpatterns = [
     # ===============================
     # 🔓 AUTENTICACIÓN
     # ===============================
-    path('', views.inicio, name='inicio'),
+    path('', catalogo.inicio, name='inicio'),
     path('registro/', auth.registro, name='registro'),
     path('login/', auth.iniciar_sesion, name='login'),
     path('logout/', auth.cerrar_sesion, name='logout'),
     # ===============================
     # 🛍️ CATÁLOGO / PRODUCTOS
     # ===============================
-    path('buscar/', views.buscar_productos, name='buscar_productos'),
-    path('producto/<int:id>/<slug:slug>/', views.detalle_producto, name='detalle_producto'),
+    path('buscar/', catalogo.buscar_productos, name='buscar_productos'),
+    path('producto/<int:id>/<slug:slug>/', catalogo.detalle_producto, name='detalle_producto'),
     #path('productos/nuevo/',views.crear_producto,name='crear_producto'),
     path('productos/mis-productos/', views.mis_productos, name='mis_productos'),
     path('productos/eliminar/<int:id>/',views.eliminar_producto,name='eliminar_producto'),
@@ -27,7 +28,7 @@ urlpatterns = [
     path('imagen-galeria/eliminar/<int:id>/',views.eliminar_imagen_galeria,name='eliminar_imagen_galeria'),
     path('categoria/<int:categoria_id>/', views.productos_por_categoria, name='productos_por_categoria'),
     path('categorias/nueva/',views.crear_categoria,name='crear_categoria'),
-    path('top-productos/', views.productos_top, name='top_productos'),
+    path('top-productos/', catalogo.productos_top, name='top_productos'),
     # Ruta para crear un producto nuevo
     path('productos/nuevo/', views.guardar_producto_view, name='crear_producto'),
     
