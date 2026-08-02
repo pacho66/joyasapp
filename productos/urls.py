@@ -10,7 +10,7 @@ urlpatterns = [
     # ===============================
     # 🔓 AUTENTICACIÓN
     # ===============================
-    path('', auth.inicio, name='inicio'),
+    path('', views.inicio, name='inicio'),
     path('registro/', auth.registro, name='registro'),
     path('login/', auth.iniciar_sesion, name='login'),
     path('logout/', auth.cerrar_sesion, name='logout'),
