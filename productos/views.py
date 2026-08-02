@@ -117,31 +117,46 @@ from .utils import (
 logger = logging.getLogger("joyasapp.auditoria")
 
 # =========================================================================
-# ⚙️ CENTRO DE CONTROL DE TARIFAS DEL SAAS (Ubicación segura y limpia)
+# ⚙️ BLOQUE 1: UTILIDADES, CONVERSORES Y HELPERS MATEMÁTICOS/FISCALES
+# (Siempre van al inicio porque las vistas de abajo los llaman)
 # =========================================================================
-PRECIOS_PLANES = {
-    'basico': {
-        'nombre': 'Básico',
-        'precio_mensual': Decimal('50000.00'),  # COP
-        'descripcion': 'Ideal para tiendas que están iniciando.'
-    },
-    'pro': {
-        'nombre': 'Pro',
-        'precio_mensual': Decimal('120000.00'),
-        'descripcion': 'Para joyerías en crecimiento con pasarelas activas.'
-    },
-    'premium': {
-        'nombre': 'Premium',
-        'precio_mensual': Decimal('250000.00'),
-        'descripcion': 'Todo ilimitado + Facturación Electrónica e integración Siigo.'
-    }
-}
 
 def safe_int(valor, default=1):
     try:
         return int(valor)
     except (ValueError, TypeError):
         return default
+
+def safe_float(val):
+    if not val:
+        return None
+    try:
+        # Esto limpia el número por si el celular envía comas en vez de puntos
+        return float(str(val).replace(',', '.'))
+    except ValueError:
+        return None
+
+def obtener_variante(producto, color, talla):
+    return ProductoVariante.objects.filter(
+        producto=producto,
+        color=color,
+        talla=talla
+    ).first()
+
+def obtener_perfil_pedido(pedido):
+    """Helper para obtener el Perfil/Tenant (Logo, Redes, Nombre de tienda)"""
+    try:
+        return Perfil.objects.get(user=pedido.usuario)
+    except Perfil.DoesNotExist:
+        return None
+
+def obtener_configuracion_negocio(pedido):
+    """Helper para obtener la parametrización fiscal, envíos e integraciones"""
+    try:
+        # 🚀 Cambiamos ConfiguracionNegocio por Perfil, que sí existe y maneja tus valores
+        return Perfil.objects.filter(usuario=pedido.usuario).first()
+    except Exception:
+        return None
 
 def generar_numero_orden(usuario=None):
     """
@@ -221,26 +236,159 @@ def calcular_precio_producto(producto, cantidad):
 
     return Decimal(str(precio)), None
 
+def calcular_totales_con_reglas_fiscales(pedido):
+    """
+    Única función centralizada en views.py para procesar el pedido.
+    Recibe el objeto 'pedido' directamente, lo que facilita su uso en cualquier vista.
+    """
+    perfil = pedido.usuario.perfil  # Accedemos al centro de mando del joyero
+    subtotal_productos = Decimal('0.00')
+    
+    # 1. Sumamos el valor base de los ítems del pedido
+    for item in pedido.items.all():
+        subtotal_productos += Decimal(str(item.subtotal or 0.00))
 
-def obtener_variante(producto, color, talla):
-    return ProductoVariante.objects.filter(
-        producto=producto,
-        color=color,
-        talla=talla
-    ).first()
+    # 🎁 REGLA DE CAMPAÑA: ¿El joyero encendió el interruptor de promociones?
+    descuento_aplicado = Decimal('0.00')
+    if perfil.aplicar_descuentos and perfil.porcentaje_descuento_promo > 0:
+        porcentaje_desc = Decimal(str(perfil.porcentaje_descuento_promo)) / Decimal('100.00')
+        descuento_aplicado = subtotal_productos * porcentaje_desc
+    
+    # Base sobre la que se calcula el IVA tras el descuento de campaña
+    base_gravable = subtotal_productos - descuento_aplicado
 
-def cantidad_carrito(request):
-    session_key = request.session.session_key
+    # ⚖️ REGLA FISCAL: ¿Es responsable de IVA?
+    iva_calculado = Decimal('0.00')
+    if perfil.responsable_iva and perfil.porcentaje_iva > 0:
+        porcentaje_iva = Decimal(str(perfil.porcentaje_iva)) / Decimal('100.00')
+        iva_calculado = base_gravable * porcentaje_iva
 
-    if not session_key:
-        return {'cantidad_carrito': 0}
+    retefuente_calculada = Decimal('0.00')
+    if hasattr(perfil, 'aplicar_retefuente') and perfil.aplicar_retefuente:
+        # Nota: Aquí puedes validar si el cliente del pedido es retenedor si tienes ese campo
+        porcentaje_rete = Decimal(str(perfil.porcentaje_retefuente or 2.50)) / Decimal('100.00')
+        retefuente_calculada = base_gravable * porcentaje_rete
 
-    items = CarritoItem.objects.filter(session_key=session_key)
+    # 🚚 REGLA DE ENVÍOS: Control de costos y umbral gratis
+    costo_envio = Decimal('0.00')
+    if perfil.cobrar_envio:
+        costo_envio = Decimal(str(perfil.costo_envio_estandar or 0.00))
+        
+        # Si el negocio configuró un tope de envío gratis y la base lo supera, queda en 0
+        if perfil.envio_gratis_desde and base_gravable >= Decimal(str(perfil.envio_gratis_desde)):
+            costo_envio = Decimal('0.00')
 
-    cantidad = sum(item.cantidad for item in items)
+    # 💾 Guardamos de forma limpia los resultados en el Pedido
+    pedido.descuento_total = descuento_aplicado
+    pedido.aplica_iva = perfil.responsable_iva  # Sincronizamos el estado del IVA
+    pedido.iva = iva_calculado
+    pedido.costo_envio = costo_envio
+    pedido.total = base_gravable + iva_calculado + costo_envio
+    pedido.save()
+    
+    return pedido
 
-    return {'cantidad_carrito': cantidad}
+def calcular_totales_pedido(pedido, perfil, items):
+    """
+    Motor fiscal único para JoyasApp. Centraliza las matemáticas de IVA,
+    descuentos, envíos y retenciones para evitar duplicidad.
+    """
+    subtotal_base = sum(Decimal(str(item.subtotal or 0)) for item in items)
+    
+    # 1. Descuentos promocionales del negocio o del pedido
+    porcentaje_desc = getattr(pedido, 'porcentaje_descuento', 0) or 0
+    if not porcentaje_desc and perfil and getattr(perfil, 'aplicar_descuentos', False):
+        porcentaje_desc = getattr(perfil, 'porcentaje_descuento_promo', 0) or 0
+    descuento_total = subtotal_base * (Decimal(str(porcentaje_desc)) / Decimal('100')) if porcentaje_desc else Decimal('0')
 
+    # =========================================================================
+    # 🎯 2. LOGÍSTICA Y ENVÍOS (CORREGIDO CON PRIORIDAD DE RECOGIDA)
+    # =========================================================================
+    tipo_envio = getattr(pedido, 'tipo_envio', '').lower() if pedido.tipo_envio else ''
+    
+    if tipo_envio == 'recogida':
+        # Prioridad Absoluta: Si recoge en tienda, el envío es $0, sin importar el monto de compra
+        envio = Decimal('0')
+    else:
+        # Si es domicilio/transportadora, evaluamos las reglas dinámicas del negocio
+        envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
+        if envio == 0 and perfil and getattr(perfil, 'cobrar_envio', False):
+            limite_gratis = Decimal(str(getattr(perfil, 'envio_gratis_desde', 0) or 0)) # Ej: 300000
+            
+            if subtotal_base < limite_gratis:
+                # Si no llega al mínimo, se cobra la tarifa estándar (Ej: 15000)
+                envio = Decimal(str(getattr(perfil, 'costo_envio_estandar', 0) or 0))
+            else:
+                # Si supera el mínimo, el envío se fuerza a $0 (Envío Gratis)
+                envio = Decimal('0')
+    # =========================================================================
+
+    # 3. IVA (Cálculo limpio y determinista desde las reglas del perfil)
+    es_responsable_iva = perfil and getattr(perfil, 'responsable_iva', False)
+    mostrar_iva_disc = perfil and getattr(perfil, 'mostrar_iva_discriminado', False)
+    porcentaje_iva = Decimal(str(getattr(perfil, 'porcentaje_iva', 19) or 19))
+    
+    if es_responsable_iva:
+        if mostrar_iva_disc:
+            # IVA Incluido: Se desglosa matemáticamente del precio base
+            iva_total = subtotal_base - (subtotal_base / (Decimal('1') + (porcentaje_iva / Decimal('100'))))
+            subtotal_render = subtotal_base - iva_total
+            total_final = subtotal_base + envio - descuento_total
+        else:
+            # IVA Adicional: Se calcula por encima del subtotal
+            iva_total = subtotal_base * (porcentaje_iva / Decimal('100'))
+            subtotal_render = subtotal_base
+            total_final = subtotal_base + iva_total + envio - descuento_total
+    else:
+        # Si la empresa no es responsable de IVA, el impuesto se apaga ($0)
+        iva_total = Decimal('0')
+        subtotal_render = subtotal_base
+        total_final = subtotal_base + envio - descuento_total
+
+    # 4. Retenciones (Se restan del total final si disminuyen el pago exigible)
+    retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
+    total_final = max(Decimal('0'), total_final - retefuente_total)
+
+    return {
+        'subtotal': subtotal_render,
+        'iva_total': iva_total,
+        'porcentaje_iva': porcentaje_iva,
+        'es_responsable_iva': es_responsable_iva,
+        'mostrar_iva_discriminado': mostrar_iva_disc,
+        'descuento_total': descuento_total,
+        'porcentaje_descuento': porcentaje_desc,
+        'retefuente_total': retefuente_total,
+        'envio': envio,
+        'costo_envio': envio, # Duplicado por compatibilidad con tus templates antiguos
+        'total_final': total_final,
+    }
+
+# =========================================================================
+# 🔑 BLOQUE 2: AUTENTICACIÓN, CUENTAS Y PLANES SAAS
+# =========================================================================
+
+# Precios planes (Estructura de datos o constante que uses)
+
+# =========================================================================
+# ⚙️ CENTRO DE CONTROL DE TARIFAS DEL SAAS (Ubicación segura y limpia)
+# =========================================================================
+PRECIOS_PLANES = {
+    'basico': {
+        'nombre': 'Básico',
+        'precio_mensual': Decimal('50000.00'),  # COP
+        'descripcion': 'Ideal para tiendas que están iniciando.'
+    },
+    'pro': {
+        'nombre': 'Pro',
+        'precio_mensual': Decimal('120000.00'),
+        'descripcion': 'Para joyerías en crecimiento con pasarelas activas.'
+    },
+    'premium': {
+        'nombre': 'Premium',
+        'precio_mensual': Decimal('250000.00'),
+        'descripcion': 'Todo ilimitado + Facturación Electrónica e integración Siigo.'
+    }
+}
 
 def registro(request):
     if request.method == 'POST':
@@ -329,7 +477,32 @@ def iniciar_sesion(request):
 def cerrar_sesion(request):
     logout(request)
     return redirect('login')
-        
+
+@login_required
+def renovar_manual(request):
+    """Vista para forzar la renovación del plan SaaS desde el panel."""
+    perfil = request.user.perfil
+    renovar_plan(perfil)
+    return redirect('dashboard')
+
+def renovar_plan(perfil):
+    """Lógica centralizada para extender la vigencia del plan 30 días."""
+    hoy = timezone.localdate()
+
+    # Si el plan sigue vigente, sumamos días al vencimiento actual (acumulativo)
+    if perfil.plan_vence and perfil.plan_vence > hoy:
+        perfil.plan_vence = perfil.plan_vence + timedelta(days=30)
+    # Si ya venció, los 30 días arrancan desde hoy
+    else:
+        perfil.plan_vence = hoy + timedelta(days=30)
+
+    perfil.activa = True
+    perfil.save()
+
+# =========================================================================
+# 🛍️ BLOQUE 3: CATÁLOGO PÚBLICO DE PRODUCTOS (VISTA DEL CLIENTE)
+# =========================================================================
+
 def inicio(request):
     try:
         # 1. Obtener el perfil de forma segura
@@ -395,50 +568,6 @@ def buscar_productos(request):
         'query': query
     })
 
-@login_required
-def lista_productos(request):
-    productos = Producto.objects.filter(usuario=request.user)
-    categorias = Categoria.objects.filter(usuario=request.user)
-    return render(request, 'lista_productos.html', {
-        'productos': productos,
-        'categorias': categorias
-    })
-
-@login_required
-def productos_por_categoria(request, categoria_id):
-    categoria = get_object_or_404(
-    Categoria,
-    id=categoria_id,
-    usuario=request.user
-)
-    productos = Producto.objects.filter(
-        categoria=categoria,
-        usuario=request.user
-    ).order_by('-id')
-    return render(request, 'productos_por_categoria.html', {
-        'categoria': categoria,
-        'productos': productos
-    }) 
-
-@login_required
-def crear_categoria(request):
-
-    if request.method == 'POST':
-
-        nombre = request.POST.get('nombre')
-
-        Categoria.objects.create(
-            nombre=nombre,
-            usuario=request.user
-        )
-
-        return redirect('dashboard')
-
-    return render(
-        request,
-        'crear_categoria.html'
-    )
-
 def detalle_producto(request, id, slug):
     producto = get_object_or_404(
         Producto,
@@ -481,6 +610,22 @@ def detalle_producto(request, id, slug):
         'tiene_stock': tiene_stock
 })
 
+@login_required
+def productos_por_categoria(request, categoria_id):
+    categoria = get_object_or_404(
+    Categoria,
+    id=categoria_id,
+    usuario=request.user
+)
+    productos = Producto.objects.filter(
+        categoria=categoria,
+        usuario=request.user
+    ).order_by('-id')
+    return render(request, 'productos_por_categoria.html', {
+        'categoria': categoria,
+        'productos': productos
+    }) 
+
 def productos_top(request):
     top = PedidoItem.objects.values('producto__nombre')\
         .annotate(total_vendido=Sum('cantidad'))\
@@ -490,299 +635,1230 @@ def productos_top(request):
         'top': top
     })
 
-def safe_float(val):
-    if not val:
-        return None
-    try:
-        # Esto limpia el número por si el celular envía comas en vez de puntos
-        return float(str(val).replace(',', '.'))
-    except ValueError:
-        return None
-    
-def guardar_producto_view(request, pk=None):
-    """
-    Controlador unificado de nivel Enterprise.
-    Delega la lógica pesada a ProductoService y gestiona el flujo HTTP y UX.
-    """
-    if pk:
-        producto = get_object_or_404(Producto, pk=pk)
-        accion = "actualizado"
+# =========================================================================
+# 🛒 BLOQUE 4: GESTIÓN DEL CARRITO DE COMPRAS (SESIÓN O BASE DE DATOS)
+# =========================================================================
+       
+def cantidad_carrito(request):
+    session_key = request.session.session_key
+
+    if not session_key:
+        return {'cantidad_carrito': 0}
+
+    items = CarritoItem.objects.filter(session_key=session_key)
+
+    cantidad = sum(item.cantidad for item in items)
+
+    return {'cantidad_carrito': cantidad}
+
+def ver_carrito(request):
+    session_key = request.session.session_key
+    if not session_key:
+        items = []
     else:
-        producto = Producto()
-        accion = "creado"
+        items = CarritoItem.objects.filter(session_key=session_key).select_related('producto', 'variante')
 
-    if request.method == 'POST':
-        try:
-            # Delegamos toda la lógica interna (Slug, variantes, transacciones) al servicio
-            producto_guardado = ProductoService.guardar(request, pk=pk)
-            
-            messages.success(request, f"¡Producto '{producto_guardado.nombre}' {accion} con éxito rotundo!")
-            return redirect('mis_productos')
+    # 1. Contamos el total de artículos físicos combinados para definir la escala comercial
+    total_articulos = sum(item.cantidad or 0 for item in items)
 
-        except Exception as e:
-            logger.error(f"Error crítico en controlador al procesar producto: {str(e)}")
-            messages.error(request, f"⚠️ Error interno: No se guardaron los cambios. Motivo: {str(e)}")
-            
-            # ✨ RUTAS CORREGIDAS: Apuntando a la raíz de templates para evitar el TemplateDoesNotExist
-            return render(request, f'{"editar_producto" if pk else "crear_producto"}.html', {
-                'producto': producto,
-                'valores': request.POST,  
-                'categorias': Categoria.objects.all()
-            })
+    if total_articulos >= 12:
+        tipo_global = "Mayorista"
+    elif total_articulos >= 6:
+        tipo_global = "Semi-Mayorista"
+    else:
+        tipo_global = "Detal"
 
-    # 🔄 Carga por petición GET normal (Edición o Creación limpia)
-    valores_iniciales = producto if pk else None
+    total = Decimal('0.00')
 
-    # ✨ RUTAS CORREGIDAS: Apuntando a la raíz de templates para evitar el TemplateDoesNotExist
-    return render(request, f'{"editar_producto" if pk else "crear_producto"}.html', {
-        'producto': producto,
-        'valores': valores_iniciales,
-        'categorias': Categoria.objects.all()
+    # 2. Procesamos cada artículo de forma segura
+    for item in items:
+        # Sincronizamos el nivel comercial en la memoria del objeto
+        item._tipo_global = tipo_global
+
+        # Calculamos el subtotal ejecutando el método original sin pisar su nombre
+        item.subtotal_calculado = item.subtotal()
+        
+        if item.producto.tipo_venta == "gramo":
+            item.total_gramos = Decimal(str(item.cantidad or 0)) * Decimal(str(item.producto.peso_producto or 0))
+        else:
+            item.total_gramos = None
+
+        item.tipo_precio = tipo_global
+        total += item.subtotal_calculado
+    
+    # Indicadores de progreso para las barras informativas en el frontend
+    faltan_semi = max(0, 6 - total_articulos)
+    faltan_mayor = max(0, 12 - total_articulos)
+
+    # Convertimos a tipos nativos para el script de WhatsApp (se mantiene idéntico y seguro)
+    carrito_json = json.dumps([
+        {
+            "nombre": item.producto.nombre,
+            "cantidad": int(item.cantidad or 0),
+            "subtotal": float(item.subtotal_calculado),
+            "total_gramos": float(item.total_gramos) if item.total_gramos else None
+        } for item in items
+    ], cls=DjangoJSONEncoder)
+    
+    return render(request, 'carrito.html', {
+        'items': items,
+        'total': total,
+        'total_articulos': total_articulos,
+        'faltan_semi': faltan_semi,
+        'faltan_mayor': faltan_mayor,
+        'carrito_json': carrito_json
     })
 
-#@login_required
-#def crear_producto(request):
-    categorias = Categoria.objects.filter(usuario=request.user)
-
+def agregar_al_carrito(request, producto_id):
     if request.method == 'POST':
-        referencia = request.POST.get('referencia')
+        producto = get_object_or_404(Producto, id=producto_id)
+        
+        color_recibido = request.POST.get('color')
+        talla_recibido = request.POST.get('talla')
+        
+        try:
+            cantidad = int(request.POST.get('cantidad', 1))
+            if cantidad < 1:
+                cantidad = 1
+        except (ValueError, TypeError):
+            cantidad = 1
 
-        # 🛑 1. VALIDACIÓN ANTICRASH: Comprobar si la referencia ya existe
-        if referencia and Producto.objects.filter(usuario=request.user, referencia=referencia).exists():
-            messages.error(
-                request, 
-                f"La referencia '{referencia}' ya está asignada a otro producto. Usa una diferente."
-            )
-            return render(
-                request,
-                'crear_producto.html',
-                {
-                    'categorias': categorias,
-                    'valores': request.POST,  
-                }
-            )
+        color = None if not color_recibido or str(color_recibido).strip() in ['None', ''] else str(color_recibido).strip()
+        talla = None if not talla_recibido or str(talla_recibido).strip() in ['None', ''] else str(talla_recibido).strip()
 
-        imagen_principal = request.FILES.get('imagen_principal')
+        # 🔥 LÓGICA HÍBRIDA SaaS: Validar si el producto requiere variantes o es simple/por gramos
+        variante = None
+        
+        # Si el producto se vende por unidades y tiene variantes configuradas
+        if producto.tipo_venta != 'gramo' and producto.variantes.exists():
+            filtros = Q(producto=producto)
+            if color:
+                filtros &= Q(color=color)
+            else:
+                filtros &= Q(color__isnull=True) | Q(color="")
 
-        # 🚀 2. INSTANCIACIÓN MANUAL SEGURA
-        producto = Producto(
-            usuario=request.user,
-            nombre=request.POST.get('nombre'),
-            referencia=referencia,
-            descripcion=request.POST.get('descripcion'),
-            categoria_id=request.POST.get('categoria'),
-            tipo_venta=request.POST.get('tipo_venta') or 'unidad',
-            precio_detal=request.POST.get('precio_detal') or None,
-            precio_semimayor=request.POST.get('precio_semimayor') or None,
-            precio_mayor=request.POST.get('precio_mayor') or None,
-            peso_producto=request.POST.get('peso_producto') or None,
-            precio_por_gramo_detal=request.POST.get('precio_por_gramo_detal') or None,
-            precio_por_gramo_semimayor=request.POST.get('precio_por_gramo_semimayor') or None,
-            precio_por_gramo_mayor=request.POST.get('precio_por_gramo_mayor') or None,
-            destacado=(request.POST.get('destacado') == 'on'),
-            precio_costo=request.POST.get('precio_costo') or 0,
-            stock=request.POST.get('stock') or 0,
-            imagen_principal=imagen_principal,  
-            certificado=request.FILES.get('certificado'),
-            video=request.FILES.get('video'),
+            if talla:
+                filtros &= Q(talla=talla)
+            else:
+                filtros &= Q(talla__isnull=True) | Q(talla="")
+
+            variante = producto.variantes.filter(filtros).first()
+
+            if not variante:
+                messages.error(request, "La combinación seleccionada no está disponible en este momento.")
+                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
+
+            # Control de stock basado en la variante
+            if variante.stock < cantidad:
+                messages.error(request, f"Lo sentimos, solo quedan {variante.stock} unidades disponibles de esta opción.")
+                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
+        else:
+            # Si es por gramos o producto simple, controlamos el stock desde el Producto base
+            if producto.stock < cantidad:
+                messages.error(request, f"Lo sentimos, solo quedan {producto.stock} unidades disponibles.")
+                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
+
+        if not request.session.session_key:
+            request.session.create()
+        session_key = request.session.session_key
+
+        # 🔥 GUARDADO SEGURO: 'variante' ahora puede ser None de forma legal
+        item, created = CarritoItem.objects.get_or_create(
+            session_key=session_key,
+            producto=producto,
+            variante=variante, 
+            defaults={'cantidad': cantidad}
         )
-        producto.save() 
 
-        # 🎨 3. PROCESAMIENTO DE IMÁGENES DE GALERÍA
-        imagenes = request.FILES.getlist('galeria')
-        for imagen in imagenes:
-            if imagen_principal and imagen.size == imagen_principal.size:
-                continue
-            ProductoImagen.objects.create(producto=producto, imagen=imagen)
+        if not created:
+            stock_limite = variante.stock if variante else producto.stock
+            if item.cantidad + cantidad > stock_limite:
+                messages.error(request, f"No puedes agregar más unidades. Ya tienes {item.cantidad} en tu carrito.")
+                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
             
-        # ⚙️ 4. CONSTRUCTOR DE VARIANTES INTELIGENTES (Lectura de Listas Paralelas)
-        v_colores = request.POST.getlist('v_color[]')
-        v_tallas = request.POST.getlist('v_talla[]')
-        v_stocks = request.POST.getlist('v_stock[]')
-        v_precios = request.POST.getlist('v_precio[]')
+            item.cantidad += cantidad
+            item.save()
 
-        for i in range(len(v_colores)):
-            try:
-                c_val = v_colores[i].strip() if i < len(v_colores) and v_colores[i] else None
-                t_val = v_tallas[i].strip() if i < len(v_tallas) and v_tallas[i] else None
-                s_val = int(v_stocks[i].strip()) if i < len(v_stocks) and v_stocks[i] else 0
-                p_val = float(v_precios[i].strip()) if i < len(v_precios) and v_precios[i] else 0
+        messages.success(request, f"¡{producto.nombre} se agregó al carrito!")
+        return redirect('ver_carrito')
 
-                # Creamos la variante únicamente si tiene al menos un identificador
-                if c_val or t_val:
-                    ProductoVariante.objects.create(
-                        producto=producto,
-                        color=c_val,
-                        talla=t_val,
-                        stock=s_val,
-                        precio_venta=p_val # Resguardado si actualizaste el modelo, sino lo calcula por el precio base
-                    )
-            except (IndexError, ValueError):
-                continue
-            except IntegrityError:
-                continue # Evita la caída si el usuario generó un duplicado exacto de color/talla
+    try:
+        producto_aux = Producto.objects.get(id=producto_id)
+        return redirect('detalle_producto', id=producto_aux.id, slug=producto_aux.slug)
+    except Producto.DoesNotExist:
+        return redirect('inicio')
 
-        messages.success(request, "¡Producto y sus variantes creados correctamente!")
-        return redirect('dashboard')
+def aumentar_cantidad(request, item_id):
+    # 1. Capturar la sesión del visitante (anonimo o registrado)
+    session_key = request.session.session_key
+    if not session_key:
+        return redirect('ver_carrito')
 
-    return render(request, 'crear_producto.html', {'categorias': categorias})
+    # 2. Buscar el ítem asegurando que pertenezca a este visitante
+    item = get_object_or_404(
+        CarritoItem,
+        id=item_id,
+        session_key=session_key
+    )
 
-@login_required
-def mis_productos(request):
+    # 3. 🔥 CONTROL DE STOCK DESDE LA VARIANTE UNIFICADA
+    # Si el ítem tiene una variante asignada, usamos ese stock; si no, el del producto global
+    stock_disponible = item.variante.stock if item.variante else item.producto.stock
 
-    productos = Producto.objects.filter(
-        usuario=request.user
-    ).order_by('-id')
+    if item.cantidad >= stock_disponible:
+        messages.warning(request, f"No puedes agregar más unidades. El inventario máximo para esta opción es de {stock_disponible} unidades.")
+    else:
+        item.cantidad += 1
+        item.save()
 
-    return render(
-        request,
-        'mis_productos.html',
-        {
-            'productos': productos
+    return redirect('ver_carrito')
+
+def disminuir_cantidad(request, item_id):
+    # 1. Capturar la sesión del visitante
+    session_key = request.session.session_key
+    if not session_key:
+        return redirect('ver_carrito')
+
+    # 2. Buscar el ítem asignado a esta sesión
+    item = get_object_or_404(
+        CarritoItem,
+        id=item_id,
+        session_key=session_key
+    )
+
+    # 3. Restar o eliminar si llega a cero
+    if item.cantidad > 1:
+        item.cantidad -= 1
+        item.save()
+    else:
+        item.delete()
+        messages.info(request, "Producto removido del carrito.")
+
+    return redirect('ver_carrito')
+
+def eliminar_del_carrito(request, item_id):
+    # 1. Capturar la sesión del visitante
+    session_key = request.session.session_key
+    if not session_key:
+        return redirect('ver_carrito')
+
+    # 2. Buscar y destruir de forma segura
+    item = get_object_or_404(
+        CarritoItem,
+        id=item_id,
+        session_key=session_key
+    )
+    
+    nombre_producto = item.producto.nombre
+    item.delete()
+    
+    messages.success(request, f"Se eliminó '{nombre_producto}' del carrito.")
+    return redirect('ver_carrito')
+
+# =========================================================================
+# 💳 BLOQUE 5: PASARELAS DE PAGO, CHECKOUT Y WEBHOOKS
+# =========================================================================
+
+@transaction.atomic
+def comprar_whatsapp(request, producto_id=None):
+    if request.method != "POST":
+        messages.error(request, "Acceso no autorizado.")
+        return redirect('ver_carrito')
+
+    resumen_items = []
+    items_carrito = None
+    es_compra_directa = producto_id is not None
+
+    # =========================================================
+    # 🛒 PASO 1: MODO DE ENTRADA (DIRECTO O CARRITO) - (Queda igual, es correcto)
+    # =========================================================
+    if es_compra_directa:
+        producto = get_object_or_404(Producto, id=producto_id)
+        usuario = producto.usuario  
+
+        try:
+            cantidad = int(request.POST.get('cantidad', 1))
+        except ValueError:
+            cantidad = 1
+
+        variante = None
+        variante_id = request.POST.get('variante_id')
+        if variante_id:
+            variante = get_object_or_404(ProductoVariante, id=variante_id, producto=producto)
+
+        if variante:
+            if variante.stock < cantidad:
+                messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
+                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
+        else:
+            if producto.tipo_venta != "gramo" and producto.stock < cantidad:
+                messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
+                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
+
+        precio, gramos = calcular_precio_producto(producto, cantidad)
+        precio = Decimal(str(precio))
+
+        if gramos:
+            subtotal = Decimal(str(gramos)) * precio
+            linea = f"{producto.nombre} ({gramos}g)"
+        else:
+            subtotal = Decimal(str(cantidad)) * precio
+            linea = f"{producto.nombre} x{cantidad}"
+
+        resumen_items.append({
+            'item': None, 
+            'producto': producto,
+            'variante': variante,
+            'cantidad': cantidad,
+            'total_gramos': gramos if gramos else 0,
+            'precio': precio,
+            'subtotal': subtotal,
+            'linea': linea,
+        })
+    else:
+        session_key = request.session.session_key
+        if not session_key:
+            messages.warning(request, "El carrito está vacío")
+            return redirect('ver_carrito')
+
+        items_carrito = CarritoItem.objects.select_related('producto', 'variante').filter(session_key=session_key)
+        if not items_carrito.exists():
+            messages.warning(request, "El carrito está vacío")
+            return redirect('ver_carrito')
+
+        usuario = items_carrito.first().producto.usuario
+
+        for item in items_carrito:
+            producto = item.producto
+            variante = item.variante
+            cantidad = item.cantidad or 0
+
+            if producto.usuario != usuario:
+                messages.warning(request, "Producto inválido en el carrito.")
+                return redirect('ver_carrito')
+
+            if variante:
+                if variante.stock < cantidad:
+                    messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
+                    return redirect('ver_carrito')
+            else:
+                if producto.tipo_venta != "gramo" and producto.stock < cantidad:
+                    messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
+                    return redirect('ver_carrito')
+
+            precio, gramos = calcular_precio_producto(producto, cantidad)
+            precio_seguro = precio if precio is not None else 0
+            precio = Decimal(str(precio_seguro))
+
+            if gramos:
+                subtotal = Decimal(str(gramos)) * precio
+                linea = f"{producto.nombre} ({gramos}g)"
+            else:
+                subtotal = Decimal(str(cantidad)) * precio
+                linea = f"{producto.nombre} x{cantidad}"
+
+            resumen_items.append({
+                'item': item,
+                'producto': producto,
+                'variante': variante,
+                'cantidad': cantidad,
+                'total_gramos': gramos if gramos else 0,
+                'precio': precio,
+                'subtotal': subtotal,
+                'linea': linea,
+            })
+
+    # =========================================================
+    # 📊 PASO 2: CONFIGURACIÓN Y MOTORES (Aquí empieza el cambio radical ⚡)
+    # =========================================================
+    numero = generar_numero_orden(usuario)
+    perfil, _ = Perfil.objects.get_or_create(user=usuario)
+    
+    # 1. Traemos de forma segura la nueva clase de Configuración Fiscal
+    config_fiscal, _ = ConfiguracionEmpresa.objects.get_or_create(perfil=perfil)
+    
+    # 2. Instanciamos el Motor Fiscal pasándole su configuración única
+    motor = MotorFiscal(config_fiscal)
+
+    # 3. Determinamos porcentaje de descuento comercial
+    porcentaje_descuento = Decimal('0')
+    if config_fiscal.aplicar_descuentos:
+        porcentaje_descuento = Decimal(str(config_fiscal.porcentaje_descuento_promo or 0))
+
+    # Captura de datos del cliente enviados por el POST
+    nombre_cliente = request.POST.get('nombre', '').strip()
+    telefono_cliente = request.POST.get('telefono', '').strip()
+    ciudad_destino = request.POST.get('ciudad', '').strip()
+    direccion_entrega = request.POST.get('direccion', '').strip()
+    nit = request.POST.get('nit', '').strip()
+
+    email_input = request.POST.get('email', '').strip()
+    if email_input:
+        cliente_email = email_input
+    elif request.user.is_authenticated:
+        cliente_email = request.user.email
+    else:
+        cliente_email = "cliente_whatsapp@joyasapp.com"
+
+    # Calculamos el subtotal base neto de los productos
+    subtotal_general = sum(data['subtotal'] for data in resumen_items)
+
+    # 4. Resolvemos el tipo de envío de forma inteligente
+    if config_fiscal.cobrar_envio:
+        # El motor decidirá internamente si aplica tarifa estándar o envío gratis según las reglas del negocio
+        tipo_envio = 'estandar'
+        valor_envio_personalizado = None
+    else:
+        # Si el comercio no tiene reglas automáticas de cobro, aplicamos tu cálculo dinámico por ciudad
+        tipo_envio = 'personalizado'
+        # Calculamos el subtotal tentativo con descuento comercial para pasarlo a la función externa de envíos
+        descuento_tentativo = subtotal_general * (porcentaje_descuento / Decimal('100'))
+        subtotal_con_descuento = subtotal_general - descuento_tentativo
+        valor_envio_personalizado = Decimal(str(calcular_envio(ciudad_destino, subtotal_con_descuento)))
+
+    # 5. ⚡ EJECUTAMOS EL MOTOR FISCAL ⚡
+    # Toda la cascada matemática ocurre en esta sola línea
+    totales = motor.calcular_totales_pedido(
+        subtotal_base=subtotal_general,
+        porcentaje_descuento=porcentaje_descuento,
+        tipo_envio=tipo_envio,
+        valor_envio_personalizado=valor_envio_personalizado
+    )
+
+    try:
+        # Guardamos el Pedido utilizando directamente los resultados estructurados del motor
+        pedido = Pedido.objects.create(
+            usuario=usuario,
+            numero_orden=numero,
+            cliente_nombre=nombre_cliente,
+            cliente_telefono=telefono_cliente,
+            cliente_email=cliente_email,
+            cliente_ciudad=ciudad_destino,
+            cliente_direccion=direccion_entrega,
+            cliente_nit=nit,
+            total=float(totales['total_final']),  
+            porcentaje_descuento=float(totales['porcentaje_descuento']),  
+            descuento_total=float(totales['descuento_total']),
+            costo_envio=float(totales['costo_envio']),
+            aplica_iva=config_fiscal.responsable_iva,
+            es_retenedor=config_fiscal.es_retenedor,
+            tipo_envio=totales['tipo_envio'],
+            estado="pendiente"
+        )
+
+        # 6. Guardamos los items de forma inmutable usando los valores de item del motor
+        for data in resumen_items:
+            valores_item = motor.calcular_valores_item(subtotal_item=data['subtotal'])
+
+            PedidoItem.objects.create(
+                pedido=pedido,
+                producto=data['producto'],
+                variante=data['variante'],
+                cantidad=int(data['cantidad']),
+                total_gramos=float(data['total_gramos']), 
+                precio=float(data['precio']),
+                subtotal=float(data['subtotal']),
+                iva=float(valores_item['iva_item']),
+                retefuente=float(valores_item['retefuente_item']),
+                total_final=float(valores_item['total_item'])
+            )
+
+            # Descuento del stock (Lógica de negocio)
+            if data['variante']:
+                data['variante'].stock -= data['cantidad']
+                data['variante'].save()
+            elif data['producto'].tipo_venta != "gramo":
+                data['producto'].stock -= data['cantidad']
+                data['producto'].save()
+
+        # =========================================================
+        # 🔗 PASO 3: ENLACE SEGURO Y WHATSAPP (Queda igual de limpio)
+        # =========================================================
+        domain = get_current_site(request).domain
+        url_factura = f"https://{domain}{reverse('factura_publica', kwargs={'token': pedido.token_publico})}"
+
+        mensaje = (
+            f"🛍️ ¡Hola! Acabo de confirmar mi pedido.\n\n"
+            f"📦 Orden N°: {pedido.numero_orden}\n"
+            f"👤 Cliente: {nombre_cliente}\n"
+            f"💰 Total Neto: ${float(totales['total_final']):,.0f}\n\n"
+            f"📄 Ver detalles y datos de facturación aquí:\n{url_factura}\n\n"
+            f"Quedo atento a tus indicaciones para realizar el pago. ¡Muchas gracias!"
+        ).replace(",", ".")
+
+        if not perfil.whatsapp:
+            messages.warning(request, "El comercio no tiene configurado WhatsApp.")
+            return redirect('ver_carrito') if not es_compra_directa else redirect('detalle_producto', id=producto.id, slug=producto.slug)
+
+        url_whatsapp_final = f"https://wa.me/{perfil.whatsapp}?text={urllib.parse.quote(mensaje)}"
+
+        if not es_compra_directa and items_carrito:
+            items_carrito.delete()
+
+        return redirect(url_whatsapp_final)
+
+    except Exception as e:
+        print("\n" + "🚨" * 30)
+        print(f"💥 ERROR EN BASE DE DATOS / GUARDADO: {str(e)}")
+        print("-" * 60)
+        traceback.print_exc()
+        print("🚨" * 30 + "\n")
+        return HttpResponse(f"Fallo capturado en proceso de guardado: {str(e)}", status=500)
+    
+@transaction.atomic
+def pagar_pedido(request):
+    """
+    Vista para procesar el pago final del pedido (Ruta: /pagar/)
+    """
+    if request.method != 'POST':
+        return redirect('ver_carrito')
+
+    try:
+        session_key = request.session.session_key
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
+
+        items = CarritoItem.objects.select_related('producto', 'variante').filter(session_key=session_key)
+
+        if not items.exists():
+            messages.error(request, "Tu carrito está vacío.")
+            return redirect('ver_carrito')
+
+        # 🏪 Detectamos el usuario dueño de la joyería
+        usuario = items.first().producto.usuario
+        numero = generar_numero_orden(usuario)
+
+        # 📝 CAPTURA DE DATOS DEL FORMULARIO DE DESPACHO
+        nombre = request.POST.get('nombre', '').strip()
+        telefono = request.POST.get('telefono', '').strip()
+        ciudad = request.POST.get('ciudad', '').strip()
+        direccion = request.POST.get('direccion', '').strip()
+        nit = request.POST.get('nit', '').strip()
+        
+        # Tipo de envío seleccionado por el usuario en el frontend
+        tipo_envio_seleccionado = request.POST.get('tipo_envio', 'domicilio').strip()
+
+        # 🛠️ ESCUDO CONTRA CORREOS VACÍOS O ANÓNIMOS
+        email_input = request.POST.get('email', '').strip()
+        if email_input:
+            cliente_email = email_input
+        elif request.user.is_authenticated:
+            cliente_email = request.user.email
+        else:
+            cliente_email = "cliente_pasarela@joyasapp.com"
+
+        # 📊 CAPTURA DINÁMICA DE IMPUESTOS Y DESCUENTO DESDE EL FORMULARIO
+        aplica_iva = request.POST.get('aplica_iva') == 'on' or request.POST.get('aplica_iva') == 'true'
+        es_retenedor = request.POST.get('es_retenedor') == 'on' or request.POST.get('es_retenedor') == 'true'
+        valor_descuento = request.POST.get('descuento', '0').strip()
+
+        try:
+            porcentaje_descuento = Decimal(str(valor_descuento or 0))
+        except (ValueError, TypeError):
+            porcentaje_descuento = Decimal('0')
+
+        porcentaje_descuento = max(Decimal('0'), min(Decimal('100'), porcentaje_descuento))
+
+        # =========================================================
+        # 🧠 CONFIGURACIÓN DEL MOTOR FISCAL
+        # =========================================================
+        perfil, _ = Perfil.objects.get_or_create(user=usuario)
+        config_fiscal, _ = ConfiguracionEmpresa.objects.get_or_create(perfil=perfil)
+        
+        motor = MotorFiscal(config_fiscal)
+        
+        # El formulario de la transacción específica puede sobreescribir las reglas por defecto
+        motor.aplica_iva = aplica_iva
+        motor.es_retenedor = es_retenedor
+
+        # Calcular precios bases y gramos de cada ítem (Conserva tu lógica de negocio intacta)
+        subtotal_general = Decimal('0')
+        lineas_items = []
+
+        for item in items:
+            cantidad_fisica = Decimal(str(item.cantidad or 1))
+            
+            if item.producto.tipo_venta == 'gramo':
+                val_precio = Decimal(str(item.producto.precio_por_gramo_detal or 0))
+                peso_base = Decimal(str(item.producto.peso_producto or 0))
+                gramos_totales = cantidad_fisica * peso_base
+                subtotal_item = gramos_totales * val_precio
+                precio_aplicado = val_precio
+            else:
+                try:
+                    precio_por_escala = item.producto.precio_por_cantidad(item.cantidad)
+                    if precio_por_escala is None:
+                        precio_por_escala = item.producto.precio_detal or 0
+                    val_precio = Decimal(str(precio_por_escala))
+                except Exception:
+                    val_precio = Decimal(str(item.producto.precio_detal or 0))
+                
+                gramos_totales = Decimal('0.00')
+                subtotal_item = cantidad_fisica * val_precio
+                precio_aplicado = val_precio
+            
+            subtotal_general += subtotal_item
+            
+            lineas_items.append({
+                'item_carrito': item,
+                'precio_aplicado': precio_aplicado,
+                'gramos_totales': gramos_totales,
+                'subtotal_item': subtotal_item
+            })
+
+        # =========================================================
+        # 🚚 RESOLUCIÓN DE ENVÍOS INTELIGENTE
+        # =========================================================
+        if config_fiscal.cobrar_envio:
+            # Si se configuró cobro de envío automático, respetamos si el cliente prefiere recogerlo
+            tipo_envio = 'recogida' if tipo_envio_seleccionado == 'recogida' else 'estandar'
+            valor_envio_personalizado = None
+        else:
+            tipo_envio = 'personalizado'
+            descuento_tentativo = subtotal_general * (porcentaje_descuento / Decimal('100'))
+            subtotal_con_descuento = subtotal_general - descuento_tentativo
+            
+            if tipo_envio_seleccionado == 'recogida':
+                valor_envio_personalizado = Decimal('0.00')
+                tipo_envio = 'recogida'
+            else:
+                # Usamos tu función auxiliar basada en la base de datos de envíos por municipio
+                valor_envio_personalizado = Decimal(str(calcular_envio(ciudad, subtotal_con_descuento)))
+
+        # ⚡ CÁLCULO GENERAL DE LA CASCADA MATEMÁTICA
+        totales = motor.calcular_totales_pedido(
+            subtotal_base=subtotal_general,
+            porcentaje_descuento=porcentaje_descuento,
+            tipo_envio=tipo_envio,
+            valor_envio_personalizado=valor_envio_personalizado
+        )
+
+        # 👤 Buscar o crear cliente (Conserva tu lógica)
+        cliente, creado = Cliente.objects.get_or_create(
+            usuario=usuario,
+            telefono=telefono,
+            defaults={
+                "nombre": nombre,
+                "email": cliente_email,
+                "ciudad": ciudad,
+                "direccion": direccion,
+            }
+        )
+
+        if not creado:
+            cliente.nombre = nombre
+            cliente.email = cliente_email
+            cliente.ciudad = ciudad
+            cliente.direccion = direccion
+            cliente.save()
+
+        # 📦 Crear el Pedido Maestro con datos puros del Motor Fiscal
+        pedido = Pedido.objects.create(
+            usuario=usuario,
+            cliente=cliente,
+            numero_orden=numero,
+            cliente_nombre=nombre,        
+            cliente_telefono=telefono,
+            cliente_email=cliente_email,  
+            cliente_ciudad=ciudad,
+            cliente_direccion=direccion,
+            cliente_nit=nit,
+            total=float(totales['total_final']),                 
+            porcentaje_descuento=float(totales['porcentaje_descuento']),
+            descuento_total=float(totales['descuento_total']),
+            costo_envio=float(totales['costo_envio']),
+            tipo_envio=totales['tipo_envio'],
+            aplica_iva=aplica_iva,             
+            es_retenedor=es_retenedor,
+            iva=float(totales['iva_total']),  # Guardamos el IVA consolidado
+            retefuente=float(totales['retefuente_total']),  # Guardamos la Retefuente consolidada
+            estado="pendiente" 
+        )
+
+        # 🔄 Registrar cada PedidoItem calculando valores unitarios inmutables
+        for linea in lineas_items:
+            item = linea['item_carrito']
+            
+            # El motor desglosa el IVA e impuesto de cada ítem de forma aislada
+            valores_item = motor.calcular_valores_item(subtotal_item=linea['subtotal_item'])
+
+            PedidoItem.objects.create(
+                pedido=pedido,
+                producto=item.producto,
+                variante=item.variante,
+                cantidad=int(item.cantidad),
+                precio=float(linea['precio_aplicado']),
+                total_gramos=float(linea['gramos_totales']),  
+                subtotal=float(linea['subtotal_item']),
+                iva=float(valores_item['iva_item']),
+                retefuente=float(valores_item['retefuente_item']),
+                total_final=float(valores_item['total_item'])
+            )
+
+            # Descontar existencias del inventario (Apartar mercancía)
+            if item.variante:
+                item.variante.stock -= item.cantidad
+                item.variante.save()
+            elif item.producto.tipo_venta != "gramo":
+                item.producto.stock -= item.cantidad
+                item.producto.save()
+
+        # Vaciar el carrito de compras tras el éxito de la transacción
+        items.delete()
+
+        return render(request, 'pago.html', {'pedido': pedido})
+
+    except Exception as e:
+        print("\n" + "🚨" * 30)
+        print(f"💥 ERROR CRÍTICO EN /PAGAR/: {str(e)}")
+        print("-" * 60)
+        traceback.print_exc()
+        print("🚨" * 30 + "\n")
+        
+        return HttpResponse(f"Error detectado en el proceso de pago: {str(e)}", status=500)
+
+def pagar_wompi(request, token): # <-- Cambiado de pedido_id a token
+    pedido = get_object_or_404(Pedido, token_publico=token) # <-- get_object_or_404 seguro
+    return crear_checkout_wompi(request, pedido)
+
+def crear_checkout_wompi(request, pedido):
+    redirect_url = request.build_absolute_uri(f'/pago-exitoso/{pedido.token_publico}/')
+    redirect_url_encoded = quote(redirect_url, safe='')
+
+    # 🏪 1. Buscamos el perfil del dueño de la joyería
+    perfil_dueno = pedido.usuario.perfil
+    
+    # 🔑 2. Buscamos ÚNICAMENTE la llave del usuario en la base de datos
+    wompi_public_key = getattr(perfil_dueno, 'wompi_public_key', None)
+
+    # 🚨 EL ESCUDO: Si el usuario NO tiene su llave configurada, frenamos todo
+    if not wompi_public_key or wompi_public_key.strip() == "":
+        print(f"⚠️ Alerta de Seguridad: El usuario {pedido.usuario.username} intentó recibir un pago pero no tiene configurada su Wompi Public Key.")
+        return HttpResponse(
+            "<h3>Método de pago temporalmente no disponible</h3>"
+            "<p>Esta tienda aún no ha terminado de configurar sus credenciales de pago en línea. "
+            "Por favor, ponte en contacto con el administrador de la joyería para completar tu compra por WhatsApp.</p>", 
+            status=400
+        )
+
+    # 🚀 Si sí tiene su llave, el flujo continúa normal y el dinero va a SU cuenta bancaria
+    checkout_url = (
+        "https://checkout.wompi.co/p/"
+        f"?public-key={wompi_public_key.strip()}" 
+        f"&currency=COP"
+        f"&amount-in-cents={int(pedido.total * 100)}"
+        f"&reference={pedido.numero_orden}"
+        f"&redirect-url={redirect_url_encoded}"
+    )
+    return redirect(checkout_url)
+
+@csrf_exempt
+def webhook_wompi(request):
+    if request.method != 'POST':
+        return HttpResponse("Método no permitido", status=405)
+        
+    try:
+        # 1. Parsear los datos que envía Wompi
+        data = json.loads(request.body)
+        
+        # Opcional: Validar integridad con la firma de Wompi (si configuras WOMPI_EVENTS_SECRET)
+        # Por ahora procesamos el evento de forma directa y segura por ID de orden
+        
+        transaccion = data.get('data', {}).get('transaction', {})
+        referencia_orden = transaccion.get('reference') # Ejemplo: #FAC-00022
+        estado_wompi = transaccion.get('status') # APPROVED, DECLINED, VOIDED
+        
+        if referencia_orden and estado_wompi == 'APPROVED':
+            # 2. Buscar el pedido por su número de orden único
+            pedido = Pedido.objects.filter(numero_orden=referencia_orden).first()
+            
+            if pedido and pedido.estado != 'pagado':
+                # 3. Actualizar el estado de manera definitiva
+                pedido.estado = 'pagado'
+                pedido.saldo_pendiente = Decimal('0.00')
+                pedido.save()
+                print(f"✅ Webhook exitoso: Pedido {referencia_orden} marcado como PAGADO.")
+                
+                # ========================================================
+                # 🚀 DISPARADORES AUTOMÁTICOS INTEGRADOS (Wompi)
+                # ========================================================
+                from .utils import generar_pdf_pedido
+                from django.core.mail import EmailMessage
+                from .models import Perfil # Asegúrate de importar tu modelo Perfil aquí si no está arriba
+
+                # Recuperamos el perfil de la joyería dueña de este pedido de forma dinámica
+                perfil = Perfil.objects.filter(user=pedido.usuario).first()
+
+                if perfil:
+                    # Generamos el binario del PDF usando tu plantilla HTML
+                    pdf, correo_empresa, nombre_tienda = generar_pdf_pedido(pedido, perfil, usuario_backup=perfil.user)
+
+                    email_cliente = getattr(pedido, 'cliente_email', None)
+                    if email_cliente and pdf:
+                        try:
+                            email = EmailMessage(
+                                subject=f"Confirmación de Pago: Pedido #{pedido.numero_orden} - {nombre_tienda}",
+                                body=f"¡Hola! Tu pago ha sido confirmado correctamente a través de Wompi. Adjuntamos tu factura detallada. 💎",
+                                from_email=correo_empresa,
+                                to=[email_cliente]
+                            )
+                            email.attach(f"factura_{pedido.numero_orden}.pdf", pdf, 'application/pdf')
+                            email.send()
+                            print(f"📧 Correo enviado al cliente {email_cliente} para la orden {pedido.numero_orden}")
+                        except Exception as e:
+                            print(f"Error en envío automático por Webhook Wompi: {str(e)}")
+                # ========================================================
+                
+        # Wompi exige que le respondas un HTTP 200 para saber que recibiste la notificación
+        return HttpResponse("Evento recibido", status=200)
+        
+    except Exception as e:
+        print(f"💥 Error en Webhook Wompi: {str(e)}")
+        # Corregido el typo 'HttpRespon tnse' que tenías en tu borrador original
+        return HttpResponse("Error interno procesado", status=200)
+
+def pagar_con_mercadopago(request, token):
+    """
+    Genera la preferencia de Mercado Pago asegurando la correcta obtención 
+    del perfil del vendedor sin recalcular totales de forma prematura.
+    """
+    try:
+        # 1. Obtener el pedido usando el token público correcto
+        pedido = get_object_or_404(Pedido, token_publico=token)
+        
+        # 🎯 INTENTO 1: Buscar relación directa si tu modelo Pedido tiene 'perfil_joyeria' o similar
+        perfil_tienda = getattr(pedido, 'perfil_joyeria', None) or getattr(pedido, 'perfil', None)
+        
+        # 🎯 INTENTO 2: Si no viene directo, lo extraemos a través del usuario de la tienda/vendedor
+        if not perfil_tienda:
+            primer_item = pedido.items.first()  # Ajusta 'items' según el related_name de PedidoItem
+            if primer_item and hasattr(primer_item.producto, 'usuario'):
+                vendedor = primer_item.producto.usuario
+            elif primer_item and hasattr(primer_item.producto, 'perfil'):
+                perfil_tienda = primer_item.producto.perfil
+                vendedor = getattr(perfil_tienda, 'user', None)
+            else:
+                vendedor = pedido.usuario 
+                
+            if not perfil_tienda and vendedor:
+                try:
+                    perfil_tienda = Perfil.objects.get(user=vendedor)
+                except Perfil.DoesNotExist:
+                    perfil_tienda = None
+
+        if not perfil_tienda:
+            return HttpResponse(
+                "<h3>Error de Configuración</h3><p>No se pudo determinar la joyería dueña de este pedido.</p>", 
+                status=200
+            )
+
+        # 🛡️ EXTRACCIÓN Y LIMPIEZA DE TU TOKEN 'APP_USR'
+        token_mp = getattr(perfil_tienda, 'mercadopago_access_token', None)
+        
+        if token_mp is None or str(token_mp).strip() in ["", "None"]:
+            return HttpResponse(
+                f"<div style='font-family:sans-serif; padding:20px; text-align:center; margin-top:50px;'>"
+                f"   <h2 style='color:#1D4ED8;'>Módulo de Pago en Configuración</h2>"
+                f"   <p style='color:#4B5563;'>La tienda '{perfil_tienda.nombre_tienda}' aún no ha enlazado sus credenciales de Mercado Pago.</p>"
+                f"</div>", 
+                status=200
+            )
+
+        token_limpio = str(token_mp).strip()
+
+        # Inicialización del SDK con credenciales reales del vendedor
+        sdk = mercadopago.SDK(token_limpio)
+
+        # URLs de Redirección y Notificación usando el atributo real: token_publico
+        ruta_relativa = f"/webhooks/mercadopago/{perfil_tienda.webhook_uuid}/"
+        url_webhook = request.build_absolute_uri(ruta_relativa).replace("http://", "https://")
+        
+        url_success = request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/").replace("http://", "https://")
+        url_failure = request.build_absolute_uri(f"/pago-fallido/{pedido.token_publico}/").replace("http://", "https://")
+
+        # Configuración del valor a pagar extraído directamente de lo sellado en la base de datos
+        monto_total = getattr(pedido, 'total_limpio', None) or getattr(pedido, 'total', 0)
+        monto_total = float(monto_total)
+
+        # Estructura de preferencia ÚNICA y limpia
+        preference_data = {
+            "items": [
+                {
+                    "title": f"Pedido #{pedido.numero_orden} - {perfil_tienda.nombre_tienda}",
+                    "quantity": 1,
+                    "currency_id": "COP",
+                    "unit_price": monto_total,
+                }
+            ],
+            "back_urls": {
+                "success": url_success,
+                "failure": url_failure,
+                "pending": url_success
+            },
+            "auto_return": "approved",
+            "external_reference": str(pedido.numero_orden),
         }
-    )
 
-@login_required
-def eliminar_imagen_galeria(request, id):
+        # Excluir localhost del webhook para evitar rechazos de Mercado Pago en desarrollo local
+        if "localhost" not in url_webhook and "127.0.0.1" not in url_webhook:
+            preference_data["notification_url"] = url_webhook
 
-    imagen = get_object_or_404(
-        ProductoImagen,
-        id=id
-    )
+        # 1. Hacemos la petición a Mercado Pago
+        preference_response = sdk.preference().create(preference_data)
+        
+        # 2. LOG DE CONTROL: Imprimimos la respuesta completa en Render para auditorías rápidas
+        print("====== RESPUESTA COMPLETA DE MERCADO PAGO ======")
+        print(preference_response)
+        print("================================================")
 
-    producto_id = imagen.producto.id
+        # 3. Extraemos la respuesta usando .get() de forma segura
+        preference = preference_response.get("response") if preference_response else None
+        
+        # 4. Validamos si Mercado Pago nos devolvió el punto de inicio de pago válido
+        if not preference or not preference.get("init_point"):
+            mensaje_error = preference_response.get("message", "Las credenciales no son válidas o la cuenta requiere homologación en Mercado Pago.")
+            return HttpResponse(
+                f"<div style='font-family:sans-serif; padding:20px; text-align:center; margin-top:50px;'>"
+                f"   <h2 style='color:#DC2626;'>Mercado Pago: Rechazo de Solicitud</h2>"
+                f"   <p style='color:#4B5563;'>La pasarela respondió pero no generó el punto de inicio.</p>"
+                f"   <p style='color:#9CA3AF; font-size:14px;'><b>Detalle técnico:</b> {mensaje_error}</p>"
+                f"   <a href='/factura/{pedido.token_publico}/' style='display:inline-block; margin-top:20px; padding:10px 20px; background:#1D4ED8; color:white; text-decoration:none; border-radius:5px;'>Volver al Pedido</a>"
+                f"</div>",
+                status=200
+            )
+        
+        # 5. Redirección al checkout transparente de Mercado Pago
+        return redirect(preference.get("init_point"))
 
-    imagen.delete()
+    except Exception as e:
+        print(f"💥 Error crítico detallado en Mercado Pago: {traceback.format_exc()}")
+        return HttpResponse(f"Error interno al inicializar el pago: {str(e)}", status=200)
 
-    return redirect(
-        'editar_producto',
-        producto_id
-    )
-
-@login_required
-def eliminar_producto(request, id):
-
-    producto = Producto.objects.get(
-        id=id,
-        usuario=request.user
-    )
-
-    producto.delete()
-
-    return redirect('mis_productos')
-
-@login_required
-def eliminar_imagen_producto(request, id):
-
-    producto = get_object_or_404(
-        Producto,
-        id=id,
-        usuario=request.user
-    )
-
-    producto.imagen_principal = None
-    producto.save()
-
-    return redirect('editar_producto', id=id)
-
-#@login_required
-#def editar_producto(request, id):
-    producto = Producto.objects.get(id=id, usuario=request.user)
-    categorias = Categoria.objects.filter(usuario=request.user)
-
+@csrf_exempt
+def webhook_mercadopago(request, profile_uuid):
+    """Recibe el UUID directamente en la URL, consulta el pago y procesa el flujo automático."""
     if request.method == 'POST':
-        producto.nombre = request.POST.get('nombre')
-        producto.descripcion = request.POST.get('descripcion')
-        producto.referencia = request.POST.get('referencia')
+        try:
+            # 1. Buscamos el perfil de la joyería usando el UUID de la URL de forma directa
+            perfil = get_object_or_404(Perfil, webhook_uuid=profile_uuid)
 
-        if request.POST.get('categoria'):
-            producto.categoria_id = request.POST.get('categoria')
+            # 2. Capturamos el ID del recurso que envía Mercado Pago
+            topic = request.GET.get('topic') or request.POST.get('topic')
+            id_recurso = request.GET.get('id') or request.POST.get('id')
 
-        producto.precio_costo = request.POST.get('precio_costo') or 0
-        producto.stock = request.POST.get('stock') or 0
-        producto.precio_detal = request.POST.get('precio_detal') or 0
-        producto.precio_semimayor = request.POST.get('precio_semimayor') or 0
-        producto.precio_mayor = request.POST.get('precio_mayor') or 0
-        producto.tipo_venta = request.POST.get('tipo_venta') or 'unidad'
-        producto.peso_producto = request.POST.get('peso_producto') or 0
-        producto.precio_por_gramo_detal = request.POST.get('precio_por_gramo_detal') or 0
-        producto.precio_por_gramo_semimayor = request.POST.get('precio_por_gramo_semimayor') or 0
-        producto.precio_por_gramo_mayor = request.POST.get('precio_por_gramo_mayor') or 0
-        producto.destacado = (request.POST.get('destacado') == 'on')
+            if not topic and request.body:
+                data = json.loads(request.body)
+                topic = data.get('type')
+                if data.get('data'):
+                    id_recurso = data.get('data').get('id')
 
-        if request.FILES.get('imagen_principal'):
-            producto.imagen_principal = request.FILES.get('imagen_principal')
-        if request.FILES.get('certificado'):
-            producto.certificado = request.FILES.get('certificado')
-        if request.FILES.get('video'):
-            producto.video = request.FILES.get('video')
-        producto.save()
+            # 3. Si es una notificación de pago, procedemos con el SDK del vendedor
+            if topic == 'payment' and id_recurso:
+                # 🧠 Inicialización limpia usando el token del vendedor recuperado con el UUID
+                sdk = mercadopago.SDK(perfil.mercadopago_access_token)
+                payment_info = sdk.payment().get(id_recurso)
+                payment_data = payment_info["response"]
 
-        galeria = request.FILES.getlist('galeria')
-        for imagen in galeria:
-            if producto.imagen_principal and imagen.size == producto.imagen_principal.size:
-                continue
-            ProductoImagen.objects.create(producto=producto, imagen=imagen)
+                status = payment_data.get("status")
+                numero_orden = payment_data.get("external_reference")
+                monto_recibido = payment_data.get("transaction_amount")
 
-        # 🔄 Reconstrucción limpia de variantes basadas en la matriz
-        producto.variantes.all().delete()
+                # 4. Localizamos el pedido real en el sistema
+                pedido = get_object_or_404(Pedido, numero_orden=numero_orden)
+                
+                # 5. Validamos estado y monto
+                if status == 'approved' and float(monto_recibido) >= float(pedido.total_limpio):
+                    if pedido.estado_pago != 'pagado':
+                        pedido.estado_pago = 'pagado'
+                        pedido.mercadopago_payment_id = id_recurso  # Guardamos la auditoría
+                        pedido.save()
+                        
+                        # ========================================================
+                        # 🚀 DISPARADORES AUTOMÁTICOS (Tu hoja de ruta)
+                        # ========================================================
+                        
+                        # 1. Enviar correo con factura PDF adjunta (Tu HTML usando xhtml2pdf)
+                        from .utils import generar_pdf_pedido
+                        from django.core.mail import EmailMessage
 
-        v_colores = request.POST.getlist('v_color[]')
-        v_tallas = request.POST.getlist('v_talla[]')
-        v_stocks = request.POST.getlist('v_stock[]')
-        v_precios = request.POST.getlist('v_precio[]')
+                        # Generamos el binario del PDF invocando tu función pura
+                        # Pasamos perfil.user como usuario de respaldo (backup)
+                        pdf, correo_empresa, nombre_tienda = generar_pdf_pedido(pedido, perfil, usuario_backup=perfil.user)
 
-        for i in range(len(v_colores)):
-            try:
-                c_val = v_colores[i].strip() if i < len(v_colores) and v_colores[i] else None
-                t_val = v_tallas[i].strip() if i < len(v_tallas) and v_tallas[i] else None
-                s_val = int(v_stocks[i].strip()) if i < len(v_stocks) and v_stocks[i] else 0
-                p_val = float(v_precios[i].strip()) if i < len(v_precios) and v_precios[i] else 0
+                        email_cliente = getattr(pedido, 'cliente_email', None)
+                        if email_cliente and pdf:
+                            try:
+                                email = EmailMessage(
+                                    subject=f"Confirmación de Pago: Pedido #{pedido.numero_orden} - {nombre_tienda}",
+                                    body=f"¡Hola! Tu pago ha sido confirmado correctamente. Adjuntamos tu factura detallada. 💎",
+                                    from_email=correo_empresa,
+                                    to=[email_cliente]
+                                )
+                                email.attach(f"factura_{pedido.numero_orden}.pdf", pdf, 'application/pdf')
+                                email.send()
+                            except Exception as e:
+                                print(f"Error en envío automático por Webhook MP para {profile_uuid}: {str(e)}")
 
-                if c_val or t_val:
-                    ProductoVariante.objects.create(
-                        producto=producto,
-                        color=c_val,
-                        talla=t_val,
-                        stock=s_val,
-                        precio_venta=p_val
-                    )
-            except (IndexError, ValueError):
-                continue
-            except IntegrityError:
-                continue
+                        # 2. Notificación push o WhatsApp al vendedor
+                        # (Aquí pones tu lógica de notificaciones cuando la tengas lista)
 
-        return redirect('mis_productos')
+                        # 3. Asiento en el registro financiero / contabilidad
+                        # (Aquí pones tu lógica contable cuando la tengas lista)
 
-    return render(request, 'editar_producto.html', {'producto': producto, 'categorias': categorias})
-def _asegurar_gastos_basicos(usuario):
-    """Inyecta la estructura de gastos base de JoyasApp protegiendo contra duplicados."""
-    tiene_categoria = hasattr(Gasto, 'categoria')
-    
-    gastos_base = [
-        {"nombre": "Compra de Oro / Insumos", "categoria": "fabricacion"},
-        {"nombre": "Compra de Plata / Insumos", "categoria": "fabricacion"},
-        {"nombre": "Piedras, Circones y Gemas", "categoria": "fabricacion"},
-        {"nombre": "Procesos de Fundición", "categoria": "fabricacion"},
-        {"nombre": "Insumos de Pulido y Soldadura", "categoria": "fabricacion"},
-        {"nombre": "Ligas, Químicos y Ácidos", "categoria": "fabricacion"},
-        {"nombre": "Cajas y Empaques de Lujo", "categoria": "fabricacion"},
-        {"nombre": "Arriendo Taller/Oficina", "categoria": "fijo"},
-        {"nombre": "Servicios Públicos (Luz/Internet)", "categoria": "fijo"},
-        {"nombre": "Publicidad y Marketing", "categoria": "marketing"},
-        {"nombre": "Transporte y Envíos", "categoria": "logistica"},
-        {"nombre": "Comisiones Bancarias y Pasarelas", "categoria": "financiero"},
-        {"nombre": "Papelería y Administración", "categoria": "administrativo"},
-    ]
-    
-    for g in gastos_base:
-        defaults = {"monto": 0.0}
-        if tiene_categoria:
-            defaults["categoria"] = g["categoria"]
+                        # ========================================================
+
+            return HttpResponse("OK", status=200)
+                
+        except Exception as e:
+            print(f"Error crítico en Webhook MP ({profile_uuid}): {str(e)}")
+            return HttpResponse(status=500)
             
-        Gasto.objects.get_or_create(usuario=usuario, nombre=g["nombre"], defaults=defaults)
+    return HttpResponse(status=400)
 
-@login_required(login_url='/login/')
+def pago_exitoso(request, token):
+    """Vista de retorno cuando el pago es aprobado en Wompi o Mercado Pago"""
+    pedido = get_object_or_404(Pedido, token_publico=token)
+
+    # 🛡️ Validamos de forma segura que Mercado Pago realmente retorne aprobado (si aplica)
+    status_mp = request.GET.get('status')
+    if status_mp and status_mp != 'approved' and status_mp != 'authorized':
+        # Si no está aprobado de verdad, lo mandamos a la vista de pendiente o fallido
+        return redirect('pago_fallido', token=token)
+
+    pedido.estado = "pagado"
+    pedido.saldo_pendiente = Decimal('0.00')
+    pedido.save()
+
+    return redirect('factura_publica', token=token)
+
+def pago_fallido(request, token):
+    """Vista para gestionar los pagos rechazados o fallidos de Mercado Pago/Wompi"""
+    # 🎯 CORREGIDO: Buscamos usando 'token_publico' para evitar FieldError
+    pedido = get_object_or_404(Pedido, token_publico=token) 
+    
+    context = {
+        'pedido': pedido,
+        'status': request.GET.get('status'), # Captura el estado ('rejected', 'cancelled')
+    }
+    # 🎯 CORREGIDO: Ajustado a 'pago_fallido.html' para consistencia de rutas
+    return render(request, 'pago_fallido.html', context)
+
+# ────────────────────────────────────────────────────────────────
+# 🛠️ FUNCIÓN AUXILIAR: TRADUCTOR DE RUTAS ESTÁTICAS PARA EL PDF
+# ────────────────────────────────────────────────────────────────
+def link_callback(uri, rel):
+    """
+    Convierte rutas relativas de estáticos y media de Django en rutas 
+    absolutas del sistema operativo para que xhtml2pdf las encuentre en Render.
+    """
+    # 1. Buscar el archivo usando el motor de estáticos de Django
+    result = finders.find(uri)
+    if result:
+        if not isinstance(result, (list, tuple)):
+            result = [result]
+        path = result[0]
+    else:
+        # 2. Si no lo encuentra, construir la ruta usando settings
+        s_url = settings.STATIC_URL
+        s_root = settings.STATIC_ROOT
+        m_url = settings.MEDIA_URL
+        m_root = settings.MEDIA_ROOT
+
+        if uri.startswith(m_url):
+            path = os.path.join(m_root, uri.replace(m_url, ""))
+        elif uri.startswith(s_url):
+            path = os.path.join(s_root, uri.replace(s_url, ""))
+        else:
+            return uri
+
+    # Asegurarnos de que el archivo físico realmente existe en el servidor
+    if not os.path.isfile(path):
+        return uri
+    return path
+
+# =========================================================================
+# 📄 BLOQUE 6: PORTAL PÚBLICO DEL CLIENTE (FACTURA Y PDF)
+# =========================================================================
+
+def factura_publica(request, token):
+    """
+    Vista que renderiza el recibo público para el cliente mediante el token UUID.
+    """
+    pedido = get_object_or_404(Pedido, token_publico=token)
+    items = pedido.items.select_related('producto', 'variante').all()
+    
+    usuario_pedido = pedido.usuario
+    try:
+        perfil = Perfil.objects.get(user=usuario_pedido)
+    except Perfil.DoesNotExist:
+        perfil = None
+
+    empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
+    empresa_nit = perfil.nit if perfil else ""
+    empresa_telefono = perfil.whatsapp if perfil else ""
+    empresa_direccion = getattr(perfil, 'direccion', getattr(perfil, 'ciudad', '')) or ""
+    empresa_email = perfil.email_empresa if perfil else ""
+    
+    empresa_logo = ""
+    if perfil and hasattr(perfil, 'logo') and perfil.logo:
+        try: empresa_logo = perfil.logo.url
+        except Exception: pass
+
+    color_primario = perfil.color_primario if perfil else "#000000"
+    color_secundario = perfil.color_secundario if perfil else "#333333"
+
+    # ⚡ LLAMADA AL MOTOR FISCAL ÚNICO
+    totales = calcular_totales_pedido(pedido, perfil, items)
+
+    # Motor de estados
+    if pedido.estado == "pendiente":
+        estado = "pendiente"
+    elif pedido.saldo_pendiente is not None and pedido.saldo_pendiente <= 0:
+        estado = "pagado"
+    elif pedido.fecha_limite and pedido.fecha_limite < timezone.now().date():
+        estado = "vencido"
+    else:
+        estado = pedido.estado
+
+    # Integración de WhatsApp usando el total final calculado
+    mensaje = f"Hola! Adjunto el comprobante de pago del pedido #{pedido.numero_orden} por valor de ${totales['total_final']:,.0f}".replace(",", ".")
+    whatsapp_num = empresa_telefono if empresa_telefono != "-" else ""
+    whatsapp_url = f"https://wa.me/{whatsapp_num}?text={urllib.parse.quote(mensaje)}"
+    qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(whatsapp_url)}"
+
+    if getattr(pedido, 'fecha', None):
+        fecha_str = pedido.fecha.strftime('%Y-%m-%d')
+    elif getattr(pedido, 'fecha_creacion', None):
+        fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d')
+    else:
+        fecha_str = timezone.now().strftime('%Y-%m-%d')
+
+    c_nombre = getattr(pedido, 'cliente_nombre', None) or (pedido.cliente.nombre if getattr(pedido, 'cliente', None) else 'Consumidor Final')
+    c_email = getattr(pedido, 'cliente_email', None) or (pedido.cliente.email if getattr(pedido, 'cliente', None) else '')
+    c_telefono = getattr(pedido, 'cliente_telefono', None) or (pedido.cliente.telefono if getattr(pedido, 'cliente', None) else '')
+    c_direccion = getattr(pedido, 'cliente_direccion', None) or (pedido.cliente.direccion if getattr(pedido, 'cliente', None) else '')
+    c_ciudad = getattr(pedido, 'cliente_ciudad', None) or (pedido.cliente.ciudad if getattr(pedido, 'cliente', None) else '')
+    c_nit = getattr(pedido, 'cliente_nit', None) or (pedido.cliente.nit if getattr(pedido, 'cliente', None) else '')
+
+    context = {
+        'pedido': pedido,
+        'items': items,
+        'cliente_nombre': c_nombre,
+        'cliente_email': c_email,
+        'cliente_telefono': c_telefono,
+        'cliente_direccion': c_direccion,
+        'cliente_ciudad': c_ciudad,
+        'cliente_nit': c_nit,
+        'empresa_nombre': empresa_nombre,
+        'empresa_nit': empresa_nit,
+        'empresa_telefono': empresa_telefono,
+        'empresa_direccion': empresa_direccion,
+        'empresa_email': empresa_email,
+        'empresa_logo': empresa_logo,
+        'color_primario': color_primario,
+        'color_secundario': color_secundario,
+        'fecha_str': fecha_str,
+        'qr_pago_url': qr_url,  
+        'whatsapp_url': whatsapp_url,
+        'estado': estado,
+    }
+    # Inyectamos los totales calculados directo al contexto
+    context.update(totales)
+    
+    return render(request, 'factura_publica.html', context)
+
+def confirmar_pago_publico(request, token):
+    """ El cliente avisa de forma anónima que ya transfirió """
+    pedido = get_object_or_404(Pedido, token_publico=token)
+    pedido.estado = "confirmacion_pago"
+    pedido.save()
+    return redirect('factura_publica', token=token)
+
+# ────────────────────────────────────────────────────────────────
+# 📄 VISTA PRINCIPAL: GENERACIÓN DE PDF
+# ────────────────────────────────────────────────────────────────
+def pedido_pdf(request, pedido_id):
+    pedido = get_object_or_404(Pedido, id=pedido_id)
+    items = pedido.items.select_related('producto', 'variante').all()
+    usuario_pedido = pedido.usuario
+
+    try:
+        perfil = Perfil.objects.get(user=usuario_pedido)
+    except Perfil.DoesNotExist:
+        perfil = None
+
+    empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
+    empresa_nit = perfil.nit if perfil else ""
+    empresa_telefono = perfil.whatsapp if perfil else ""
+    empresa_direccion = perfil.direccion if perfil else ""
+    empresa_email = perfil.email_empresa if perfil else ""
+    color_primario = perfil.color_primario if perfil else "#111111"
+    color_secundario = perfil.color_secundario if perfil else "#333333"
+
+    # ⚡ LLAMADA AL MOTOR FISCAL ÚNICO
+    totales = calcular_totales_pedido(pedido, perfil, items)
+
+    # 🕵️‍♂️ Buscamos de forma segura el campo de fecha real que tiene tu modelo Pedido
+    fecha_obj = getattr(
+        pedido, 'created_at', 
+        getattr(pedido, 'fecha', 
+        getattr(pedido, 'fecha_registro', None))
+    )
+    
+    # Si encuentra el campo, lo formatea. Si no, pone "S/F" de forma segura
+    if fecha_obj:
+        try:
+            fecha_str = fecha_obj.strftime('%Y-%m-%d')
+        except AttributeError:
+            fecha_str = str(fecha_obj)
+    else:
+        fecha_str = "S/F"
+
+    context = {
+        'pedido': pedido,
+        'items': items,
+        'cliente_nombre': pedido.cliente_nombre,
+        'cliente_email': pedido.cliente_email,
+        'cliente_telefono': pedido.cliente_telefono,
+        'cliente_direccion': pedido.cliente_direccion,
+        'cliente_ciudad': pedido.cliente_ciudad,
+        'cliente_nit': pedido.cliente_nit,
+        'empresa_nombre': empresa_nombre,
+        'empresa_nit': empresa_nit,
+        'empresa_telefono': empresa_telefono,
+        'empresa_direccion': empresa_direccion,
+        'empresa_email': empresa_email,
+        'color_primario': color_primario,
+        'color_secundario': color_secundario,
+        'fecha_str': fecha_str,
+    }
+    # Inyectamos exactamente los mismos totales
+    context.update(totales)
+
+    try:
+        template = get_template('pedido_pdf.html')
+        html = template.render(context)
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="pedido_{pedido.numero_orden}.pdf"'
+        
+        # 🎯 CAMBIO CLAVE: Agregamos el parámetro link_callback aquí abajo
+        pdf = pisa.CreatePDF(html, dest=response, link_callback=link_callback)
+        
+        if pdf.err:
+            return HttpResponse(f"Error generando PDF: {pdf.err}", status=500)
+        return response
+    except Exception as e:
+        # Añadido un print para depurar rápido en la consola de Render si algo más falla
+        print(f"💥 ERROR EN GENERACIÓN PDF: {str(e)}")
+        traceback.print_exc()
+        return HttpResponse(f"Error interno: {str(e)}", status=500)
+
+# =========================================================================
+# 📊 BLOQUE 7: DASHBOARD ADMINISTRATIVO, CRM Y ESTADÍSTICAS
+# =========================================================================
+
+login_required(login_url='/login/')
 def dashboard(request):
     usuario = request.user
 
@@ -1128,130 +2204,6 @@ def panel_crm(request):
     return render(request, 'crm/panel_crm.html', context)
 
 @login_required
-def exportar_excel_dashboard(request):
-    # Traemos solo los pedidos del joyero que tiene la sesión iniciada
-    if request.user.is_superuser:
-        queryset = Pedido.objects.all()
-    else:
-        queryset = Pedido.objects.filter(usuario=request.user)
-
-    wb = openpyxl.Workbook()
-    ws_resumen = wb.active
-    ws_resumen.title = "Resumen"
-    ws_resumen.append(["Orden", "Fecha", "Cliente", "Subtotal", "IVA", "ReteFuente", "Descuento", "Total"])
-
-    ws_detalle = wb.create_sheet(title="Detalle")
-    ws_detalle.append(["Orden", "Producto", "Cantidad", "Gramos", "Precio Unitario", "Subtotal", "Descuento", "IVA", "Total"])
-
-    for pedido in queryset:
-        subtotal_pedido = Decimal('0')
-        iva_total = Decimal('0')
-        rete_total = Decimal('0')
-        descuento_total = Decimal('0')
-
-        for item in pedido.items.all():
-            cantidad = Decimal(item.cantidad)
-            precio = Decimal(item.precio)
-
-            gramos = ''
-            if item.producto.tipo_venta == 'gramo':
-                peso = item.producto.peso_producto or 1
-                gramos = cantidad * Decimal(peso)
-                base = gramos * precio
-            else:
-                base = cantidad * precio
-
-            subtotal = Decimal(item.subtotal or base)
-            descuento = Decimal(item.descuento or 0)
-            iva = Decimal(item.iva or 0)
-            rete = Decimal(item.retefuente or 0)
-            total = Decimal(item.total_final or 0)
-
-            subtotal_pedido += subtotal
-            iva_total += iva
-            rete_total += rete
-            descuento_total += descuento
-
-            ws_detalle.append([
-                pedido.numero_orden, item.producto.nombre, float(cantidad),
-                float(gramos) if gramos else '', float(precio), float(subtotal),
-                float(descuento), float(iva), float(total),
-            ])
-
-        ws_resumen.append([
-            pedido.numero_orden, pedido.fecha.strftime('%Y-%m-%d') if pedido.fecha else '',
-            pedido.cliente_nombre or '', float(subtotal_pedido), float(iva_total),
-            float(rete_total), float(descuento_total), float(pedido.total),
-        ])
-
-    for ws in [ws_resumen, ws_detalle]:
-        for col in ws.columns:
-            max_length = 0
-            col_letter = col[0].column_letter
-            for cell in col:
-                try:
-                    if cell.value:
-                        max_length = max(max_length, len(str(cell.value)))
-                except:
-                    pass
-            ws.column_dimensions[col_letter].width = max_length + 2
-
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename=ventas_contable.xlsx'
-    wb.save(response)
-    return response
-
-def modificar_banner(request):
-    # 🛡️ BLINDAJE 1: Controlar de forma segura que exista el perfil del usuario
-    perfil = getattr(request.user, 'perfil', None)
-    if not perfil:
-        messages.error(request, "No se encontró un perfil comercial configurado para este usuario.")
-        return redirect('inicio')
-
-    if request.method == 'POST':
-        try:
-            # 🛡️ BLINDAJE 2: Recolección limpia con fallback seguro mediante cadenas vacías
-            perfil.banner_texto = request.POST.get('banner_texto', '').strip()
-            perfil.nombre_tienda = request.POST.get('nombre_tienda', '').strip()
-            perfil.instagram = request.POST.get('instagram', '').strip()
-            perfil.facebook = request.POST.get('facebook', '').strip()
-            perfil.tiktok = request.POST.get('tiktok', '').strip()
-            
-            # 🛡️ BLINDAJE 3: Control estricto de color (Si viene manipulado o vacío, fuerza el negro)
-            color_seleccionado = request.POST.get('estilo_color', '#000000')
-            if not color_seleccionado.startswith('#') or len(color_seleccionado) != 7:
-                perfil.color_principal = '#000000'
-            else:
-                perfil.color_principal = color_seleccionado
-
-            # 🛡️ BLINDAJE 4: ESCUDO ANTI-DUPLICADOS INTEGRADO Y SEGURO
-            if 'banner' in request.FILES:
-                nueva_imagen = request.FILES['banner']
-                
-                # Comprobación de seguridad: Evitar duplicados si coincide el nombre exacto
-                if perfil.banner and nueva_imagen.name == perfil.banner.name:
-                    pass  
-                else:
-                    # Sanear la extensión y forzar un nombre único basado en timestamp para reventar caché
-                    ext = nueva_imagen.name.split('.')[-1].lower()
-                    if ext in ['jpg', 'jpeg', 'png', 'webp']:
-                        nueva_imagen.name = f"banner_{int(time.time())}.{ext}"
-                        perfil.banner = nueva_imagen
-            
-            # 🛡️ BLINDAJE 5: Guardado seguro en base de datos
-            perfil.save()
-            messages.success(request, "¡Centro de promociones actualizado con éxito!")
-            return redirect('modificar_banner')
-
-        except Exception as e:
-            # 🛡️ EXCEPCIÓN TOTAL: Captura cualquier error interno y lo muestra en un mensaje de alerta de Django
-            # Evita la pantalla blanca de Error 500 y te dice exactamente qué falló en caliente
-            messages.error(request, f"Ocurrió un error inesperado al guardar los cambios: {str(e)}")
-            return redirect('modificar_banner')
-
-    return render(request, 'modificar_banner.html', {'perfil': perfil})
-
-@login_required
 def estadisticas(request):
     pedidos = Pedido.objects.filter(usuario=request.user)
 
@@ -1365,6 +2317,304 @@ def ganancias(request):
     }
     return render(request, 'ganancias.html', context)
 
+def modificar_banner(request):
+    # 🛡️ BLINDAJE 1: Controlar de forma segura que exista el perfil del usuario
+    perfil = getattr(request.user, 'perfil', None)
+    if not perfil:
+        messages.error(request, "No se encontró un perfil comercial configurado para este usuario.")
+        return redirect('inicio')
+
+    if request.method == 'POST':
+        try:
+            # 🛡️ BLINDAJE 2: Recolección limpia con fallback seguro mediante cadenas vacías
+            perfil.banner_texto = request.POST.get('banner_texto', '').strip()
+            perfil.nombre_tienda = request.POST.get('nombre_tienda', '').strip()
+            perfil.instagram = request.POST.get('instagram', '').strip()
+            perfil.facebook = request.POST.get('facebook', '').strip()
+            perfil.tiktok = request.POST.get('tiktok', '').strip()
+            
+            # 🛡️ BLINDAJE 3: Control estricto de color (Si viene manipulado o vacío, fuerza el negro)
+            color_seleccionado = request.POST.get('estilo_color', '#000000')
+            if not color_seleccionado.startswith('#') or len(color_seleccionado) != 7:
+                perfil.color_principal = '#000000'
+            else:
+                perfil.color_principal = color_seleccionado
+
+            # 🛡️ BLINDAJE 4: ESCUDO ANTI-DUPLICADOS INTEGRADO Y SEGURO
+            if 'banner' in request.FILES:
+                nueva_imagen = request.FILES['banner']
+                
+                # Comprobación de seguridad: Evitar duplicados si coincide el nombre exacto
+                if perfil.banner and nueva_imagen.name == perfil.banner.name:
+                    pass  
+                else:
+                    # Sanear la extensión y forzar un nombre único basado en timestamp para reventar caché
+                    ext = nueva_imagen.name.split('.')[-1].lower()
+                    if ext in ['jpg', 'jpeg', 'png', 'webp']:
+                        nueva_imagen.name = f"banner_{int(time.time())}.{ext}"
+                        perfil.banner = nueva_imagen
+            
+            # 🛡️ BLINDAJE 5: Guardado seguro en base de datos
+            perfil.save()
+            messages.success(request, "¡Centro de promociones actualizado con éxito!")
+            return redirect('modificar_banner')
+
+        except Exception as e:
+            # 🛡️ EXCEPCIÓN TOTAL: Captura cualquier error interno y lo muestra en un mensaje de alerta de Django
+            # Evita la pantalla blanca de Error 500 y te dice exactamente qué falló en caliente
+            messages.error(request, f"Ocurrió un error inesperado al guardar los cambios: {str(e)}")
+            return redirect('modificar_banner')
+
+    return render(request, 'modificar_banner.html', {'perfil': perfil})
+
+@login_required
+def exportar_excel_dashboard(request):
+    # Traemos solo los pedidos del joyero que tiene la sesión iniciada
+    if request.user.is_superuser:
+        queryset = Pedido.objects.all()
+    else:
+        queryset = Pedido.objects.filter(usuario=request.user)
+
+    wb = openpyxl.Workbook()
+    ws_resumen = wb.active
+    ws_resumen.title = "Resumen"
+    ws_resumen.append(["Orden", "Fecha", "Cliente", "Subtotal", "IVA", "ReteFuente", "Descuento", "Total"])
+
+    ws_detalle = wb.create_sheet(title="Detalle")
+    ws_detalle.append(["Orden", "Producto", "Cantidad", "Gramos", "Precio Unitario", "Subtotal", "Descuento", "IVA", "Total"])
+
+    for pedido in queryset:
+        subtotal_pedido = Decimal('0')
+        iva_total = Decimal('0')
+        rete_total = Decimal('0')
+        descuento_total = Decimal('0')
+
+        for item in pedido.items.all():
+            cantidad = Decimal(item.cantidad)
+            precio = Decimal(item.precio)
+
+            gramos = ''
+            if item.producto.tipo_venta == 'gramo':
+                peso = item.producto.peso_producto or 1
+                gramos = cantidad * Decimal(peso)
+                base = gramos * precio
+            else:
+                base = cantidad * precio
+
+            subtotal = Decimal(item.subtotal or base)
+            descuento = Decimal(item.descuento or 0)
+            iva = Decimal(item.iva or 0)
+            rete = Decimal(item.retefuente or 0)
+            total = Decimal(item.total_final or 0)
+
+            subtotal_pedido += subtotal
+            iva_total += iva
+            rete_total += rete
+            descuento_total += descuento
+
+            ws_detalle.append([
+                pedido.numero_orden, item.producto.nombre, float(cantidad),
+                float(gramos) if gramos else '', float(precio), float(subtotal),
+                float(descuento), float(iva), float(total),
+            ])
+
+        ws_resumen.append([
+            pedido.numero_orden, pedido.fecha.strftime('%Y-%m-%d') if pedido.fecha else '',
+            pedido.cliente_nombre or '', float(subtotal_pedido), float(iva_total),
+            float(rete_total), float(descuento_total), float(pedido.total),
+        ])
+
+    for ws in [ws_resumen, ws_detalle]:
+        for col in ws.columns:
+            max_length = 0
+            col_letter = col[0].column_letter
+            for cell in col:
+                try:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                except:
+                    pass
+            ws.column_dimensions[col_letter].width = max_length + 2
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=ventas_contable.xlsx'
+    wb.save(response)
+    return response
+
+# =========================================================================
+# 📦 BLOQUE 8: GESTIÓN INTERNA DEL CATÁLOGO (ADMINISTRADOR)
+# =========================================================================
+
+@login_required
+def mis_productos(request):
+
+    productos = Producto.objects.filter(
+        usuario=request.user
+    ).order_by('-id')
+
+    return render(
+        request,
+        'mis_productos.html',
+        {
+            'productos': productos
+        }
+    )
+
+@login_required
+def inventario(request):
+    productos_base = Producto.objects.filter(usuario=request.user).prefetch_related('variantes').order_by('nombre')
+
+    # 🔍 SISTEMA DE BÚSQUEDA
+    q = request.GET.get('q', '').strip()
+    if q:
+        productos_base = productos_base.filter(nombre__icontains=q)
+
+    total_productos = productos_base.count()
+    productos_stock = 0
+    stock_bajo = 0
+    agotados = 0
+
+    # 🔄 Inyectamos dinámicamente el stock real consolidado a cada objeto fila
+    for p in productos_base:
+        if p.variantes.exists():
+            p.stock_real = p.variantes.aggregate(total=Sum('stock'))['total'] or 0
+        else:
+            p.stock_real = p.stock or 0
+
+        # Clasificación de métricas
+        if p.stock_real > 5:
+            productos_stock += 1
+        elif 0 < p.stock_real <= 5:
+            stock_bajo += 1
+        else:
+            agotados += 1
+
+    context = {
+        'productos': productos_base,
+        'total_productos': total_productos,
+        'productos_stock': productos_stock,  
+        'stock_bajo': stock_bajo,            
+        'agotados': agotados,
+        'q': q,  
+    }
+    return render(request, 'inventario.html', context)
+
+@login_required
+def lista_productos(request):
+    productos = Producto.objects.filter(usuario=request.user)
+    categorias = Categoria.objects.filter(usuario=request.user)
+    return render(request, 'lista_productos.html', {
+        'productos': productos,
+        'categorias': categorias
+    })
+
+@login_required
+def crear_categoria(request):
+
+    if request.method == 'POST':
+
+        nombre = request.POST.get('nombre')
+
+        Categoria.objects.create(
+            nombre=nombre,
+            usuario=request.user
+        )
+
+        return redirect('dashboard')
+
+    return render(
+        request,
+        'crear_categoria.html'
+    )
+
+def guardar_producto_view(request, pk=None):
+    """
+    Controlador unificado de nivel Enterprise.
+    Delega la lógica pesada a ProductoService y gestiona el flujo HTTP y UX.
+    """
+    if pk:
+        producto = get_object_or_404(Producto, pk=pk)
+        accion = "actualizado"
+    else:
+        producto = Producto()
+        accion = "creado"
+
+    if request.method == 'POST':
+        try:
+            # Delegamos toda la lógica interna (Slug, variantes, transacciones) al servicio
+            producto_guardado = ProductoService.guardar(request, pk=pk)
+            
+            messages.success(request, f"¡Producto '{producto_guardado.nombre}' {accion} con éxito rotundo!")
+            return redirect('mis_productos')
+
+        except Exception as e:
+            logger.error(f"Error crítico en controlador al procesar producto: {str(e)}")
+            messages.error(request, f"⚠️ Error interno: No se guardaron los cambios. Motivo: {str(e)}")
+            
+            # ✨ RUTAS CORREGIDAS: Apuntando a la raíz de templates para evitar el TemplateDoesNotExist
+            return render(request, f'{"editar_producto" if pk else "crear_producto"}.html', {
+                'producto': producto,
+                'valores': request.POST,  
+                'categorias': Categoria.objects.all()
+            })
+
+    # 🔄 Carga por petición GET normal (Edición o Creación limpia)
+    valores_iniciales = producto if pk else None
+
+    # ✨ RUTAS CORREGIDAS: Apuntando a la raíz de templates para evitar el TemplateDoesNotExist
+    return render(request, f'{"editar_producto" if pk else "crear_producto"}.html', {
+        'producto': producto,
+        'valores': valores_iniciales,
+        'categorias': Categoria.objects.all()
+    })
+
+@login_required
+def eliminar_producto(request, id):
+
+    producto = Producto.objects.get(
+        id=id,
+        usuario=request.user
+    )
+
+    producto.delete()
+
+    return redirect('mis_productos')
+
+@login_required
+def eliminar_imagen_producto(request, id):
+
+    producto = get_object_or_404(
+        Producto,
+        id=id,
+        usuario=request.user
+    )
+
+    producto.imagen_principal = None
+    producto.save()
+
+    return redirect('editar_producto', id=id)
+
+@login_required
+def eliminar_imagen_galeria(request, id):
+
+    imagen = get_object_or_404(
+        ProductoImagen,
+        id=id
+    )
+
+    producto_id = imagen.producto.id
+
+    imagen.delete()
+
+    return redirect(
+        'editar_producto',
+        producto_id
+    )
+
+# =========================================================================
+# 🧾 BLOQUE 9: ADMINISTRACIÓN DE PEDIDOS, CONTROL DE PAGOS Y FACTURACIÓN
+# =========================================================================
+
 @login_required
 def configurar_negocio(request):
     perfil = request.user.perfil
@@ -1440,1102 +2690,6 @@ def configurar_negocio(request):
         })
 
     return render(request, 'configurar_negocio.html', {'form': form, 'perfil': perfil})
-
-def calcular_totales_con_reglas_fiscales(pedido):
-    """
-    Única función centralizada en views.py para procesar el pedido.
-    Recibe el objeto 'pedido' directamente, lo que facilita su uso en cualquier vista.
-    """
-    perfil = pedido.usuario.perfil  # Accedemos al centro de mando del joyero
-    subtotal_productos = Decimal('0.00')
-    
-    # 1. Sumamos el valor base de los ítems del pedido
-    for item in pedido.items.all():
-        subtotal_productos += Decimal(str(item.subtotal or 0.00))
-
-    # 🎁 REGLA DE CAMPAÑA: ¿El joyero encendió el interruptor de promociones?
-    descuento_aplicado = Decimal('0.00')
-    if perfil.aplicar_descuentos and perfil.porcentaje_descuento_promo > 0:
-        porcentaje_desc = Decimal(str(perfil.porcentaje_descuento_promo)) / Decimal('100.00')
-        descuento_aplicado = subtotal_productos * porcentaje_desc
-    
-    # Base sobre la que se calcula el IVA tras el descuento de campaña
-    base_gravable = subtotal_productos - descuento_aplicado
-
-    # ⚖️ REGLA FISCAL: ¿Es responsable de IVA?
-    iva_calculado = Decimal('0.00')
-    if perfil.responsable_iva and perfil.porcentaje_iva > 0:
-        porcentaje_iva = Decimal(str(perfil.porcentaje_iva)) / Decimal('100.00')
-        iva_calculado = base_gravable * porcentaje_iva
-
-    retefuente_calculada = Decimal('0.00')
-    if hasattr(perfil, 'aplicar_retefuente') and perfil.aplicar_retefuente:
-        # Nota: Aquí puedes validar si el cliente del pedido es retenedor si tienes ese campo
-        porcentaje_rete = Decimal(str(perfil.porcentaje_retefuente or 2.50)) / Decimal('100.00')
-        retefuente_calculada = base_gravable * porcentaje_rete
-
-    # 🚚 REGLA DE ENVÍOS: Control de costos y umbral gratis
-    costo_envio = Decimal('0.00')
-    if perfil.cobrar_envio:
-        costo_envio = Decimal(str(perfil.costo_envio_estandar or 0.00))
-        
-        # Si el negocio configuró un tope de envío gratis y la base lo supera, queda en 0
-        if perfil.envio_gratis_desde and base_gravable >= Decimal(str(perfil.envio_gratis_desde)):
-            costo_envio = Decimal('0.00')
-
-    # 💾 Guardamos de forma limpia los resultados en el Pedido
-    pedido.descuento_total = descuento_aplicado
-    pedido.aplica_iva = perfil.responsable_iva  # Sincronizamos el estado del IVA
-    pedido.iva = iva_calculado
-    pedido.costo_envio = costo_envio
-    pedido.total = base_gravable + iva_calculado + costo_envio
-    pedido.save()
-    
-    return pedido
-
-@login_required
-def renovar_manual(request):
-    """Vista para forzar la renovación del plan SaaS desde el panel."""
-    perfil = request.user.perfil
-    renovar_plan(perfil)
-    return redirect('dashboard')
-
-def renovar_plan(perfil):
-    """Lógica centralizada para extender la vigencia del plan 30 días."""
-    hoy = timezone.localdate()
-
-    # Si el plan sigue vigente, sumamos días al vencimiento actual (acumulativo)
-    if perfil.plan_vence and perfil.plan_vence > hoy:
-        perfil.plan_vence = perfil.plan_vence + timedelta(days=30)
-    # Si ya venció, los 30 días arrancan desde hoy
-    else:
-        perfil.plan_vence = hoy + timedelta(days=30)
-
-    perfil.activa = True
-    perfil.save()
-  
-def agregar_al_carrito(request, producto_id):
-    if request.method == 'POST':
-        producto = get_object_or_404(Producto, id=producto_id)
-        
-        color_recibido = request.POST.get('color')
-        talla_recibido = request.POST.get('talla')
-        
-        try:
-            cantidad = int(request.POST.get('cantidad', 1))
-            if cantidad < 1:
-                cantidad = 1
-        except (ValueError, TypeError):
-            cantidad = 1
-
-        color = None if not color_recibido or str(color_recibido).strip() in ['None', ''] else str(color_recibido).strip()
-        talla = None if not talla_recibido or str(talla_recibido).strip() in ['None', ''] else str(talla_recibido).strip()
-
-        # 🔥 LÓGICA HÍBRIDA SaaS: Validar si el producto requiere variantes o es simple/por gramos
-        variante = None
-        
-        # Si el producto se vende por unidades y tiene variantes configuradas
-        if producto.tipo_venta != 'gramo' and producto.variantes.exists():
-            filtros = Q(producto=producto)
-            if color:
-                filtros &= Q(color=color)
-            else:
-                filtros &= Q(color__isnull=True) | Q(color="")
-
-            if talla:
-                filtros &= Q(talla=talla)
-            else:
-                filtros &= Q(talla__isnull=True) | Q(talla="")
-
-            variante = producto.variantes.filter(filtros).first()
-
-            if not variante:
-                messages.error(request, "La combinación seleccionada no está disponible en este momento.")
-                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
-
-            # Control de stock basado en la variante
-            if variante.stock < cantidad:
-                messages.error(request, f"Lo sentimos, solo quedan {variante.stock} unidades disponibles de esta opción.")
-                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
-        else:
-            # Si es por gramos o producto simple, controlamos el stock desde el Producto base
-            if producto.stock < cantidad:
-                messages.error(request, f"Lo sentimos, solo quedan {producto.stock} unidades disponibles.")
-                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
-
-        if not request.session.session_key:
-            request.session.create()
-        session_key = request.session.session_key
-
-        # 🔥 GUARDADO SEGURO: 'variante' ahora puede ser None de forma legal
-        item, created = CarritoItem.objects.get_or_create(
-            session_key=session_key,
-            producto=producto,
-            variante=variante, 
-            defaults={'cantidad': cantidad}
-        )
-
-        if not created:
-            stock_limite = variante.stock if variante else producto.stock
-            if item.cantidad + cantidad > stock_limite:
-                messages.error(request, f"No puedes agregar más unidades. Ya tienes {item.cantidad} en tu carrito.")
-                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
-            
-            item.cantidad += cantidad
-            item.save()
-
-        messages.success(request, f"¡{producto.nombre} se agregó al carrito!")
-        return redirect('ver_carrito')
-
-    try:
-        producto_aux = Producto.objects.get(id=producto_id)
-        return redirect('detalle_producto', id=producto_aux.id, slug=producto_aux.slug)
-    except Producto.DoesNotExist:
-        return redirect('inicio')
-
-def ver_carrito(request):
-    session_key = request.session.session_key
-    if not session_key:
-        items = []
-    else:
-        items = CarritoItem.objects.filter(session_key=session_key).select_related('producto', 'variante')
-
-    # 1. Contamos el total de artículos físicos combinados para definir la escala comercial
-    total_articulos = sum(item.cantidad or 0 for item in items)
-
-    if total_articulos >= 12:
-        tipo_global = "Mayorista"
-    elif total_articulos >= 6:
-        tipo_global = "Semi-Mayorista"
-    else:
-        tipo_global = "Detal"
-
-    total = Decimal('0.00')
-
-    # 2. Procesamos cada artículo de forma segura
-    for item in items:
-        # Sincronizamos el nivel comercial en la memoria del objeto
-        item._tipo_global = tipo_global
-
-        # Calculamos el subtotal ejecutando el método original sin pisar su nombre
-        item.subtotal_calculado = item.subtotal()
-        
-        if item.producto.tipo_venta == "gramo":
-            item.total_gramos = Decimal(str(item.cantidad or 0)) * Decimal(str(item.producto.peso_producto or 0))
-        else:
-            item.total_gramos = None
-
-        item.tipo_precio = tipo_global
-        total += item.subtotal_calculado
-    
-    # Indicadores de progreso para las barras informativas en el frontend
-    faltan_semi = max(0, 6 - total_articulos)
-    faltan_mayor = max(0, 12 - total_articulos)
-
-    # Convertimos a tipos nativos para el script de WhatsApp (se mantiene idéntico y seguro)
-    carrito_json = json.dumps([
-        {
-            "nombre": item.producto.nombre,
-            "cantidad": int(item.cantidad or 0),
-            "subtotal": float(item.subtotal_calculado),
-            "total_gramos": float(item.total_gramos) if item.total_gramos else None
-        } for item in items
-    ], cls=DjangoJSONEncoder)
-    
-    return render(request, 'carrito.html', {
-        'items': items,
-        'total': total,
-        'total_articulos': total_articulos,
-        'faltan_semi': faltan_semi,
-        'faltan_mayor': faltan_mayor,
-        'carrito_json': carrito_json
-    })
-
-def aumentar_cantidad(request, item_id):
-    # 1. Capturar la sesión del visitante (anonimo o registrado)
-    session_key = request.session.session_key
-    if not session_key:
-        return redirect('ver_carrito')
-
-    # 2. Buscar el ítem asegurando que pertenezca a este visitante
-    item = get_object_or_404(
-        CarritoItem,
-        id=item_id,
-        session_key=session_key
-    )
-
-    # 3. 🔥 CONTROL DE STOCK DESDE LA VARIANTE UNIFICADA
-    # Si el ítem tiene una variante asignada, usamos ese stock; si no, el del producto global
-    stock_disponible = item.variante.stock if item.variante else item.producto.stock
-
-    if item.cantidad >= stock_disponible:
-        messages.warning(request, f"No puedes agregar más unidades. El inventario máximo para esta opción es de {stock_disponible} unidades.")
-    else:
-        item.cantidad += 1
-        item.save()
-
-    return redirect('ver_carrito')
-
-def disminuir_cantidad(request, item_id):
-    # 1. Capturar la sesión del visitante
-    session_key = request.session.session_key
-    if not session_key:
-        return redirect('ver_carrito')
-
-    # 2. Buscar el ítem asignado a esta sesión
-    item = get_object_or_404(
-        CarritoItem,
-        id=item_id,
-        session_key=session_key
-    )
-
-    # 3. Restar o eliminar si llega a cero
-    if item.cantidad > 1:
-        item.cantidad -= 1
-        item.save()
-    else:
-        item.delete()
-        messages.info(request, "Producto removido del carrito.")
-
-    return redirect('ver_carrito')
-
-def eliminar_del_carrito(request, item_id):
-    # 1. Capturar la sesión del visitante
-    session_key = request.session.session_key
-    if not session_key:
-        return redirect('ver_carrito')
-
-    # 2. Buscar y destruir de forma segura
-    item = get_object_or_404(
-        CarritoItem,
-        id=item_id,
-        session_key=session_key
-    )
-    
-    nombre_producto = item.producto.nombre
-    item.delete()
-    
-    messages.success(request, f"Se eliminó '{nombre_producto}' del carrito.")
-    return redirect('ver_carrito')
-
-@transaction.atomic
-def comprar_whatsapp(request, producto_id=None):
-    if request.method != "POST":
-        messages.error(request, "Acceso no autorizado.")
-        return redirect('ver_carrito')
-
-    resumen_items = []
-    items_carrito = None
-    es_compra_directa = producto_id is not None
-
-    # =========================================================
-    # 🛒 PASO 1: MODO DE ENTRADA (DIRECTO O CARRITO) - (Queda igual, es correcto)
-    # =========================================================
-    if es_compra_directa:
-        producto = get_object_or_404(Producto, id=producto_id)
-        usuario = producto.usuario  
-
-        try:
-            cantidad = int(request.POST.get('cantidad', 1))
-        except ValueError:
-            cantidad = 1
-
-        variante = None
-        variante_id = request.POST.get('variante_id')
-        if variante_id:
-            variante = get_object_or_404(ProductoVariante, id=variante_id, producto=producto)
-
-        if variante:
-            if variante.stock < cantidad:
-                messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
-                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
-        else:
-            if producto.tipo_venta != "gramo" and producto.stock < cantidad:
-                messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
-                return redirect('detalle_producto', id=producto.id, slug=producto.slug)
-
-        precio, gramos = calcular_precio_producto(producto, cantidad)
-        precio = Decimal(str(precio))
-
-        if gramos:
-            subtotal = Decimal(str(gramos)) * precio
-            linea = f"{producto.nombre} ({gramos}g)"
-        else:
-            subtotal = Decimal(str(cantidad)) * precio
-            linea = f"{producto.nombre} x{cantidad}"
-
-        resumen_items.append({
-            'item': None, 
-            'producto': producto,
-            'variante': variante,
-            'cantidad': cantidad,
-            'total_gramos': gramos if gramos else 0,
-            'precio': precio,
-            'subtotal': subtotal,
-            'linea': linea,
-        })
-    else:
-        session_key = request.session.session_key
-        if not session_key:
-            messages.warning(request, "El carrito está vacío")
-            return redirect('ver_carrito')
-
-        items_carrito = CarritoItem.objects.select_related('producto', 'variante').filter(session_key=session_key)
-        if not items_carrito.exists():
-            messages.warning(request, "El carrito está vacío")
-            return redirect('ver_carrito')
-
-        usuario = items_carrito.first().producto.usuario
-
-        for item in items_carrito:
-            producto = item.producto
-            variante = item.variante
-            cantidad = item.cantidad or 0
-
-            if producto.usuario != usuario:
-                messages.warning(request, "Producto inválido en el carrito.")
-                return redirect('ver_carrito')
-
-            if variante:
-                if variante.stock < cantidad:
-                    messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
-                    return redirect('ver_carrito')
-            else:
-                if producto.tipo_venta != "gramo" and producto.stock < cantidad:
-                    messages.warning(request, f"Sin stock suficiente para {producto.nombre}")
-                    return redirect('ver_carrito')
-
-            precio, gramos = calcular_precio_producto(producto, cantidad)
-            precio_seguro = precio if precio is not None else 0
-            precio = Decimal(str(precio_seguro))
-
-            if gramos:
-                subtotal = Decimal(str(gramos)) * precio
-                linea = f"{producto.nombre} ({gramos}g)"
-            else:
-                subtotal = Decimal(str(cantidad)) * precio
-                linea = f"{producto.nombre} x{cantidad}"
-
-            resumen_items.append({
-                'item': item,
-                'producto': producto,
-                'variante': variante,
-                'cantidad': cantidad,
-                'total_gramos': gramos if gramos else 0,
-                'precio': precio,
-                'subtotal': subtotal,
-                'linea': linea,
-            })
-
-    # =========================================================
-    # 📊 PASO 2: CONFIGURACIÓN Y MOTORES (Aquí empieza el cambio radical ⚡)
-    # =========================================================
-    numero = generar_numero_orden(usuario)
-    perfil, _ = Perfil.objects.get_or_create(user=usuario)
-    
-    # 1. Traemos de forma segura la nueva clase de Configuración Fiscal
-    config_fiscal, _ = ConfiguracionEmpresa.objects.get_or_create(perfil=perfil)
-    
-    # 2. Instanciamos el Motor Fiscal pasándole su configuración única
-    motor = MotorFiscal(config_fiscal)
-
-    # 3. Determinamos porcentaje de descuento comercial
-    porcentaje_descuento = Decimal('0')
-    if config_fiscal.aplicar_descuentos:
-        porcentaje_descuento = Decimal(str(config_fiscal.porcentaje_descuento_promo or 0))
-
-    # Captura de datos del cliente enviados por el POST
-    nombre_cliente = request.POST.get('nombre', '').strip()
-    telefono_cliente = request.POST.get('telefono', '').strip()
-    ciudad_destino = request.POST.get('ciudad', '').strip()
-    direccion_entrega = request.POST.get('direccion', '').strip()
-    nit = request.POST.get('nit', '').strip()
-
-    email_input = request.POST.get('email', '').strip()
-    if email_input:
-        cliente_email = email_input
-    elif request.user.is_authenticated:
-        cliente_email = request.user.email
-    else:
-        cliente_email = "cliente_whatsapp@joyasapp.com"
-
-    # Calculamos el subtotal base neto de los productos
-    subtotal_general = sum(data['subtotal'] for data in resumen_items)
-
-    # 4. Resolvemos el tipo de envío de forma inteligente
-    if config_fiscal.cobrar_envio:
-        # El motor decidirá internamente si aplica tarifa estándar o envío gratis según las reglas del negocio
-        tipo_envio = 'estandar'
-        valor_envio_personalizado = None
-    else:
-        # Si el comercio no tiene reglas automáticas de cobro, aplicamos tu cálculo dinámico por ciudad
-        tipo_envio = 'personalizado'
-        # Calculamos el subtotal tentativo con descuento comercial para pasarlo a la función externa de envíos
-        descuento_tentativo = subtotal_general * (porcentaje_descuento / Decimal('100'))
-        subtotal_con_descuento = subtotal_general - descuento_tentativo
-        valor_envio_personalizado = Decimal(str(calcular_envio(ciudad_destino, subtotal_con_descuento)))
-
-    # 5. ⚡ EJECUTAMOS EL MOTOR FISCAL ⚡
-    # Toda la cascada matemática ocurre en esta sola línea
-    totales = motor.calcular_totales_pedido(
-        subtotal_base=subtotal_general,
-        porcentaje_descuento=porcentaje_descuento,
-        tipo_envio=tipo_envio,
-        valor_envio_personalizado=valor_envio_personalizado
-    )
-
-    try:
-        # Guardamos el Pedido utilizando directamente los resultados estructurados del motor
-        pedido = Pedido.objects.create(
-            usuario=usuario,
-            numero_orden=numero,
-            cliente_nombre=nombre_cliente,
-            cliente_telefono=telefono_cliente,
-            cliente_email=cliente_email,
-            cliente_ciudad=ciudad_destino,
-            cliente_direccion=direccion_entrega,
-            cliente_nit=nit,
-            total=float(totales['total_final']),  
-            porcentaje_descuento=float(totales['porcentaje_descuento']),  
-            descuento_total=float(totales['descuento_total']),
-            costo_envio=float(totales['costo_envio']),
-            aplica_iva=config_fiscal.responsable_iva,
-            es_retenedor=config_fiscal.es_retenedor,
-            tipo_envio=totales['tipo_envio'],
-            estado="pendiente"
-        )
-
-        # 6. Guardamos los items de forma inmutable usando los valores de item del motor
-        for data in resumen_items:
-            valores_item = motor.calcular_valores_item(subtotal_item=data['subtotal'])
-
-            PedidoItem.objects.create(
-                pedido=pedido,
-                producto=data['producto'],
-                variante=data['variante'],
-                cantidad=int(data['cantidad']),
-                total_gramos=float(data['total_gramos']), 
-                precio=float(data['precio']),
-                subtotal=float(data['subtotal']),
-                iva=float(valores_item['iva_item']),
-                retefuente=float(valores_item['retefuente_item']),
-                total_final=float(valores_item['total_item'])
-            )
-
-            # Descuento del stock (Lógica de negocio)
-            if data['variante']:
-                data['variante'].stock -= data['cantidad']
-                data['variante'].save()
-            elif data['producto'].tipo_venta != "gramo":
-                data['producto'].stock -= data['cantidad']
-                data['producto'].save()
-
-        # =========================================================
-        # 🔗 PASO 3: ENLACE SEGURO Y WHATSAPP (Queda igual de limpio)
-        # =========================================================
-        domain = get_current_site(request).domain
-        url_factura = f"https://{domain}{reverse('factura_publica', kwargs={'token': pedido.token_publico})}"
-
-        mensaje = (
-            f"🛍️ ¡Hola! Acabo de confirmar mi pedido.\n\n"
-            f"📦 Orden N°: {pedido.numero_orden}\n"
-            f"👤 Cliente: {nombre_cliente}\n"
-            f"💰 Total Neto: ${float(totales['total_final']):,.0f}\n\n"
-            f"📄 Ver detalles y datos de facturación aquí:\n{url_factura}\n\n"
-            f"Quedo atento a tus indicaciones para realizar el pago. ¡Muchas gracias!"
-        ).replace(",", ".")
-
-        if not perfil.whatsapp:
-            messages.warning(request, "El comercio no tiene configurado WhatsApp.")
-            return redirect('ver_carrito') if not es_compra_directa else redirect('detalle_producto', id=producto.id, slug=producto.slug)
-
-        url_whatsapp_final = f"https://wa.me/{perfil.whatsapp}?text={urllib.parse.quote(mensaje)}"
-
-        if not es_compra_directa and items_carrito:
-            items_carrito.delete()
-
-        return redirect(url_whatsapp_final)
-
-    except Exception as e:
-        print("\n" + "🚨" * 30)
-        print(f"💥 ERROR EN BASE DE DATOS / GUARDADO: {str(e)}")
-        print("-" * 60)
-        traceback.print_exc()
-        print("🚨" * 30 + "\n")
-        return HttpResponse(f"Fallo capturado en proceso de guardado: {str(e)}", status=500)
-@transaction.atomic
-def pagar_pedido(request):
-    """
-    Vista para procesar el pago final del pedido (Ruta: /pagar/)
-    """
-    if request.method != 'POST':
-        return redirect('ver_carrito')
-
-    try:
-        session_key = request.session.session_key
-        if not session_key:
-            request.session.create()
-            session_key = request.session.session_key
-
-        items = CarritoItem.objects.select_related('producto', 'variante').filter(session_key=session_key)
-
-        if not items.exists():
-            messages.error(request, "Tu carrito está vacío.")
-            return redirect('ver_carrito')
-
-        # 🏪 Detectamos el usuario dueño de la joyería
-        usuario = items.first().producto.usuario
-        numero = generar_numero_orden(usuario)
-
-        # 📝 CAPTURA DE DATOS DEL FORMULARIO DE DESPACHO
-        nombre = request.POST.get('nombre', '').strip()
-        telefono = request.POST.get('telefono', '').strip()
-        ciudad = request.POST.get('ciudad', '').strip()
-        direccion = request.POST.get('direccion', '').strip()
-        nit = request.POST.get('nit', '').strip()
-        
-        # Tipo de envío seleccionado por el usuario en el frontend
-        tipo_envio_seleccionado = request.POST.get('tipo_envio', 'domicilio').strip()
-
-        # 🛠️ ESCUDO CONTRA CORREOS VACÍOS O ANÓNIMOS
-        email_input = request.POST.get('email', '').strip()
-        if email_input:
-            cliente_email = email_input
-        elif request.user.is_authenticated:
-            cliente_email = request.user.email
-        else:
-            cliente_email = "cliente_pasarela@joyasapp.com"
-
-        # 📊 CAPTURA DINÁMICA DE IMPUESTOS Y DESCUENTO DESDE EL FORMULARIO
-        aplica_iva = request.POST.get('aplica_iva') == 'on' or request.POST.get('aplica_iva') == 'true'
-        es_retenedor = request.POST.get('es_retenedor') == 'on' or request.POST.get('es_retenedor') == 'true'
-        valor_descuento = request.POST.get('descuento', '0').strip()
-
-        try:
-            porcentaje_descuento = Decimal(str(valor_descuento or 0))
-        except (ValueError, TypeError):
-            porcentaje_descuento = Decimal('0')
-
-        porcentaje_descuento = max(Decimal('0'), min(Decimal('100'), porcentaje_descuento))
-
-        # =========================================================
-        # 🧠 CONFIGURACIÓN DEL MOTOR FISCAL
-        # =========================================================
-        perfil, _ = Perfil.objects.get_or_create(user=usuario)
-        config_fiscal, _ = ConfiguracionEmpresa.objects.get_or_create(perfil=perfil)
-        
-        motor = MotorFiscal(config_fiscal)
-        
-        # El formulario de la transacción específica puede sobreescribir las reglas por defecto
-        motor.aplica_iva = aplica_iva
-        motor.es_retenedor = es_retenedor
-
-        # Calcular precios bases y gramos de cada ítem (Conserva tu lógica de negocio intacta)
-        subtotal_general = Decimal('0')
-        lineas_items = []
-
-        for item in items:
-            cantidad_fisica = Decimal(str(item.cantidad or 1))
-            
-            if item.producto.tipo_venta == 'gramo':
-                val_precio = Decimal(str(item.producto.precio_por_gramo_detal or 0))
-                peso_base = Decimal(str(item.producto.peso_producto or 0))
-                gramos_totales = cantidad_fisica * peso_base
-                subtotal_item = gramos_totales * val_precio
-                precio_aplicado = val_precio
-            else:
-                try:
-                    precio_por_escala = item.producto.precio_por_cantidad(item.cantidad)
-                    if precio_por_escala is None:
-                        precio_por_escala = item.producto.precio_detal or 0
-                    val_precio = Decimal(str(precio_por_escala))
-                except Exception:
-                    val_precio = Decimal(str(item.producto.precio_detal or 0))
-                
-                gramos_totales = Decimal('0.00')
-                subtotal_item = cantidad_fisica * val_precio
-                precio_aplicado = val_precio
-            
-            subtotal_general += subtotal_item
-            
-            lineas_items.append({
-                'item_carrito': item,
-                'precio_aplicado': precio_aplicado,
-                'gramos_totales': gramos_totales,
-                'subtotal_item': subtotal_item
-            })
-
-        # =========================================================
-        # 🚚 RESOLUCIÓN DE ENVÍOS INTELIGENTE
-        # =========================================================
-        if config_fiscal.cobrar_envio:
-            # Si se configuró cobro de envío automático, respetamos si el cliente prefiere recogerlo
-            tipo_envio = 'recogida' if tipo_envio_seleccionado == 'recogida' else 'estandar'
-            valor_envio_personalizado = None
-        else:
-            tipo_envio = 'personalizado'
-            descuento_tentativo = subtotal_general * (porcentaje_descuento / Decimal('100'))
-            subtotal_con_descuento = subtotal_general - descuento_tentativo
-            
-            if tipo_envio_seleccionado == 'recogida':
-                valor_envio_personalizado = Decimal('0.00')
-                tipo_envio = 'recogida'
-            else:
-                # Usamos tu función auxiliar basada en la base de datos de envíos por municipio
-                valor_envio_personalizado = Decimal(str(calcular_envio(ciudad, subtotal_con_descuento)))
-
-        # ⚡ CÁLCULO GENERAL DE LA CASCADA MATEMÁTICA
-        totales = motor.calcular_totales_pedido(
-            subtotal_base=subtotal_general,
-            porcentaje_descuento=porcentaje_descuento,
-            tipo_envio=tipo_envio,
-            valor_envio_personalizado=valor_envio_personalizado
-        )
-
-        # 👤 Buscar o crear cliente (Conserva tu lógica)
-        cliente, creado = Cliente.objects.get_or_create(
-            usuario=usuario,
-            telefono=telefono,
-            defaults={
-                "nombre": nombre,
-                "email": cliente_email,
-                "ciudad": ciudad,
-                "direccion": direccion,
-            }
-        )
-
-        if not creado:
-            cliente.nombre = nombre
-            cliente.email = cliente_email
-            cliente.ciudad = ciudad
-            cliente.direccion = direccion
-            cliente.save()
-
-        # 📦 Crear el Pedido Maestro con datos puros del Motor Fiscal
-        pedido = Pedido.objects.create(
-            usuario=usuario,
-            cliente=cliente,
-            numero_orden=numero,
-            cliente_nombre=nombre,        
-            cliente_telefono=telefono,
-            cliente_email=cliente_email,  
-            cliente_ciudad=ciudad,
-            cliente_direccion=direccion,
-            cliente_nit=nit,
-            total=float(totales['total_final']),                 
-            porcentaje_descuento=float(totales['porcentaje_descuento']),
-            descuento_total=float(totales['descuento_total']),
-            costo_envio=float(totales['costo_envio']),
-            tipo_envio=totales['tipo_envio'],
-            aplica_iva=aplica_iva,             
-            es_retenedor=es_retenedor,
-            iva=float(totales['iva_total']),  # Guardamos el IVA consolidado
-            retefuente=float(totales['retefuente_total']),  # Guardamos la Retefuente consolidada
-            estado="pendiente" 
-        )
-
-        # 🔄 Registrar cada PedidoItem calculando valores unitarios inmutables
-        for linea in lineas_items:
-            item = linea['item_carrito']
-            
-            # El motor desglosa el IVA e impuesto de cada ítem de forma aislada
-            valores_item = motor.calcular_valores_item(subtotal_item=linea['subtotal_item'])
-
-            PedidoItem.objects.create(
-                pedido=pedido,
-                producto=item.producto,
-                variante=item.variante,
-                cantidad=int(item.cantidad),
-                precio=float(linea['precio_aplicado']),
-                total_gramos=float(linea['gramos_totales']),  
-                subtotal=float(linea['subtotal_item']),
-                iva=float(valores_item['iva_item']),
-                retefuente=float(valores_item['retefuente_item']),
-                total_final=float(valores_item['total_item'])
-            )
-
-            # Descontar existencias del inventario (Apartar mercancía)
-            if item.variante:
-                item.variante.stock -= item.cantidad
-                item.variante.save()
-            elif item.producto.tipo_venta != "gramo":
-                item.producto.stock -= item.cantidad
-                item.producto.save()
-
-        # Vaciar el carrito de compras tras el éxito de la transacción
-        items.delete()
-
-        return render(request, 'pago.html', {'pedido': pedido})
-
-    except Exception as e:
-        print("\n" + "🚨" * 30)
-        print(f"💥 ERROR CRÍTICO EN /PAGAR/: {str(e)}")
-        print("-" * 60)
-        traceback.print_exc()
-        print("🚨" * 30 + "\n")
-        
-        return HttpResponse(f"Error detectado en el proceso de pago: {str(e)}", status=500)
-
-def confirmar_pago_publico(request, token):
-    """ El cliente avisa de forma anónima que ya transfirió """
-    pedido = get_object_or_404(Pedido, token_publico=token)
-    pedido.estado = "confirmacion_pago"
-    pedido.save()
-    return redirect('factura_publica', token=token)
-
-@login_required
-@transaction.atomic
-def confirmar_pago(request, pedido_id):
-    """ El administrador aprueba el pago desde su panel privado """
-    pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
-    
-    # 🌟 Cambiamos el estado del pedido a pagado sin volver a restar stock
-    if pedido.estado != "pagado":
-        pedido.estado = "pagado"
-        pedido.save()
-        
-    return render(request, 'pago_confirmado.html', {'pedido': pedido})
-
-def pagar_wompi(request, token): # <-- Cambiado de pedido_id a token
-    pedido = get_object_or_404(Pedido, token_publico=token) # <-- get_object_or_404 seguro
-    return crear_checkout_wompi(request, pedido)
-
-def crear_checkout_wompi(request, pedido):
-    redirect_url = request.build_absolute_uri(f'/pago-exitoso/{pedido.token_publico}/')
-    redirect_url_encoded = quote(redirect_url, safe='')
-
-    # 🏪 1. Buscamos el perfil del dueño de la joyería
-    perfil_dueno = pedido.usuario.perfil
-    
-    # 🔑 2. Buscamos ÚNICAMENTE la llave del usuario en la base de datos
-    wompi_public_key = getattr(perfil_dueno, 'wompi_public_key', None)
-
-    # 🚨 EL ESCUDO: Si el usuario NO tiene su llave configurada, frenamos todo
-    if not wompi_public_key or wompi_public_key.strip() == "":
-        print(f"⚠️ Alerta de Seguridad: El usuario {pedido.usuario.username} intentó recibir un pago pero no tiene configurada su Wompi Public Key.")
-        return HttpResponse(
-            "<h3>Método de pago temporalmente no disponible</h3>"
-            "<p>Esta tienda aún no ha terminado de configurar sus credenciales de pago en línea. "
-            "Por favor, ponte en contacto con el administrador de la joyería para completar tu compra por WhatsApp.</p>", 
-            status=400
-        )
-
-    # 🚀 Si sí tiene su llave, el flujo continúa normal y el dinero va a SU cuenta bancaria
-    checkout_url = (
-        "https://checkout.wompi.co/p/"
-        f"?public-key={wompi_public_key.strip()}" 
-        f"&currency=COP"
-        f"&amount-in-cents={int(pedido.total * 100)}"
-        f"&reference={pedido.numero_orden}"
-        f"&redirect-url={redirect_url_encoded}"
-    )
-    return redirect(checkout_url)
-
-@csrf_exempt
-def webhook_wompi(request):
-    if request.method != 'POST':
-        return HttpResponse("Método no permitido", status=405)
-        
-    try:
-        # 1. Parsear los datos que envía Wompi
-        data = json.loads(request.body)
-        
-        # Opcional: Validar integridad con la firma de Wompi (si configuras WOMPI_EVENTS_SECRET)
-        # Por ahora procesamos el evento de forma directa y segura por ID de orden
-        
-        transaccion = data.get('data', {}).get('transaction', {})
-        referencia_orden = transaccion.get('reference') # Ejemplo: #FAC-00022
-        estado_wompi = transaccion.get('status') # APPROVED, DECLINED, VOIDED
-        
-        if referencia_orden and estado_wompi == 'APPROVED':
-            # 2. Buscar el pedido por su número de orden único
-            pedido = Pedido.objects.filter(numero_orden=referencia_orden).first()
-            
-            if pedido and pedido.estado != 'pagado':
-                # 3. Actualizar el estado de manera definitiva
-                pedido.estado = 'pagado'
-                pedido.saldo_pendiente = Decimal('0.00')
-                pedido.save()
-                print(f"✅ Webhook exitoso: Pedido {referencia_orden} marcado como PAGADO.")
-                
-                # ========================================================
-                # 🚀 DISPARADORES AUTOMÁTICOS INTEGRADOS (Wompi)
-                # ========================================================
-                from .utils import generar_pdf_pedido
-                from django.core.mail import EmailMessage
-                from .models import Perfil # Asegúrate de importar tu modelo Perfil aquí si no está arriba
-
-                # Recuperamos el perfil de la joyería dueña de este pedido de forma dinámica
-                perfil = Perfil.objects.filter(user=pedido.usuario).first()
-
-                if perfil:
-                    # Generamos el binario del PDF usando tu plantilla HTML
-                    pdf, correo_empresa, nombre_tienda = generar_pdf_pedido(pedido, perfil, usuario_backup=perfil.user)
-
-                    email_cliente = getattr(pedido, 'cliente_email', None)
-                    if email_cliente and pdf:
-                        try:
-                            email = EmailMessage(
-                                subject=f"Confirmación de Pago: Pedido #{pedido.numero_orden} - {nombre_tienda}",
-                                body=f"¡Hola! Tu pago ha sido confirmado correctamente a través de Wompi. Adjuntamos tu factura detallada. 💎",
-                                from_email=correo_empresa,
-                                to=[email_cliente]
-                            )
-                            email.attach(f"factura_{pedido.numero_orden}.pdf", pdf, 'application/pdf')
-                            email.send()
-                            print(f"📧 Correo enviado al cliente {email_cliente} para la orden {pedido.numero_orden}")
-                        except Exception as e:
-                            print(f"Error en envío automático por Webhook Wompi: {str(e)}")
-                # ========================================================
-                
-        # Wompi exige que le respondas un HTTP 200 para saber que recibiste la notificación
-        return HttpResponse("Evento recibido", status=200)
-        
-    except Exception as e:
-        print(f"💥 Error en Webhook Wompi: {str(e)}")
-        # Corregido el typo 'HttpRespon tnse' que tenías en tu borrador original
-        return HttpResponse("Error interno procesado", status=200)
-
-def pagar_con_mercadopago(request, token):
-    """
-    Genera la preferencia de Mercado Pago asegurando la correcta obtención 
-    del perfil del vendedor sin recalcular totales de forma prematura.
-    """
-    try:
-        # 1. Obtener el pedido usando el token público correcto
-        pedido = get_object_or_404(Pedido, token_publico=token)
-        
-        # 🎯 INTENTO 1: Buscar relación directa si tu modelo Pedido tiene 'perfil_joyeria' o similar
-        perfil_tienda = getattr(pedido, 'perfil_joyeria', None) or getattr(pedido, 'perfil', None)
-        
-        # 🎯 INTENTO 2: Si no viene directo, lo extraemos a través del usuario de la tienda/vendedor
-        if not perfil_tienda:
-            primer_item = pedido.items.first()  # Ajusta 'items' según el related_name de PedidoItem
-            if primer_item and hasattr(primer_item.producto, 'usuario'):
-                vendedor = primer_item.producto.usuario
-            elif primer_item and hasattr(primer_item.producto, 'perfil'):
-                perfil_tienda = primer_item.producto.perfil
-                vendedor = getattr(perfil_tienda, 'user', None)
-            else:
-                vendedor = pedido.usuario 
-                
-            if not perfil_tienda and vendedor:
-                try:
-                    perfil_tienda = Perfil.objects.get(user=vendedor)
-                except Perfil.DoesNotExist:
-                    perfil_tienda = None
-
-        if not perfil_tienda:
-            return HttpResponse(
-                "<h3>Error de Configuración</h3><p>No se pudo determinar la joyería dueña de este pedido.</p>", 
-                status=200
-            )
-
-        # 🛡️ EXTRACCIÓN Y LIMPIEZA DE TU TOKEN 'APP_USR'
-        token_mp = getattr(perfil_tienda, 'mercadopago_access_token', None)
-        
-        if token_mp is None or str(token_mp).strip() in ["", "None"]:
-            return HttpResponse(
-                f"<div style='font-family:sans-serif; padding:20px; text-align:center; margin-top:50px;'>"
-                f"   <h2 style='color:#1D4ED8;'>Módulo de Pago en Configuración</h2>"
-                f"   <p style='color:#4B5563;'>La tienda '{perfil_tienda.nombre_tienda}' aún no ha enlazado sus credenciales de Mercado Pago.</p>"
-                f"</div>", 
-                status=200
-            )
-
-        token_limpio = str(token_mp).strip()
-
-        # Inicialización del SDK con credenciales reales del vendedor
-        sdk = mercadopago.SDK(token_limpio)
-
-        # URLs de Redirección y Notificación usando el atributo real: token_publico
-        ruta_relativa = f"/webhooks/mercadopago/{perfil_tienda.webhook_uuid}/"
-        url_webhook = request.build_absolute_uri(ruta_relativa).replace("http://", "https://")
-        
-        url_success = request.build_absolute_uri(f"/pago-exitoso/{pedido.token_publico}/").replace("http://", "https://")
-        url_failure = request.build_absolute_uri(f"/pago-fallido/{pedido.token_publico}/").replace("http://", "https://")
-
-        # Configuración del valor a pagar extraído directamente de lo sellado en la base de datos
-        monto_total = getattr(pedido, 'total_limpio', None) or getattr(pedido, 'total', 0)
-        monto_total = float(monto_total)
-
-        # Estructura de preferencia ÚNICA y limpia
-        preference_data = {
-            "items": [
-                {
-                    "title": f"Pedido #{pedido.numero_orden} - {perfil_tienda.nombre_tienda}",
-                    "quantity": 1,
-                    "currency_id": "COP",
-                    "unit_price": monto_total,
-                }
-            ],
-            "back_urls": {
-                "success": url_success,
-                "failure": url_failure,
-                "pending": url_success
-            },
-            "auto_return": "approved",
-            "external_reference": str(pedido.numero_orden),
-        }
-
-        # Excluir localhost del webhook para evitar rechazos de Mercado Pago en desarrollo local
-        if "localhost" not in url_webhook and "127.0.0.1" not in url_webhook:
-            preference_data["notification_url"] = url_webhook
-
-        # 1. Hacemos la petición a Mercado Pago
-        preference_response = sdk.preference().create(preference_data)
-        
-        # 2. LOG DE CONTROL: Imprimimos la respuesta completa en Render para auditorías rápidas
-        print("====== RESPUESTA COMPLETA DE MERCADO PAGO ======")
-        print(preference_response)
-        print("================================================")
-
-        # 3. Extraemos la respuesta usando .get() de forma segura
-        preference = preference_response.get("response") if preference_response else None
-        
-        # 4. Validamos si Mercado Pago nos devolvió el punto de inicio de pago válido
-        if not preference or not preference.get("init_point"):
-            mensaje_error = preference_response.get("message", "Las credenciales no son válidas o la cuenta requiere homologación en Mercado Pago.")
-            return HttpResponse(
-                f"<div style='font-family:sans-serif; padding:20px; text-align:center; margin-top:50px;'>"
-                f"   <h2 style='color:#DC2626;'>Mercado Pago: Rechazo de Solicitud</h2>"
-                f"   <p style='color:#4B5563;'>La pasarela respondió pero no generó el punto de inicio.</p>"
-                f"   <p style='color:#9CA3AF; font-size:14px;'><b>Detalle técnico:</b> {mensaje_error}</p>"
-                f"   <a href='/factura/{pedido.token_publico}/' style='display:inline-block; margin-top:20px; padding:10px 20px; background:#1D4ED8; color:white; text-decoration:none; border-radius:5px;'>Volver al Pedido</a>"
-                f"</div>",
-                status=200
-            )
-        
-        # 5. Redirección al checkout transparente de Mercado Pago
-        return redirect(preference.get("init_point"))
-
-    except Exception as e:
-        print(f"💥 Error crítico detallado en Mercado Pago: {traceback.format_exc()}")
-        return HttpResponse(f"Error interno al inicializar el pago: {str(e)}", status=200)
-
-@csrf_exempt
-def webhook_mercadopago(request, profile_uuid):
-    """Recibe el UUID directamente en la URL, consulta el pago y procesa el flujo automático."""
-    if request.method == 'POST':
-        try:
-            # 1. Buscamos el perfil de la joyería usando el UUID de la URL de forma directa
-            perfil = get_object_or_404(Perfil, webhook_uuid=profile_uuid)
-
-            # 2. Capturamos el ID del recurso que envía Mercado Pago
-            topic = request.GET.get('topic') or request.POST.get('topic')
-            id_recurso = request.GET.get('id') or request.POST.get('id')
-
-            if not topic and request.body:
-                data = json.loads(request.body)
-                topic = data.get('type')
-                if data.get('data'):
-                    id_recurso = data.get('data').get('id')
-
-            # 3. Si es una notificación de pago, procedemos con el SDK del vendedor
-            if topic == 'payment' and id_recurso:
-                # 🧠 Inicialización limpia usando el token del vendedor recuperado con el UUID
-                sdk = mercadopago.SDK(perfil.mercadopago_access_token)
-                payment_info = sdk.payment().get(id_recurso)
-                payment_data = payment_info["response"]
-
-                status = payment_data.get("status")
-                numero_orden = payment_data.get("external_reference")
-                monto_recibido = payment_data.get("transaction_amount")
-
-                # 4. Localizamos el pedido real en el sistema
-                pedido = get_object_or_404(Pedido, numero_orden=numero_orden)
-                
-                # 5. Validamos estado y monto
-                if status == 'approved' and float(monto_recibido) >= float(pedido.total_limpio):
-                    if pedido.estado_pago != 'pagado':
-                        pedido.estado_pago = 'pagado'
-                        pedido.mercadopago_payment_id = id_recurso  # Guardamos la auditoría
-                        pedido.save()
-                        
-                        # ========================================================
-                        # 🚀 DISPARADORES AUTOMÁTICOS (Tu hoja de ruta)
-                        # ========================================================
-                        
-                        # 1. Enviar correo con factura PDF adjunta (Tu HTML usando xhtml2pdf)
-                        from .utils import generar_pdf_pedido
-                        from django.core.mail import EmailMessage
-
-                        # Generamos el binario del PDF invocando tu función pura
-                        # Pasamos perfil.user como usuario de respaldo (backup)
-                        pdf, correo_empresa, nombre_tienda = generar_pdf_pedido(pedido, perfil, usuario_backup=perfil.user)
-
-                        email_cliente = getattr(pedido, 'cliente_email', None)
-                        if email_cliente and pdf:
-                            try:
-                                email = EmailMessage(
-                                    subject=f"Confirmación de Pago: Pedido #{pedido.numero_orden} - {nombre_tienda}",
-                                    body=f"¡Hola! Tu pago ha sido confirmado correctamente. Adjuntamos tu factura detallada. 💎",
-                                    from_email=correo_empresa,
-                                    to=[email_cliente]
-                                )
-                                email.attach(f"factura_{pedido.numero_orden}.pdf", pdf, 'application/pdf')
-                                email.send()
-                            except Exception as e:
-                                print(f"Error en envío automático por Webhook MP para {profile_uuid}: {str(e)}")
-
-                        # 2. Notificación push o WhatsApp al vendedor
-                        # (Aquí pones tu lógica de notificaciones cuando la tengas lista)
-
-                        # 3. Asiento en el registro financiero / contabilidad
-                        # (Aquí pones tu lógica contable cuando la tengas lista)
-
-                        # ========================================================
-
-            return HttpResponse("OK", status=200)
-                
-        except Exception as e:
-            print(f"Error crítico en Webhook MP ({profile_uuid}): {str(e)}")
-            return HttpResponse(status=500)
-            
-    return HttpResponse(status=400)
-
-def obtener_perfil_pedido(pedido):
-    """Helper para obtener el Perfil/Tenant (Logo, Redes, Nombre de tienda)"""
-    try:
-        return Perfil.objects.get(user=pedido.usuario)
-    except Perfil.DoesNotExist:
-        return None
-
-def obtener_configuracion_negocio(pedido):
-    """Helper para obtener la parametrización fiscal, envíos e integraciones"""
-    try:
-        # 🚀 Cambiamos ConfiguracionNegocio por Perfil, que sí existe y maneja tus valores
-        return Perfil.objects.filter(usuario=pedido.usuario).first()
-    except Exception:
-        return None
-
-def pago_exitoso(request, token):
-    """Vista de retorno cuando el pago es aprobado en Wompi o Mercado Pago"""
-    pedido = get_object_or_404(Pedido, token_publico=token)
-
-    # 🛡️ Validamos de forma segura que Mercado Pago realmente retorne aprobado (si aplica)
-    status_mp = request.GET.get('status')
-    if status_mp and status_mp != 'approved' and status_mp != 'authorized':
-        # Si no está aprobado de verdad, lo mandamos a la vista de pendiente o fallido
-        return redirect('pago_fallido', token=token)
-
-    pedido.estado = "pagado"
-    pedido.saldo_pendiente = Decimal('0.00')
-    pedido.save()
-
-    return redirect('factura_publica', token=token)
-
-def pago_fallido(request, token):
-    """Vista para gestionar los pagos rechazados o fallidos de Mercado Pago/Wompi"""
-    # 🎯 CORREGIDO: Buscamos usando 'token_publico' para evitar FieldError
-    pedido = get_object_or_404(Pedido, token_publico=token) 
-    
-    context = {
-        'pedido': pedido,
-        'status': request.GET.get('status'), # Captura el estado ('rejected', 'cancelled')
-    }
-    # 🎯 CORREGIDO: Ajustado a 'pago_fallido.html' para consistencia de rutas
-    return render(request, 'pago_fallido.html', context)
 
 @login_required
 def lista_pedidos(request):
@@ -2643,318 +2797,18 @@ def detalle_pedido(request, pedido_id):
     return render(request, 'detalle_pedido.html', context)
 
 @login_required
-def inventario(request):
-    productos_base = Producto.objects.filter(usuario=request.user).prefetch_related('variantes').order_by('nombre')
-
-    # 🔍 SISTEMA DE BÚSQUEDA
-    q = request.GET.get('q', '').strip()
-    if q:
-        productos_base = productos_base.filter(nombre__icontains=q)
-
-    total_productos = productos_base.count()
-    productos_stock = 0
-    stock_bajo = 0
-    agotados = 0
-
-    # 🔄 Inyectamos dinámicamente el stock real consolidado a cada objeto fila
-    for p in productos_base:
-        if p.variantes.exists():
-            p.stock_real = p.variantes.aggregate(total=Sum('stock'))['total'] or 0
-        else:
-            p.stock_real = p.stock or 0
-
-        # Clasificación de métricas
-        if p.stock_real > 5:
-            productos_stock += 1
-        elif 0 < p.stock_real <= 5:
-            stock_bajo += 1
-        else:
-            agotados += 1
-
-    context = {
-        'productos': productos_base,
-        'total_productos': total_productos,
-        'productos_stock': productos_stock,  
-        'stock_bajo': stock_bajo,            
-        'agotados': agotados,
-        'q': q,  
-    }
-    return render(request, 'inventario.html', context)
-
-def calcular_totales_pedido(pedido, perfil, items):
-    """
-    Motor fiscal único para JoyasApp. Centraliza las matemáticas de IVA,
-    descuentos, envíos y retenciones para evitar duplicidad.
-    """
-    subtotal_base = sum(Decimal(str(item.subtotal or 0)) for item in items)
+@transaction.atomic
+def confirmar_pago(request, pedido_id):
+    """ El administrador aprueba el pago desde su panel privado """
+    pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
     
-    # 1. Descuentos promocionales del negocio o del pedido
-    porcentaje_desc = getattr(pedido, 'porcentaje_descuento', 0) or 0
-    if not porcentaje_desc and perfil and getattr(perfil, 'aplicar_descuentos', False):
-        porcentaje_desc = getattr(perfil, 'porcentaje_descuento_promo', 0) or 0
-    descuento_total = subtotal_base * (Decimal(str(porcentaje_desc)) / Decimal('100')) if porcentaje_desc else Decimal('0')
-
-    # =========================================================================
-    # 🎯 2. LOGÍSTICA Y ENVÍOS (CORREGIDO CON PRIORIDAD DE RECOGIDA)
-    # =========================================================================
-    tipo_envio = getattr(pedido, 'tipo_envio', '').lower() if pedido.tipo_envio else ''
-    
-    if tipo_envio == 'recogida':
-        # Prioridad Absoluta: Si recoge en tienda, el envío es $0, sin importar el monto de compra
-        envio = Decimal('0')
-    else:
-        # Si es domicilio/transportadora, evaluamos las reglas dinámicas del negocio
-        envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
-        if envio == 0 and perfil and getattr(perfil, 'cobrar_envio', False):
-            limite_gratis = Decimal(str(getattr(perfil, 'envio_gratis_desde', 0) or 0)) # Ej: 300000
-            
-            if subtotal_base < limite_gratis:
-                # Si no llega al mínimo, se cobra la tarifa estándar (Ej: 15000)
-                envio = Decimal(str(getattr(perfil, 'costo_envio_estandar', 0) or 0))
-            else:
-                # Si supera el mínimo, el envío se fuerza a $0 (Envío Gratis)
-                envio = Decimal('0')
-    # =========================================================================
-
-    # 3. IVA (Cálculo limpio y determinista desde las reglas del perfil)
-    es_responsable_iva = perfil and getattr(perfil, 'responsable_iva', False)
-    mostrar_iva_disc = perfil and getattr(perfil, 'mostrar_iva_discriminado', False)
-    porcentaje_iva = Decimal(str(getattr(perfil, 'porcentaje_iva', 19) or 19))
-    
-    if es_responsable_iva:
-        if mostrar_iva_disc:
-            # IVA Incluido: Se desglosa matemáticamente del precio base
-            iva_total = subtotal_base - (subtotal_base / (Decimal('1') + (porcentaje_iva / Decimal('100'))))
-            subtotal_render = subtotal_base - iva_total
-            total_final = subtotal_base + envio - descuento_total
-        else:
-            # IVA Adicional: Se calcula por encima del subtotal
-            iva_total = subtotal_base * (porcentaje_iva / Decimal('100'))
-            subtotal_render = subtotal_base
-            total_final = subtotal_base + iva_total + envio - descuento_total
-    else:
-        # Si la empresa no es responsable de IVA, el impuesto se apaga ($0)
-        iva_total = Decimal('0')
-        subtotal_render = subtotal_base
-        total_final = subtotal_base + envio - descuento_total
-
-    # 4. Retenciones (Se restan del total final si disminuyen el pago exigible)
-    retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
-    total_final = max(Decimal('0'), total_final - retefuente_total)
-
-    return {
-        'subtotal': subtotal_render,
-        'iva_total': iva_total,
-        'porcentaje_iva': porcentaje_iva,
-        'es_responsable_iva': es_responsable_iva,
-        'mostrar_iva_discriminado': mostrar_iva_disc,
-        'descuento_total': descuento_total,
-        'porcentaje_descuento': porcentaje_desc,
-        'retefuente_total': retefuente_total,
-        'envio': envio,
-        'costo_envio': envio, # Duplicado por compatibilidad con tus templates antiguos
-        'total_final': total_final,
-    }
-
-def factura_publica(request, token):
-    """
-    Vista que renderiza el recibo público para el cliente mediante el token UUID.
-    """
-    pedido = get_object_or_404(Pedido, token_publico=token)
-    items = pedido.items.select_related('producto', 'variante').all()
-    
-    usuario_pedido = pedido.usuario
-    try:
-        perfil = Perfil.objects.get(user=usuario_pedido)
-    except Perfil.DoesNotExist:
-        perfil = None
-
-    empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
-    empresa_nit = perfil.nit if perfil else ""
-    empresa_telefono = perfil.whatsapp if perfil else ""
-    empresa_direccion = getattr(perfil, 'direccion', getattr(perfil, 'ciudad', '')) or ""
-    empresa_email = perfil.email_empresa if perfil else ""
-    
-    empresa_logo = ""
-    if perfil and hasattr(perfil, 'logo') and perfil.logo:
-        try: empresa_logo = perfil.logo.url
-        except Exception: pass
-
-    color_primario = perfil.color_primario if perfil else "#000000"
-    color_secundario = perfil.color_secundario if perfil else "#333333"
-
-    # ⚡ LLAMADA AL MOTOR FISCAL ÚNICO
-    totales = calcular_totales_pedido(pedido, perfil, items)
-
-    # Motor de estados
-    if pedido.estado == "pendiente":
-        estado = "pendiente"
-    elif pedido.saldo_pendiente is not None and pedido.saldo_pendiente <= 0:
-        estado = "pagado"
-    elif pedido.fecha_limite and pedido.fecha_limite < timezone.now().date():
-        estado = "vencido"
-    else:
-        estado = pedido.estado
-
-    # Integración de WhatsApp usando el total final calculado
-    mensaje = f"Hola! Adjunto el comprobante de pago del pedido #{pedido.numero_orden} por valor de ${totales['total_final']:,.0f}".replace(",", ".")
-    whatsapp_num = empresa_telefono if empresa_telefono != "-" else ""
-    whatsapp_url = f"https://wa.me/{whatsapp_num}?text={urllib.parse.quote(mensaje)}"
-    qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(whatsapp_url)}"
-
-    if getattr(pedido, 'fecha', None):
-        fecha_str = pedido.fecha.strftime('%Y-%m-%d')
-    elif getattr(pedido, 'fecha_creacion', None):
-        fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d')
-    else:
-        fecha_str = timezone.now().strftime('%Y-%m-%d')
-
-    c_nombre = getattr(pedido, 'cliente_nombre', None) or (pedido.cliente.nombre if getattr(pedido, 'cliente', None) else 'Consumidor Final')
-    c_email = getattr(pedido, 'cliente_email', None) or (pedido.cliente.email if getattr(pedido, 'cliente', None) else '')
-    c_telefono = getattr(pedido, 'cliente_telefono', None) or (pedido.cliente.telefono if getattr(pedido, 'cliente', None) else '')
-    c_direccion = getattr(pedido, 'cliente_direccion', None) or (pedido.cliente.direccion if getattr(pedido, 'cliente', None) else '')
-    c_ciudad = getattr(pedido, 'cliente_ciudad', None) or (pedido.cliente.ciudad if getattr(pedido, 'cliente', None) else '')
-    c_nit = getattr(pedido, 'cliente_nit', None) or (pedido.cliente.nit if getattr(pedido, 'cliente', None) else '')
-
-    context = {
-        'pedido': pedido,
-        'items': items,
-        'cliente_nombre': c_nombre,
-        'cliente_email': c_email,
-        'cliente_telefono': c_telefono,
-        'cliente_direccion': c_direccion,
-        'cliente_ciudad': c_ciudad,
-        'cliente_nit': c_nit,
-        'empresa_nombre': empresa_nombre,
-        'empresa_nit': empresa_nit,
-        'empresa_telefono': empresa_telefono,
-        'empresa_direccion': empresa_direccion,
-        'empresa_email': empresa_email,
-        'empresa_logo': empresa_logo,
-        'color_primario': color_primario,
-        'color_secundario': color_secundario,
-        'fecha_str': fecha_str,
-        'qr_pago_url': qr_url,  
-        'whatsapp_url': whatsapp_url,
-        'estado': estado,
-    }
-    # Inyectamos los totales calculados directo al contexto
-    context.update(totales)
-    
-    return render(request, 'factura_publica.html', context)
-
-# ────────────────────────────────────────────────────────────────
-# 🛠️ FUNCIÓN AUXILIAR: TRADUCTOR DE RUTAS ESTÁTICAS PARA EL PDF
-# ────────────────────────────────────────────────────────────────
-def link_callback(uri, rel):
-    """
-    Convierte rutas relativas de estáticos y media de Django en rutas 
-    absolutas del sistema operativo para que xhtml2pdf las encuentre en Render.
-    """
-    # 1. Buscar el archivo usando el motor de estáticos de Django
-    result = finders.find(uri)
-    if result:
-        if not isinstance(result, (list, tuple)):
-            result = [result]
-        path = result[0]
-    else:
-        # 2. Si no lo encuentra, construir la ruta usando settings
-        s_url = settings.STATIC_URL
-        s_root = settings.STATIC_ROOT
-        m_url = settings.MEDIA_URL
-        m_root = settings.MEDIA_ROOT
-
-        if uri.startswith(m_url):
-            path = os.path.join(m_root, uri.replace(m_url, ""))
-        elif uri.startswith(s_url):
-            path = os.path.join(s_root, uri.replace(s_url, ""))
-        else:
-            return uri
-
-    # Asegurarnos de que el archivo físico realmente existe en el servidor
-    if not os.path.isfile(path):
-        return uri
-    return path
-
-# ────────────────────────────────────────────────────────────────
-# 📄 VISTA PRINCIPAL: GENERACIÓN DE PDF
-# ────────────────────────────────────────────────────────────────
-def pedido_pdf(request, pedido_id):
-    pedido = get_object_or_404(Pedido, id=pedido_id)
-    items = pedido.items.select_related('producto', 'variante').all()
-    usuario_pedido = pedido.usuario
-
-    try:
-        perfil = Perfil.objects.get(user=usuario_pedido)
-    except Perfil.DoesNotExist:
-        perfil = None
-
-    empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
-    empresa_nit = perfil.nit if perfil else ""
-    empresa_telefono = perfil.whatsapp if perfil else ""
-    empresa_direccion = perfil.direccion if perfil else ""
-    empresa_email = perfil.email_empresa if perfil else ""
-    color_primario = perfil.color_primario if perfil else "#111111"
-    color_secundario = perfil.color_secundario if perfil else "#333333"
-
-    # ⚡ LLAMADA AL MOTOR FISCAL ÚNICO
-    totales = calcular_totales_pedido(pedido, perfil, items)
-
-    # 🕵️‍♂️ Buscamos de forma segura el campo de fecha real que tiene tu modelo Pedido
-    fecha_obj = getattr(
-        pedido, 'created_at', 
-        getattr(pedido, 'fecha', 
-        getattr(pedido, 'fecha_registro', None))
-    )
-    
-    # Si encuentra el campo, lo formatea. Si no, pone "S/F" de forma segura
-    if fecha_obj:
-        try:
-            fecha_str = fecha_obj.strftime('%Y-%m-%d')
-        except AttributeError:
-            fecha_str = str(fecha_obj)
-    else:
-        fecha_str = "S/F"
-
-    context = {
-        'pedido': pedido,
-        'items': items,
-        'cliente_nombre': pedido.cliente_nombre,
-        'cliente_email': pedido.cliente_email,
-        'cliente_telefono': pedido.cliente_telefono,
-        'cliente_direccion': pedido.cliente_direccion,
-        'cliente_ciudad': pedido.cliente_ciudad,
-        'cliente_nit': pedido.cliente_nit,
-        'empresa_nombre': empresa_nombre,
-        'empresa_nit': empresa_nit,
-        'empresa_telefono': empresa_telefono,
-        'empresa_direccion': empresa_direccion,
-        'empresa_email': empresa_email,
-        'color_primario': color_primario,
-        'color_secundario': color_secundario,
-        'fecha_str': fecha_str,
-    }
-    # Inyectamos exactamente los mismos totales
-    context.update(totales)
-
-    try:
-        template = get_template('pedido_pdf.html')
-        html = template.render(context)
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="pedido_{pedido.numero_orden}.pdf"'
+    # 🌟 Cambiamos el estado del pedido a pagado sin volver a restar stock
+    if pedido.estado != "pagado":
+        pedido.estado = "pagado"
+        pedido.save()
         
-        # 🎯 CAMBIO CLAVE: Agregamos el parámetro link_callback aquí abajo
-        pdf = pisa.CreatePDF(html, dest=response, link_callback=link_callback)
-        
-        if pdf.err:
-            return HttpResponse(f"Error generando PDF: {pdf.err}", status=500)
-        return response
-    except Exception as e:
-        # Añadido un print para depurar rápido en la consola de Render si algo más falla
-        print(f"💥 ERROR EN GENERACIÓN PDF: {str(e)}")
-        traceback.print_exc()
-        return HttpResponse(f"Error interno: {str(e)}", status=500)
-    
+    return render(request, 'pago_confirmado.html', {'pedido': pedido})
+
 @login_required
 def generar_factura(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
@@ -3128,6 +2982,37 @@ def generar_factura(request, pedido_id):
     response['Content-Disposition'] = f'inline; filename="factura_{pedido.numero_orden}.pdf"'
     return response
 
+# =========================================================================
+# 💸 BLOQUE 10: CONTABILIDAD DE GASTOS, ABONOS Y COBRANZAS (CARTERA)
+# =========================================================================
+
+def _asegurar_gastos_basicos(usuario):
+    """Inyecta la estructura de gastos base de JoyasApp protegiendo contra duplicados."""
+    tiene_categoria = hasattr(Gasto, 'categoria')
+    
+    gastos_base = [
+        {"nombre": "Compra de Oro / Insumos", "categoria": "fabricacion"},
+        {"nombre": "Compra de Plata / Insumos", "categoria": "fabricacion"},
+        {"nombre": "Piedras, Circones y Gemas", "categoria": "fabricacion"},
+        {"nombre": "Procesos de Fundición", "categoria": "fabricacion"},
+        {"nombre": "Insumos de Pulido y Soldadura", "categoria": "fabricacion"},
+        {"nombre": "Ligas, Químicos y Ácidos", "categoria": "fabricacion"},
+        {"nombre": "Cajas y Empaques de Lujo", "categoria": "fabricacion"},
+        {"nombre": "Arriendo Taller/Oficina", "categoria": "fijo"},
+        {"nombre": "Servicios Públicos (Luz/Internet)", "categoria": "fijo"},
+        {"nombre": "Publicidad y Marketing", "categoria": "marketing"},
+        {"nombre": "Transporte y Envíos", "categoria": "logistica"},
+        {"nombre": "Comisiones Bancarias y Pasarelas", "categoria": "financiero"},
+        {"nombre": "Papelería y Administración", "categoria": "administrativo"},
+    ]
+    
+    for g in gastos_base:
+        defaults = {"monto": 0.0}
+        if tiene_categoria:
+            defaults["categoria"] = g["categoria"]
+            
+        Gasto.objects.get_or_create(usuario=usuario, nombre=g["nombre"], defaults=defaults)
+
 @login_required(login_url='/login/')
 def gastos(request): # 🎯 Nombre unificado para cumplir con urls.py y Render
     usuario = request.user
@@ -3269,6 +3154,61 @@ def registrar_abono(request, pedido_id):
     return redirect('detalle_pedido', pedido_id=pedido.id)
 
 @login_required
+def cartera_clientes(request):
+    hoy = timezone.now().date()
+
+    pedidos = Pedido.objects.filter(
+        usuario=request.user,
+        tipo_pago='credito',
+        saldo_pendiente__gt=0,
+        estado__in=['pendiente', 'vencido']
+    ).order_by('fecha_limite')
+
+    cartera = []
+
+    for p in pedidos:
+        dias_mora = 0
+        if p.fecha_limite and p.fecha_limite < hoy:
+            dias_mora = (hoy - p.fecha_limite).days
+
+        estado_visual = 'vencido' if dias_mora > 0 else 'pendiente'
+        link_pago = request.build_absolute_uri(f"/factura/{p.token_publico}/")
+
+        # Ajuste de mensaje con el formato de moneda limpio
+        saldo_formateado = f"{p.saldo_pendiente:,.0f}".replace(",", ".")
+        mensaje = f"Hola {p.cliente_nombre}, tienes un saldo pendiente de ${saldo_formateado}. Puedes pagar aquí: {link_pago}"
+        mensaje_codificado = quote(mensaje)
+
+        # 🌟 CORRECCIÓN: Uso de '=' en lugar de ':' y limpieza de número telefónico
+        telefono_limpio = ''.join(filter(str.isdigit, p.cliente_telefono or ""))
+        if telefono_limpio and not telefono_limpio.startswith('57'):
+            telefono_limpio = f"57{telefono_limpio}"
+            
+        whatsapp_link = f"https://wa.me/{telefono_limpio}?text={mensaje_codificado}"
+
+        cartera.append({
+            'pedido': p,
+            'cliente': p.cliente,
+            'telefono': p.cliente_telefono,
+            'saldo': p.saldo_pendiente,
+            'fecha_limite': p.fecha_limite,
+            'dias_mora': dias_mora,
+            'estado': estado_visual,
+            'link_pago': link_pago,
+            'whatsapp': whatsapp_link,
+        })
+        
+    # 🌟 CORRECCIÓN: Sumar usando Decimal explícito para evitar fallos de tipos
+    morosos_total = sum((c['saldo'] for c in cartera if c['estado'] == 'vencido'), Decimal('0.00'))
+    morosos_count = sum(1 for c in cartera if c['estado'] == 'vencido')
+
+    return render(request, 'cartera.html', {
+        'cartera': cartera,
+        'morosos_total': morosos_total,
+        'morosos_count': morosos_count
+    })
+
+@login_required
 def cobrar_whatsapp(request, pedido_id):
     """📱 COBRO DE UN PEDIDO INDEPENDIENTE"""
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
@@ -3348,61 +3288,6 @@ def cobrar_moroso(request, cliente_id):
 
     url = f"https://wa.me/{telefono}?text={quote(mensaje)}"
     return redirect(url)
-
-@login_required
-def cartera_clientes(request):
-    hoy = timezone.now().date()
-
-    pedidos = Pedido.objects.filter(
-        usuario=request.user,
-        tipo_pago='credito',
-        saldo_pendiente__gt=0,
-        estado__in=['pendiente', 'vencido']
-    ).order_by('fecha_limite')
-
-    cartera = []
-
-    for p in pedidos:
-        dias_mora = 0
-        if p.fecha_limite and p.fecha_limite < hoy:
-            dias_mora = (hoy - p.fecha_limite).days
-
-        estado_visual = 'vencido' if dias_mora > 0 else 'pendiente'
-        link_pago = request.build_absolute_uri(f"/factura/{p.token_publico}/")
-
-        # Ajuste de mensaje con el formato de moneda limpio
-        saldo_formateado = f"{p.saldo_pendiente:,.0f}".replace(",", ".")
-        mensaje = f"Hola {p.cliente_nombre}, tienes un saldo pendiente de ${saldo_formateado}. Puedes pagar aquí: {link_pago}"
-        mensaje_codificado = quote(mensaje)
-
-        # 🌟 CORRECCIÓN: Uso de '=' en lugar de ':' y limpieza de número telefónico
-        telefono_limpio = ''.join(filter(str.isdigit, p.cliente_telefono or ""))
-        if telefono_limpio and not telefono_limpio.startswith('57'):
-            telefono_limpio = f"57{telefono_limpio}"
-            
-        whatsapp_link = f"https://wa.me/{telefono_limpio}?text={mensaje_codificado}"
-
-        cartera.append({
-            'pedido': p,
-            'cliente': p.cliente,
-            'telefono': p.cliente_telefono,
-            'saldo': p.saldo_pendiente,
-            'fecha_limite': p.fecha_limite,
-            'dias_mora': dias_mora,
-            'estado': estado_visual,
-            'link_pago': link_pago,
-            'whatsapp': whatsapp_link,
-        })
-        
-    # 🌟 CORRECCIÓN: Sumar usando Decimal explícito para evitar fallos de tipos
-    morosos_total = sum((c['saldo'] for c in cartera if c['estado'] == 'vencido'), Decimal('0.00'))
-    morosos_count = sum(1 for c in cartera if c['estado'] == 'vencido')
-
-    return render(request, 'cartera.html', {
-        'cartera': cartera,
-        'morosos_total': morosos_total,
-        'morosos_count': morosos_count
-    })
 
 @login_required
 def whatsapp_segmento(request):
@@ -3503,6 +3388,10 @@ def whatsapp_segmento(request):
     )
 
     return redirect(url_whatsapp)
+
+# =========================================================================
+# 🛠️ BLOQUE 11: OPERACIONES DE TALLER / MANUFACTURA
+# =========================================================================
 
 @login_required
 def fabricacion(request):
