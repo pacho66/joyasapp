@@ -1,9 +1,8 @@
 from django.urls import path
-from . import views
-from .views import whatsapp_segmento
 from django.conf import settings
 from django.conf.urls.static import static
 from .views import auth
+from . import views
 
 urlpatterns = [
 
