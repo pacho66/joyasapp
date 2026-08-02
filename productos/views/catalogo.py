@@ -29,15 +29,6 @@ from ..models import (
 # =========================================================================
 from ..services.precios import calcular_precio_producto
 
-# =========================================================================
-# ⚙️ UTILIDADES
-# =========================================================================
-from .utilidades import (
-    safe_int,
-    safe_float,
-    obtener_variante,
-)
-
 logger = logging.getLogger(__name__)
 
 # =========================================================================
