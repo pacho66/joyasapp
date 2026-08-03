@@ -4,6 +4,7 @@ from django.conf.urls.static import static
 from .views import auth
 from .views import catalogo
 from .views import admin_catalogo
+from .views import carrito
 from . import views
 
 urlpatterns = [
@@ -39,11 +40,11 @@ urlpatterns = [
     # ===============================
     # 🛒 CARRITO
     # ===============================
-    path('carrito/', views.ver_carrito, name='ver_carrito'),
-    path('carrito/agregar/<int:producto_id>/', views.agregar_al_carrito, name='agregar_al_carrito'),
-    path('carrito/eliminar/<int:item_id>/', views.eliminar_del_carrito, name='eliminar_del_carrito'),
-    path('carrito/aumentar/<int:item_id>/', views.aumentar_cantidad, name='aumentar_cantidad'),
-    path('carrito/disminuir/<int:item_id>/', views.disminuir_cantidad, name='disminuir_cantidad'),
+    path('carrito/', carrito.ver_carrito, name='ver_carrito'),
+    path('carrito/agregar/<int:producto_id>/', carrito.agregar_al_carrito, name='agregar_al_carrito'),
+    path('carrito/eliminar/<int:item_id>/', carrito.eliminar_del_carrito, name='eliminar_del_carrito'),
+    path('carrito/aumentar/<int:item_id>/', carrito.aumentar_cantidad, name='aumentar_cantidad'),
+    path('carrito/disminuir/<int:item_id>/', carrito.disminuir_cantidad, name='disminuir_cantidad'),
 
     # ===============================
     # 💳 COMPRAS / PAGOS UNIFICADOS
