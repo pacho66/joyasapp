@@ -10,6 +10,9 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.template.loader import get_template
 from xhtml2pdf import pisa
+from .models import (
+    Pedido,
+)
 
 def generar_pdf_pedido(pedido, perfil, usuario_backup=None):
     """
@@ -110,7 +113,6 @@ def generar_factura(request, pedido_id):
     2. ESTA ES LA VISTA WEB. 
        Llama a la función de arriba para obtener el PDF y se lo muestra al usuario.
     """
-    from .models import Pedido
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
     perfil = getattr(request.user, 'perfil', None)
     
@@ -148,8 +150,7 @@ def generar_link_whatsapp(request, pedido):
     return f"https://wa.me/57{telefono}?text={mensaje_url}"
 
 
-def generar_numero_orden(usuario=None):
-    from .models import Pedido  
+def generar_numero_orden(usuario=None): 
     if usuario:
         queryset = Pedido.objects.filter(usuario=usuario)
     else:

@@ -5,6 +5,7 @@ from .views import auth
 from .views import catalogo
 from .views import admin_catalogo
 from .views import carrito
+from .views import checkout
 from . import views
 
 urlpatterns = [
@@ -48,23 +49,23 @@ urlpatterns = [
 
     # ===============================
     # 💳 COMPRAS / PAGOS UNIFICADOS
-    # ===============================
-    path('comprar-whatsapp/', views.comprar_whatsapp, name='comprar_whatsapp'),
-    path('comprar-directo/<int:producto_id>/', views.comprar_whatsapp, name='comprar_directo'),
-    path('pagar/', views.pagar_pedido, name='pagar_pedido'),
-    path('pagar/mercadopago/<uuid:token>/', views.pagar_con_mercadopago, name='pagar_con_mercadopago'),
-    path('pagar/wompi/<uuid:token>/', views.pagar_wompi, name='pagar_wompi'), # <-- Corregido a uuid y renombrado para claridad
-    path('pago-exitoso/<uuid:token>/', views.pago_exitoso),
+    # =============================
+    path('comprar-whatsapp/', checkout.comprar_whatsapp, name='comprar_whatsapp'),
+    path('comprar-directo/<int:producto_id>/', checkout.comprar_whatsapp, name='comprar_directo'),
+    path('pagar/', checkout.pagar_pedido, name='pagar_pedido'),
+    path('pagar/mercadopago/<uuid:token>/', checkout.pagar_con_mercadopago, name='pagar_con_mercadopago'),
+    path('pagar/wompi/<uuid:token>/', checkout.pagar_wompi, name='pagar_wompi'), # <-- Corregido a uuid y renombrado para claridad
+    path('pago-exitoso/<uuid:token>/', checkout.pago_exitoso),
     path('confirmar-pago/<uuid:token>/', views.confirmar_pago_publico, name='confirmar_pago_publico'),
-    path('confirmar-pago/<int:pedido_id>/', views.confirmar_pago, name='confirmar_pago'),
-    path('pago-fallido/<uuid:token>/', views.pago_fallido, name='pago_fallido'),
+    path('confirmar-pago/<int:pedido_id>/', checkout.confirmar_pago, name='confirmar_pago'),
+    path('pago-fallido/<uuid:token>/', checkout.pago_fallido, name='pago_fallido'),
 
     # ===============================
     # 💳 WEBHOOKS AUTOMÁTICOS
     # ===============================
-    path('webhooks/mercadopago/<uuid:profile_uuid>/', views.webhook_mercadopago, name='webhook_mercadopago'),
-    path('webhooks/wompi/', views.webhook_wompi, name='webhook_wompi'),
-    path('webhooks/mercadopago/', views.webhook_mercadopago, name='webhook_mercadopago'), 
+    path('webhooks/mercadopago/<uuid:profile_uuid>/', checkout.webhook_mercadopago, name='webhook_mercadopago'),
+    path('webhooks/wompi/', checkout.webhook_wompi, name='webhook_wompi'),
+    path('webhooks/mercadopago/', checkout.webhook_mercadopago, name='webhook_mercadopago'), 
     
     # ===============================
     # 📦 PEDIDOS
