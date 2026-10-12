@@ -51,6 +51,7 @@ import mercadopago
 from .utilidades import (
     generar_numero_orden,
     calcular_envio,
+    calcular_totales_pedido,
 )
 
 # =========================================================================
@@ -425,7 +426,7 @@ def pagar_pedido(request):
                 valor_envio_personalizado = Decimal(str(calcular_envio(ciudad, subtotal_con_descuento)))
 
         # ⚡ CÁLCULO GENERAL DE LA CASCADA MATEMÁTICA
-        totales = motor.calcular_totales_pedido(
+        totales = utilidades.calcular_totales_pedido(
             subtotal_base=subtotal_general,
             porcentaje_descuento=porcentaje_descuento,
             tipo_envio=tipo_envio,
