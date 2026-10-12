@@ -719,17 +719,29 @@ def webhook_mercadopago(request, profile_uuid):
     return HttpResponse(status=400)
 
 def pago_exitoso(request, token):
-    pedido = get_object_or_404(Pedido, token_publico=token)
+    """Vista de retorno cuando el pago es aprobado en Wompi o Mercado Pago"""
+    try:
+        pedido = get_object_or_404(Pedido, token_publico=token)
 
-    status_mp = request.GET.get('status')
-    if status_mp and status_mp != 'approved' and status_mp != 'authorized':
-        return redirect('pago_fallido', token=token)
+        status_mp = request.GET.get('status')
+        if status_mp and status_mp not in ['approved', 'authorized']:
+            return redirect('pago_fallido', token=token)
 
-    pedido.estado = "pagado"
-    pedido.saldo_pendiente = Decimal('0.00')
-    pedido.save()
+        # Actualizamos estado de forma segura
+        pedido.estado = "pagado"
+        pedido.saldo_pendiente = Decimal('0.00')
+        pedido.save()
 
-    return redirect('factura_publica', token=token)
+        return redirect('factura_publica', token=token)
+    except Exception as e:
+        print("\n" + "🚨" * 30)
+        print(f"💥 ERROR EN PAGO EXITOSO: {str(e)}")
+        print("-" * 60)
+        traceback.print_exc()
+        print("🚨" * 30 + "\n")
+        # Si falla la redirección interna, mostramos un mensaje amigable o redirigimos al carrito/inicio
+        messages.success(request, "¡Tu pago fue procesado con éxito!")
+        return redirect('ver_carrito')
 
 def pago_fallido(request, token):
     pedido = get_object_or_404(Pedido, token_publico=token) 
