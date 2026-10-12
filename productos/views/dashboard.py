@@ -95,7 +95,7 @@ def dashboard(request):
             clientes_filtrados = clientes.filter(ultima_compra__lt=hace_30).distinct()
         elif tipo == 'morosos':
             try:
-                ids_morosos = pedidos.filter(tipo_pago='credito', saldo_pendiente_gt=0, fecha_limite_lt=hoy).values_list('cliente_id', flat=True).distinct()
+                ids_morosos = pedidos.filter(tipo_pago='credito', saldo_pendiente__gt=0, fecha_limite__lt=hoy).values_list('cliente_id', flat=True).distinct()
                 clientes_filtrados = clientes.filter(id__in=ids_morosos)
             except Exception:
                 pass
@@ -168,7 +168,7 @@ def dashboard(request):
         total_clientes = clientes.count()
         total_productos = productos.count()
         productos_sin_stock = productos.filter(stock=0).count()
-        productos_bajo_stock = productos.filter(stock_gt=0, stock_lte=5).count()
+        productos_bajo_stock = productos.filter(stock__gt=0, stock__lte=5).count()
 
         ticket_promedio = total_general / total_pedidos if total_pedidos > 0 else 0
         crecimiento = total_hoy - total_ayer
