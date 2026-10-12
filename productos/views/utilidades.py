@@ -59,7 +59,6 @@ def generar_numero_orden(usuario=None):
     Garantiza que el número sea único en toda la base de datos.
     """
     from django.db.models import Max
-    from .models import Pedido # Asegúrate de que apunte a tu app real
 
     # 1. Buscamos SIEMPRE a nivel global (evita choques entre joyerías)
     # Excluimos strings vacíos o nulos por seguridad
