@@ -1,3 +1,4 @@
+import traceback
 import time
 from decimal import Decimal
 from datetime import timedelta
@@ -26,255 +27,201 @@ from .contabilidad import _asegurar_gastos_basicos
 # =========================================================================
 # 📊 BLOQUE 7: DASHBOARD ADMINISTRATIVO, CRM Y ESTADÍSTICAS
 # =========================================================================
-
 @login_required(login_url='/login/')
 def dashboard(request):
-    usuario = request.user
-    hoy = timezone.localdate()
+    try:
+        usuario = request.user
+        hoy = timezone.localdate()
 
-    # ✅ Perfil multiusuario del SaaS con 30 días gratis por defecto
-    perfil, creado = Perfil.objects.get_or_create(
-        user=usuario,
-        defaults={
-            'nombre_tienda': 'JoyasApp',
-            'plan': 'gratis',
-            'plan_vence': hoy + timedelta(days=30)  # Asigna 30 días gratis en la creación
+        # ✅ Perfil multiusuario del SaaS seguro
+        perfil, creado = Perfil.objects.get_or_create(
+            user=usuario,
+            defaults={
+                'nombre_tienda': 'JoyasApp',
+                'plan': 'gratis'
+            }
+        )
+
+        # 🛡️ Protección de Gastos Activa (Protegida si no existe la función)
+        try:
+            if 'I' in globals() or '_asegurar_gastos_basicos' in globals():
+                _asegurar_gastos_basicos(usuario)
+        except Exception:
+            pass
+
+        # 🔒 Validar vencimiento del plan de forma segura
+        if hasattr(perfil, 'plan_vence') and perfil.plan_vence and perfil.plan_vence < hoy:
+            return render(request, 'plan_vencido.html', {'perfil': perfil})
+        
+        ayer = hoy - timedelta(days=1)
+        hace_30 = timezone.now() - timedelta(days=30)
+        tipo = request.GET.get('tipo')
+
+        pedidos = Pedido.objects.filter(usuario=usuario)
+
+        # 📊 GRÁFICAS (ÚLTIMOS 7 DÍAS)
+        ventas_por_dia = (
+            pedidos
+            .annotate(fecha_dia=TruncDate('fecha'))
+            .values('fecha_dia')
+            .annotate(total=Sum('total'))
+            .order_by('fecha_dia')
+        )
+
+        fechas = [v['fecha_dia'].strftime('%d/%m') for v in ventas_por_dia if v['fecha_dia']]
+        totales = [float(v['total']) if v['total'] is not None else 0.0 for v in ventas_por_dia]
+        
+        clientes = Cliente.objects.filter(usuario=usuario)
+        productos = Producto.objects.filter(usuario=usuario)
+
+        # 🔴 CARTERA Y MOROSOS (Protegido por campos opcionales)
+        try:
+            pedidos_en_mora = pedidos.filter(tipo_pago='credito', saldo_pendiente_gt=0, fecha_limite_lt=hoy)
+            cartera_agg = pedidos_en_mora.aggregate(suma_mora=Sum('saldo_pendiente'))['suma_mora']
+            morosos_total = float(cartera_agg) if cartera_agg is not None else 0.0
+            clientes_morosos_ids = pedidos_en_mora.values_list('cliente_id', flat=True).distinct()
+            morosos_count = Cliente.objects.filter(id__in=clientes_morosos_ids).count()
+        except Exception:
+            morosos_total = 0.0
+            morosos_count = 0
+
+        # FILTROS CLIENTES
+        clientes_filtrados = clientes
+        if tipo == 'vip':
+            clientes_filtrados = clientes.filter(total_compras__gte=500000)
+        elif tipo == 'nuevos':
+            clientes_filtrados = clientes.filter(fecha_creacion__date=hoy)
+        elif tipo == 'dormidos':
+            clientes_filtrados = clientes.filter(ultima_compra__lt=hace_30).distinct()
+        elif tipo == 'morosos':
+            try:
+                ids_morosos = pedidos.filter(tipo_pago='credito', saldo_pendiente_gt=0, fecha_limite_lt=hoy).values_list('cliente_id', flat=True).distinct()
+                clientes_filtrados = clientes.filter(id__in=ids_morosos)
+            except Exception:
+                pass
+        
+        mensajes = {
+            'vip': "💎 Clientes VIP",
+            'nuevos': "✨ Clientes nuevos",
+            'dormidos': "😴 Clientes inactivos",
+            'morosos': "🔴 Clientes en mora"
         }
-    )
+        mensaje = mensajes.get(tipo, "📊 Panel General")
 
-    # Si es un perfil existente sin fecha de vencimiento, le asignamos la prueba gratis de 30 días
-    if not perfil.plan_vence:
-        perfil.plan_vence = (perfil.user.date_joined.date() if perfil.user.date_joined else hoy) + timedelta(days=30)
-        perfil.save()
+        for clie in clientes_filtrados:
+            try:
+                total_real = Pedido.objects.filter(usuario=usuario, cliente_nombre=clie.nombre, estado__iexact='pagado').aggregate(suma=Sum('total'))['suma'] or 0
+                clie.total_compras = total_real
+            except Exception:
+                pass
 
-    # 🛡️ Protección de Gastos Activa
-    try:
-        _asegurar_gastos_basicos(usuario)
+        total_hoy = pedidos.filter(fecha__date=hoy).aggregate(total=Sum('total'))['total'] or 0
+        total_ayer = pedidos.filter(fecha__date=ayer).aggregate(total=Sum('total'))['total'] or 0
+        total_general = pedidos.aggregate(total=Sum('total'))['total'] or 0
+        ganancias_mes = pedidos.filter(fecha_month=hoy.month, fecha_year=hoy.year).aggregate(total=Sum('total'))['total'] or 0
+
+        total_ingresos = float(total_general or 0)
+
+        try:
+            costos_pedidos = pedidos.aggregate(mat=Sum('costo_material'), mo=Sum('costo_mano_obra'))
+            total_material = float(costos_pedidos['mat'] or 0)
+            total_mano_obra = float(costos_pedidos['mo'] or 0)
+        except Exception:
+            total_material = 0.0
+            total_mano_obra = 0.0
+
+        total_costos = total_material + total_mano_obra
+
+        try:
+            from ..models import Gasto
+            total_gastos = float(Gasto.objects.filter(usuario=usuario).aggregate(total=Sum('monto'))['total'] or 0)
+        except Exception:
+            total_gastos = 0.0
+
+        utilidad_bruta = total_ingresos - total_costos
+        utilidad_neta = utilidad_bruta - total_gastos
+
+        margen_bruto = (utilidad_bruta / total_ingresos * 100) if total_ingresos > 0 else 0
+        margen_neto = (utilidad_neta / total_ingresos * 100) if total_ingresos > 0 else 0
+
+        # VALORIZACIÓN DE INVENTARIO
+        inv_valorizado_costo = 0.0
+        inv_valorizado_venta = 0.0
+        for prod in productos.prefetch_related('variantes'):
+            p_costo = float(getattr(prod, 'precio_costo', 0) or 0)
+            p_detal = float(getattr(prod, 'precio_detal', 0) or 0)
+            if hasattr(prod, 'variantes') and prod.variantes.exists():
+                cant = sum(int(v.stock or 0) for v in prod.variantes.all())
+            else:
+                cant = int(prod.stock or 0)
+            inv_valorizado_costo += cant * p_costo
+            inv_valorizado_venta += cant * p_detal
+
+        utilidad_potencial_inv = inv_valorizado_venta - inv_valorizado_costo
+        
+        pedidos_hoy = pedidos.filter(fecha__date=hoy).count()
+        total_pedidos = pedidos.count()
+        pedidos_recientes = pedidos.order_by('-fecha')[:5]
+        pedidos_pendientes = pedidos.filter(estado='pendiente').count()
+        pedidos_pagados = pedidos.filter(estado='pagado').count()
+
+        total_clientes = clientes.count()
+        total_productos = productos.count()
+        productos_sin_stock = productos.filter(stock=0).count()
+        productos_bajo_stock = productos.filter(stock_gt=0, stock_lte=5).count()
+
+        ticket_promedio = total_general / total_pedidos if total_pedidos > 0 else 0
+        crecimiento = total_hoy - total_ayer
+
+        context = {
+            'mensaje': mensaje,
+            'tipo': tipo,
+            'today': hoy,
+            'perfil': perfil,
+            'total_hoy': total_hoy,
+            'total_ayer': total_ayer,
+            'total_general': total_general,
+            'ganancias_mes': ganancias_mes,
+            'crecimiento': crecimiento,
+            'fechas': fechas,
+            'totales': totales,
+            'total_ingresos': total_ingresos,
+            'total_material': total_material,
+            'total_mano_obra': total_mano_obra,
+            'total_costos': total_costos,
+            'total_gastos': total_gastos,
+            'utilidad': utilidad_bruta,
+            'utilidad_bruta': utilidad_bruta,
+            'utilidad_neta': utilidad_neta,
+            'margen_bruto': margen_bruto,
+            'margen_neto': margen_neto,
+            'inv_valorizado_costo': inv_valorizado_costo,
+            'inv_valorizado_venta': inv_valorizado_venta,
+            'utilidad_potencial_inv': utilidad_potencial_inv,
+            'pedidos_hoy': pedidos_hoy,
+            'total_pedidos': total_pedidos,
+            'pedidos_recientes': pedidos_recientes,
+            'pedidos_pendientes': pedidos_pendientes,
+            'pedidos_pagados': pedidos_pagados,
+            'total_clientes': total_clientes,
+            'total_productos': total_productos,
+            'productos_sin_stock': productos_sin_stock,
+            'productos_bajo_stock': productos_bajo_stock,
+            'ticket_promedio': ticket_promedio,
+            'morosos_count': morosos_count,
+            'morosos_total': morosos_total,
+            'clientes_filtrados': clientes_filtrados,
+        }
+
+        return render(request, 'dashboard.html', context)
+
     except Exception as e:
-        print(f"⚠️ Aviso en _asegurar_gastos_basicos: {e}")
-
-    # 🔒 Validar vencimiento del plan
-    plan_vencido = perfil.plan_vence and perfil.plan_vence < hoy
-    if plan_vencido:
-        # En lugar de romper, renderizamos con la bandera de plan vencido o redirigimos limpiamente
-        return render(request, 'plan_vencido.html', {'perfil': perfil, 'hoy': hoy})
-    
-    ayer = hoy - timedelta(days=1)
-    hace_30 = timezone.now() - timedelta(days=30)
-
-    tipo = request.GET.get('tipo')
-
-    # ==========================
-    # BASE MULTIUSUARIO SaaS
-    # ==========================
-    pedidos = Pedido.objects.filter(usuario=usuario)
-
-    # ==========================
-    # 📊 GRÁFICAS (ÚLTIMOS 7 DÍAS)
-    # ==========================
-    ventas_por_dia = (
-        pedidos
-        .annotate(fecha_dia=TruncDate('fecha'))
-        .values('fecha_dia')
-        .annotate(total=Sum('total'))
-        .order_by('fecha_dia')
-    )
-
-    fechas = [v['fecha_dia'].strftime('%d/%m') for v in ventas_por_dia if v['fecha_dia']]
-    totales = [float(v['total']) if v['total'] is not None else 0.0 for v in ventas_por_dia]
-    
-    cliente_id = request.GET.get('cliente')
-    if cliente_id:
-        pedidos = pedidos.filter(cliente_id=cliente_id)
-
-    clientes = Cliente.objects.filter(usuario=usuario)
-    productos = Producto.objects.filter(usuario=usuario)
-
-    # ==========================
-    # 🔴 CARTERA Y MOROSOS
-    # ==========================
-    pedidos_en_mora = Pedido.objects.filter(
-        usuario=usuario,
-        tipo_pago='credito',
-        saldo_pendiente__gt=0,
-        fecha_limite__lt=hoy
-    )
-
-    cartera_agg = pedidos_en_mora.aggregate(suma_mora=Sum('saldo_pendiente'))['suma_mora']
-    morosos_total = float(cartera_agg) if cartera_agg is not None else 0.0
-
-    clientes_morosos_ids = pedidos_en_mora.values_list('cliente_id', flat=True).distinct()
-    clientes_morosos = Cliente.objects.filter(id__in=clientes_morosos_ids)
-    morosos_count = clientes_morosos.count()
-    
-    # ==========================
-    # FILTROS CLIENTES
-    # ==========================
-    clientes_filtrados = clientes
-
-    if tipo == 'vip':
-        clientes_filtrados = clientes.filter(total_compras__gte=500000)
-    elif tipo == 'nuevos':
-        clientes_filtrados = clientes.filter(fecha_creacion__date=hoy)
-    elif tipo == 'dormidos':
-        clientes_filtrados = clientes.filter(ultima_compra__lt=hace_30).distinct()
-    elif tipo == 'morosos':
-        ids_morosos = Pedido.objects.filter(
-            usuario=usuario,
-            tipo_pago='credito',
-            saldo_pendiente__gt=0,
-            fecha_limite__lt=hoy
-        ).values_list('cliente_id', flat=True).distinct()
-        
-        clientes_filtrados = clientes.filter(id__in=ids_morosos)
-    
-    mensajes = {
-        'vip': "💎 Clientes VIP",
-        'nuevos': "✨ Clientes nuevos",
-        'dormidos': "😴 Clientes inactivos",
-        'morosos': "🔴 Clientes en mora"
-    }
-    mensaje = mensajes.get(tipo, "📊 Panel General")
-
-    # Recalcular en caliente el total real de compras acumuladas
-    for clie in clientes_filtrados:
-        total_real = Pedido.objects.filter(
-            usuario=usuario,
-            cliente_nombre=clie.nombre,
-            estado__iexact='pagado'
-        ).aggregate(suma=Sum('total'))['suma'] or 0
-        clie.total_compras = total_real
-
-    # ==========================
-    # VENTAS Y ENVIOS
-    # ==========================
-    total_hoy = pedidos.filter(fecha__date=hoy).aggregate(total=Sum('total'))['total'] or 0
-    total_ayer = pedidos.filter(fecha__date=ayer).aggregate(total=Sum('total'))['total'] or 0
-    total_general = pedidos.aggregate(total=Sum('total'))['total'] or 0
-    
-    ganancias_mes = pedidos.filter(
-        fecha__month=hoy.month,
-        fecha__year=hoy.year
-    ).aggregate(total=Sum('total'))['total'] or 0
-
-    # =======================================================================
-    # 💰 PANEL FINANCIERO
-    # =======================================================================
-    total_ingresos = float(total_general or 0)
-
-    costos_pedidos = pedidos.aggregate(
-        mat=Sum('costo_material'),
-        mo=Sum('costo_mano_obra')
-    )
-    total_material = float(costos_pedidos['mat'] or 0)
-    total_mano_obra = float(costos_pedidos['mo'] or 0)
-    total_costos = total_material + total_mano_obra
-
-    try:
-        from ..models import Gasto
-        total_gastos = float(Gasto.objects.filter(usuario=usuario).aggregate(total=Sum('monto'))['total'] or 0)
-    except Exception:
-        total_gastos = 0.0
-
-    utilidad_bruta = total_ingresos - total_costos
-    utilidad_neta = utilidad_bruta - total_gastos
-
-    margen_bruto = (utilidad_bruta / total_ingresos * 100) if total_ingresos > 0 else 0
-    margen_neto = (utilidad_neta / total_ingresos * 100) if total_ingresos > 0 else 0
-
-    # =======================================================================
-    # 💎 VALORIZACIÓN DE INVENTARIO
-    # =======================================================================
-    inventario = Producto.objects.filter(usuario=usuario).prefetch_related('variantes')
-    inv_valorizado_costo = 0.0
-    inv_valorizado_venta = 0.0
-
-    for prod in inventario:
-        p_costo = float(prod.precio_costo or 0)
-        p_detal = float(prod.precio_detal or 0)
-        
-        if prod.variantes.exists():
-            cant = sum(int(v.stock or 0) for v in prod.variantes.all())
-        else:
-            cant = int(prod.stock or 0)
-        
-        inv_valorizado_costo += cant * p_costo
-        inv_valorizado_venta += cant * p_detal
-
-    utilidad_potencial_inv = inv_valorizado_venta - inv_valorizado_costo
-    
-    # ==========================
-    # PEDIDOS E INVENTARIO (CORREGIDO ORM EN STOCK)
-    # ==========================
-    pedidos_hoy = pedidos.filter(fecha__date=hoy).count()
-    total_pedidos = pedidos.count()
-    pedidos_recientes = pedidos.order_by('-fecha')[:5]
-    pedidos_pendientes = pedidos.filter(estado='pendiente').count()
-    pedidos_pagados = pedidos.filter(estado='pagado').count()
-
-    total_clientes = clientes.count()
-    clientes_vip = clientes.filter(total_compras__gte=500000).count()
-    clientes_nuevos = clientes.filter(fecha_creacion__date=hoy).count()
-    clientes_dormidos = clientes.filter(ultima_compra__lt=hace_30).distinct().count()
-
-    total_productos = productos.count()
-    productos_sin_stock = productos.filter(stock=0).count()
-    # 🎯 CORRECCIÓN CLAVE: doble guion bajo en ORM stock_gt y stock_lte
-    productos_bajo_stock = productos.filter(stock_gt=0, stock_lte=5).count()
-
-    ticket_promedio = total_general / total_pedidos if total_pedidos > 0 else 0
-    crecimiento = total_hoy - total_ayer
-
-    # ==========================
-    # CONTEXT CONSOLIDADO
-    # ==========================
-    context = {
-        'mensaje': mensaje,
-        'tipo': tipo,
-        'today': hoy,
-        'perfil': perfil,
-        'total_hoy': total_hoy,
-        'total_ayer': total_ayer,
-        'total_general': total_general,
-        'ganancias_mes': ganancias_mes,
-        'crecimiento': crecimiento,
-        'fechas': fechas,
-        'totales': totales,
-        
-        'total_ingresos': total_ingresos,
-        'total_material': total_material,
-        'total_mano_obra': total_mano_obra,
-        'total_costos': total_costos,
-        'total_gastos': total_gastos,
-        'utilidad': utilidad_bruta,
-        'utilidad_bruta': utilidad_bruta,
-        'utilidad_neta': utilidad_neta,
-        'margen_bruto': margen_bruto,
-        'margen_neto': margen_neto,
-        
-        'inv_valorizado_costo': inv_valorizado_costo,
-        'inv_valorizado_venta': inv_valorizado_venta,
-        'utilidad_potencial_inv': utilidad_potencial_inv,
-
-        'pedidos_hoy': pedidos_hoy,
-        'total_pedidos': total_pedidos,
-        'pedidos_recientes': pedidos_recientes,
-        'pedidos_pendientes': pedidos_pendientes,
-        'pedidos_pagados': pedidos_pagados,
-        'total_clientes': total_clientes,
-        'clientes_vip': clientes_vip,
-        'clientes_nuevos': clientes_nuevos,
-        'clientes_dormidos': clientes_dormidos,
-        'clientes_filtrados': clientes_filtrados,
-        'morosos_count': morosos_count,
-        'morosos_total': morosos_total,
-        'total_productos': total_productos,
-        'productos_sin_stock': productos_sin_stock,
-        'productos_bajo_stock': productos_bajo_stock,
-        'ticket_promedio': ticket_promedio,
-    }
-
-    return render(request, 'dashboard.html', context)
+        print("\n" + "🚨" * 30)
+        print(f"💥 ERROR CRÍTICO EN /DASHBOARD/: {str(e)}")
+        print("-" * 60)
+        traceback.print_exc()
+        print("🚨" * 30 + "\n")
+        return HttpResponse(f"Error interno en dashboard: {str(e)}", status=500)
 
 @login_required
 def panel_crm(request):
