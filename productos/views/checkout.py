@@ -53,6 +53,7 @@ from .utilidades import (
     calcular_envio,
     calcular_totales_pedido,
 )
+from . import utilidades
 
 # =========================================================================
 # 💳 BLOQUE 5: PASARELAS DE PAGO, CHECKOUT Y WEBHOOKS
