@@ -1,3 +1,4 @@
+import traceback
 from decimal import Decimal
 from io import BytesIO
 
@@ -127,86 +128,104 @@ def lista_pedidos(request):
 
 @login_required
 def detalle_pedido(request, pedido_id):
-    pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
+    try:
+        pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
 
-    # =======================================================
-    # 🔄 CRM ACTUALIZACIÓN EN CALIENTE
-    # =======================================================
-    if pedido.cliente:
-        cliente_actual = pedido.cliente
-        total_historico = Pedido.objects.filter(
-            cliente=cliente_actual, usuario=request.user, estado='pagado'
-        ).aggregate(Sum('total'))['total__sum'] or Decimal('0.00')
+        # =======================================================
+        # 🔄 CRM ACTUALIZACIÓN EN CALIENTE
+        # =======================================================
+        if pedido.cliente:
+            cliente_actual = pedido.cliente
+            total_historico = Pedido.objects.filter(
+                cliente=cliente_actual, usuario=request.user, estado='pagado'
+            ).aggregate(Sum('total'))['total__sum'] or Decimal('0.00')
 
-        total_cartera = Pedido.objects.filter(
-            cliente=cliente_actual, usuario=request.user, saldo_pendiente__gt=0
-        ).aggregate(Sum('saldo_pendiente'))['saldo_pendiente__sum'] or Decimal('0.00')
+            total_cartera = Pedido.objects.filter(
+                cliente=cliente_actual, usuario=request.user, saldo_pendiente__gt=0
+            ).aggregate(Sum('saldo_pendiente'))['saldo_pendiente__sum'] or Decimal('0.00')
 
-        cliente_actual.total_compras = total_historico
-        cliente_actual.saldo_pendiente = total_cartera
-        cliente_actual.save()
+            cliente_actual.total_compras = total_historico
+            cliente_actual.saldo_pendiente = total_cartera
+            cliente_actual.save()
 
-    items = pedido.items.select_related('producto', 'variante').all()
+        items = pedido.items.select_related('producto', 'variante').all()
 
-    # =======================================================
-    # 🏢 1. OBTENCIÓN DE PERFIL Y CONFIGURACIÓN (Evita cruces)
-    # =======================================================
-    perfil = obtener_perfil_pedido(pedido)
-    config = obtener_configuracion_negocio(pedido) # 🎯 NUEVO: Carga la configuración del negocio real
+        # =======================================================
+        # 🏢 1. OBTENCIÓN DE PERFIL Y CONFIGURACIÓN SEGURA
+        # =======================================================
+        perfil = obtener_perfil_pedido(pedido)
+        config = obtener_configuracion_negocio(pedido)
+        
+        empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
+        empresa_nit = perfil.nit if perfil else "Sin NIT"
+        empresa_telefono = perfil.whatsapp if perfil else "Sin teléfono"
+        empresa_direccion = perfil.direccion if perfil else "Sin dirección"
+        logo_path = perfil.logo.url if perfil and getattr(perfil, 'logo', None) else None
+
+        # =======================================================
+        # ⚡ 2. CÁLCULO SEGURO DE TOTALES (Evita caída por incompatibilidad de motor)
+        # =======================================================
+        try:
+            totales = calcular_totales_pedido(pedido, config, items)
+        except Exception:
+            # Fallback de emergencia usando los datos sellados directamente en el pedido
+            subtotal_base = sum(Decimal(str(item.subtotal or 0)) for item in items)
+            totales = {
+                'subtotal': subtotal_base,
+                'iva_total': Decimal(str(getattr(pedido, 'iva', 0) or 0)),
+                'descuento_total': Decimal(str(getattr(pedido, 'descuento_total', 0) or 0)),
+                'porcentaje_descuento': Decimal(str(getattr(pedido, 'porcentaje_descuento', 0) or 0)),
+                'retefuente_total': Decimal(str(getattr(pedido, 'retefuente', 0) or 0)),
+                'envio': Decimal(str(getattr(pedido, 'costo_envio', 0) or 0)),
+                'total_final': Decimal(str(getattr(pedido, 'total', 0) or subtotal_base))
+            }
+
+        link_pdf = request.build_absolute_uri(reverse('pedido_pdf', args=[pedido.id]))
+        link_publico = request.build_absolute_uri(reverse('confirmar_pago_publico', args=[pedido.token_publico]))
+        whatsapp_url = generar_link_whatsapp(request, pedido) if 'generar_link_whatsapp' in globals() else '#'
+
+        hoy = timezone.now().date()
+        estado_credito = None
+        if getattr(pedido, 'tipo_pago', 'contado') == 'credito':
+            if totales['total_final'] <= 0 or (pedido.saldo_pendiente is not None and pedido.saldo_pendiente <= 0):
+                estado_credito = 'pagado'
+            elif pedido.fecha_limite and pedido.fecha_limite < hoy:
+                estado_credito = 'vencido'
+            else:
+                estado_credito = 'pendiente'
+
+        abonos = pedido.abonos.all().order_by('-fecha') if hasattr(pedido, 'abonos') else []
+        total_abonado = sum(a.monto for a in abonos) if abonos else 0
+
+        context = {
+            'pedido': pedido,
+            'items': items,
+            'cliente': getattr(pedido, 'cliente', None),
+            'link_pdf': link_pdf,
+            'link_publico': link_publico,
+            'whatsapp_url': whatsapp_url,
+            'estado_credito': estado_credito,
+            'abonos': abonos,
+            'total_abonado': total_abonado,
+            'empresa_nombre': empresa_nombre,
+            'empresa_nit': empresa_nit,
+            'empresa_telefono': empresa_telefono,
+            'empresa_direccion': empresa_direccion,
+            'logo_path': logo_path,
+            'qr_pago_url': link_publico,
+            **totales  
+        }
+        
+        return render(request, 'detalle_pedido.html', context)
+
+    except Exception as e:
+        print("\n" + "🚨" * 30)
+        print(f"💥 ERROR CRÍTICO EN DETALLE DE PEDIDO #{pedido_id}: {str(e)}")
+        print("-" * 60)
+        traceback.print_exc()
+        print("🚨" * 30 + "\n")
+        return HttpResponse(f"Error al cargar el detalle del pedido: {str(e)}", status=500)
     
-    empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
-    empresa_nit = perfil.nit if perfil else "Sin NIT"
-    empresa_telefono = perfil.whatsapp if perfil else "Sin teléfono"
-    empresa_direccion = perfil.direccion if perfil else "Sin dirección"
-    logo_path = perfil.logo.url if perfil and getattr(perfil, 'logo', None) else None
-
-    # =======================================================
-    # ⚡ 2. MOTOR FISCAL ÚNICO (Pasamos config para tasas fiscales reales)
-    # =======================================================
-    totales = calcular_totales_pedido(pedido, config, items) # 🎯 CORREGIDO: Usa 'config' en vez de 'perfil'
-
-    # 🔗 ENLACES NATIVOS Y WHATSAPP
-    link_pdf = request.build_absolute_uri(reverse('pedido_pdf', args=[pedido.id]))
-    link_publico = request.build_absolute_uri(reverse('confirmar_pago_publico', args=[pedido.token_publico]))
-    whatsapp_url = generar_link_whatsapp(request, pedido) if 'generar_link_whatsapp' in globals() else '#'
-
-    # 💳 CONTROL DE CRÉDITO
-    hoy = timezone.now().date()
-    estado_credito = None
-    if pedido.tipo_pago == 'credito':
-        if totales['total_final'] <= 0 or (pedido.saldo_pendiente is not None and pedido.saldo_pendiente <= 0):
-            estado_credito = 'pagado'
-        elif pedido.fecha_limite and pedido.fecha_limite < hoy:
-            estado_credito = 'vencido'
-        else:
-            estado_credito = 'pendiente'
-
-    # 📜 HISTORIAL DE ABONOS
-    abonos = pedido.abonos.all().order_by('-fecha') if hasattr(pedido, 'abonos') else []
-    total_abonado = sum(a.monto for a in abonos) if abonos else 0
-
-    context = {
-        'pedido': pedido,
-        'items': items,
-        'cliente': getattr(pedido, 'cliente', None),
-        'link_pdf': link_pdf,
-        'link_publico': link_publico,
-        'whatsapp_url': whatsapp_url,
-        'estado_credito': estado_credito,
-        'abonos': abonos,
-        'total_abonado': total_abonado,
-        'empresa_nombre': empresa_nombre,
-        'empresa_nit': empresa_nit,
-        'empresa_telefono': empresa_telefono,
-        'empresa_direccion': empresa_direccion,
-        'logo_path': logo_path,
-        'qr_pago_url': link_publico,
-        **totales  
-    }
-    
-    print("✅ DETALLE PEDIDO OK - CONFIGURACIÓN DE NEGOCIO Y MOTOR FISCAL SINCRONIZADOS")
-    return render(request, 'detalle_pedido.html', context)
-
 @login_required
 @transaction.atomic
 def confirmar_pago(request, pedido_id):
@@ -222,173 +241,185 @@ def confirmar_pago(request, pedido_id):
 
 @login_required
 def generar_factura(request, pedido_id):
-    pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
-    items = pedido.items.select_related('producto', 'variante').all()
+    try:
+        pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
+        items = pedido.items.select_related('producto', 'variante').all()
 
-    # 🛡️ OBTENCIÓN SEGURA DEL PERFIL
-    perfil = getattr(request.user, 'perfil', None)
-    nombre_tienda = getattr(perfil, 'nombre_tienda', 'Mi Joyería') or "Mi Joyería"
-    nit_tienda = getattr(perfil, 'nit', '') or ""
-    whatsapp_tienda = getattr(perfil, 'whatsapp', '') or ""
-    ciudad_tienda = getattr(perfil, 'ciudad', '') or ""
-    correo_empresa = getattr(perfil, 'email_empresa', None) or request.user.email or 'correo@empresa.com'
+        perfil = getattr(request.user, 'perfil', None)
+        nombre_tienda = getattr(perfil, 'nombre_tienda', 'Mi Joyería') or "Mi Joyería"
+        nit_tienda = getattr(perfil, 'nit', '') or ""
+        whatsapp_tienda = getattr(perfil, 'whatsapp', '') or ""
+        ciudad_tienda = getattr(perfil, 'ciudad', '') or ""
+        correo_empresa = getattr(perfil, 'email_empresa', None) or request.user.email or 'correo@empresa.com'
 
-    # ⚡ LLAMADA AL MOTOR FISCAL ÚNICO (Reemplaza los cálculos manuales anteriores)
-    totales = calcular_totales_pedido(pedido, perfil, items)
-    
-    # Mapeo exacto de variables para no romper tu diseño de ReportLab
-    subtotal_general = totales['subtotal']
-    iva_total = totales['iva_total']
-    descuento_total = totales['descuento_total']
-    porcentaje_desc = totales['porcentaje_descuento']
-    retefuente_total = totales['retefuente_total']
-    costo_envio_num = totales['envio']
-    total_final = totales['total_final']
+        try:
+            totales = calcular_totales_pedido(pedido, perfil, items)
+        except Exception:
+            subtotal_base = sum(Decimal(str(item.subtotal or 0)) for item in items)
+            totales = {
+                'subtotal': subtotal_base,
+                'iva_total': Decimal(str(getattr(pedido, 'iva', 0) or 0)),
+                'descuento_total': Decimal(str(getattr(pedido, 'descuento_total', 0) or 0)),
+                'porcentaje_descuento': Decimal(str(getattr(pedido, 'porcentaje_descuento', 0) or 0)),
+                'retefuente_total': Decimal(str(getattr(pedido, 'retefuente', 0) or 0)),
+                'envio': Decimal(str(getattr(pedido, 'costo_envio', 0) or 0)),
+                'total_final': Decimal(str(getattr(pedido, 'total', 0) or subtotal_base))
+            }
+        
+        subtotal_general = totales['subtotal']
+        iva_total = totales['iva_total']
+        descuento_total = totales['descuento_total']
+        porcentaje_desc = totales['porcentaje_descuento']
+        retefuente_total = totales['retefuente_total']
+        costo_envio_num = totales['envio']
+        total_final = totales['total_final']
 
-    buffer = BytesIO()
-    p = canvas.Canvas(buffer, pagesize=letter)
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
 
-    PAGE_WIDTH, PAGE_HEIGHT = letter
-    LINE_HEIGHT = 18
+        PAGE_WIDTH, PAGE_HEIGHT = letter
+        LINE_HEIGHT = 18
 
-    def draw_header():
-        y = 760
-        p.setFont("Helvetica-Bold", 16)
-        p.drawString(50, y, nombre_tienda)
+        def draw_header():
+            y = 760
+            p.setFont("Helvetica-Bold", 16)
+            p.drawString(50, y, nombre_tienda)
 
-        p.setFont("Helvetica", 9)
-        p.drawString(50, y - 15, f"NIT: {nit_tienda}")
-        p.drawString(50, y - 28, f"Tel: {whatsapp_tienda}")
-        p.drawString(50, y - 41, f"Email: {correo_empresa}")
-        p.drawString(50, y - 54, f"{ciudad_tienda}")
+            p.setFont("Helvetica", 9)
+            p.drawString(50, y - 15, f"NIT: {nit_tienda}")
+            p.drawString(50, y - 28, f"Tel: {whatsapp_tienda}")
+            p.drawString(50, y - 41, f"Email: {correo_empresa}")
+            p.drawString(50, y - 54, f"{ciudad_tienda}")
 
-        p.setFont("Helvetica-Bold", 11)
-        p.drawString(390, y, "FACTURA")
+            p.setFont("Helvetica-Bold", 11)
+            p.drawString(390, y, "FACTURA")
 
-        p.setFont("Helvetica", 9)
-        p.drawString(390, y - 18, f"N° {pedido.numero_orden}")
+            p.setFont("Helvetica", 9)
+            p.drawString(390, y - 18, f"N° {pedido.numero_orden}")
 
-        fecha = pedido.fecha_creacion.strftime('%Y-%m-%d') if pedido.fecha_creacion else ''
-        p.drawString(390, y - 33, f"Fecha: {fecha}")
+            fecha = pedido.fecha_creacion.strftime('%Y-%m-%d') if pedido.fecha_creacion else ''
+            p.drawString(390, y - 33, f"Fecha: {fecha}")
 
-        if getattr(pedido, 'tipo_pago', 'contado') == 'credito':
-            p.drawString(390, y - 48, "Pago: Crédito")
-        else:
-            p.drawString(390, y - 48, "Pago: Contado")
+            if getattr(pedido, 'tipo_pago', 'contado') == 'credito':
+                p.drawString(390, y - 48, "Pago: Crédito")
+            else:
+                p.drawString(390, y - 48, "Pago: Contado")
 
-        p.line(50, y - 65, 550, y - 65)
+            p.line(50, y - 65, 550, y - 65)
 
-        yc = y - 85
-        p.drawString(50, yc, f"Cliente: {getattr(pedido, 'cliente_nombre', '') or ''}")
-        p.drawString(50, yc - 14, f"NIT/CC: {getattr(pedido, 'cliente_nit', '') or ''}")
-        p.drawString(50, yc - 28, f"Dirección: {getattr(pedido, 'cliente_direccion', '') or ''}")
-        p.drawString(50, yc - 42, f"Ciudad: {getattr(pedido, 'cliente_ciudad', '') or ''}")
-        p.drawString(50, yc - 56, f"Teléfono: {getattr(pedido, 'cliente_telefono', '') or ''}")
+            yc = y - 85
+            p.drawString(50, yc, f"Cliente: {getattr(pedido, 'cliente_nombre', '') or ''}")
+            p.drawString(50, yc - 14, f"NIT/CC: {getattr(pedido, 'cliente_nit', '') or ''}")
+            p.drawString(50, yc - 28, f"Dirección: {getattr(pedido, 'cliente_direccion', '') or ''}")
+            p.drawString(50, yc - 42, f"Ciudad: {getattr(pedido, 'cliente_ciudad', '') or ''}")
+            p.drawString(50, yc - 56, f"Teléfono: {getattr(pedido, 'cliente_telefono', '') or ''}")
 
-    def draw_footer():
-        p.line(50, 60, 550, 60)
-        p.setFont("Helvetica", 8)
-        p.drawString(50, 45, "Gracias por su compra 💎")
-        p.drawRightString(550, 45, f"Factura {pedido.numero_orden}")
+        def draw_footer():
+            p.line(50, 60, 550, 60)
+            p.setFont("Helvetica", 8)
+            p.drawString(50, 45, "Gracias por su compra 💎")
+            p.drawRightString(550, 45, f"Factura {pedido.numero_orden}")
 
-    def draw_table_header(y):
-        p.setFont("Helvetica-Bold", 10)
-        p.drawString(50, y, "Producto")
-        p.drawString(250, y, "Cant.")
-        p.drawString(310, y, "Precio")
-        p.drawString(410, y, "Total")
-        p.line(50, y - 5, 550, y - 5)
-        return y - 20
+        def draw_table_header(y):
+            p.setFont("Helvetica-Bold", 10)
+            p.drawString(50, y, "Producto")
+            p.drawString(250, y, "Cant.")
+            p.drawString(310, y, "Precio")
+            p.drawString(410, y, "Total")
+            p.line(50, y - 5, 550, y - 5)
+            return y - 20
 
-    def nueva_pagina():
-        p.showPage()
+        def nueva_pagina():
+            p.showPage()
+            draw_header()
+            return draw_table_header(560)
+
         draw_header()
-        return draw_table_header(560)
+        y = draw_table_header(560)
 
-    draw_header()
-    y = draw_table_header(560)
+        for item in items:
+            if y < 100:
+                draw_footer()
+                y = nueva_pagina()
 
-    for item in items:
-        if y < 100:
+            nombre = item.producto.nombre[:28] if item.producto and item.producto.nombre else "Producto"
+
+            gramos = getattr(item, 'total_gramos', None)
+            if gramos and gramos > 0:
+                cantidad = f"{gramos}g"
+            else:
+                cantidad = f"{int(item.cantidad or 1)} u"
+
+            precio = Decimal(str(item.precio or 0))
+            total_item = Decimal(str(item.total_final or item.subtotal or 0))
+
+            p.setFont("Helvetica", 9)
+            p.drawString(50, y, nombre)
+            p.drawString(250, y, cantidad)
+            p.drawRightString(390, y, f"${precio:,.0f}".replace(",", "."))
+            p.drawRightString(540, y, f"${total_item:,.0f}".replace(",", "."))
+
+            y -= LINE_HEIGHT
+
+        y -= 20
+        if y < 160:
             draw_footer()
             y = nueva_pagina()
 
-        nombre = item.producto.nombre[:28]
+        p.setFont("Helvetica", 10)
+        p.drawString(340, y, "Subtotal:")
+        p.drawRightString(540, y, f"${subtotal_general:,.0f}".replace(",", "."))
 
-        gramos = getattr(item, 'total_gramos', None)
-        if gramos and gramos > 0:
-            cantidad = f"{gramos}g"
+        if iva_total > 0:
+            y -= 15
+            p.drawString(340, y, "IVA:")
+            p.drawRightString(540, y, f"${iva_total:,.0f}".replace(",", "."))
+
+        if descuento_total > 0 or porcentaje_desc > 0:
+            y -= 15
+            p.drawString(340, y, f"Descuento ({porcentaje_desc}%):")
+            p.drawRightString(540, y, f"-${descuento_total:,.0f}".replace(",", "."))
+
+        if retefuente_total > 0:
+            y -= 15
+            p.drawString(340, y, "ReteFuente:")
+            p.drawRightString(540, y, f"-${retefuente_total:,.0f}".replace(",", "."))
+
+        y -= 15
+        p.drawString(340, y, "Envío:")
+        if costo_envio_num == 0:
+            p.drawRightString(540, y, "GRATIS")
         else:
-            cantidad = f"{int(item.cantidad)} u"
+            p.drawRightString(540, y, f"${costo_envio_num:,.0f}".replace(",", "."))
 
-        precio = Decimal(str(item.precio or 0))
-        total_item = Decimal(str(item.total_final or item.subtotal or 0))
+        y -= 22
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(340, y, "TOTAL:")
+        p.drawRightString(540, y, f"${total_final:,.0f}".replace(",", "."))
 
-        p.setFont("Helvetica", 9)
-        p.drawString(50, y, nombre)
-        p.drawString(250, y, cantidad)
-        p.drawRightString(390, y, f"${precio:,.0f}".replace(",", "."))
-        p.drawRightString(540, y, f"${total_item:,.0f}".replace(",", "."))
-
-        y -= LINE_HEIGHT
-
-    # TOTALES EN EL PDF (Espacio de seguridad)
-    y -= 20
-    if y < 160:
         draw_footer()
-        y = nueva_pagina()
+        p.save()
+        pdf = buffer.getvalue()
+        buffer.close()
 
-    p.setFont("Helvetica", 10)
-    p.drawString(340, y, "Subtotal:")
-    p.drawRightString(540, y, f"${subtotal_general:,.0f}".replace(",", "."))
+        email_cliente = getattr(pedido, 'cliente_email', None)
+        if email_cliente:
+            try:
+                email = EmailMessage(
+                    subject=f"Factura {pedido.numero_orden} - {nombre_tienda}",
+                    body="¡Gracias por tu confianza! Adjuntamos el detalle formal de tu pedido de joyería. 💎",
+                    from_email=correo_empresa,
+                    to=[email_cliente]
+                )
+                email.attach(f"factura_{pedido.numero_orden}.pdf", pdf, 'application/pdf')
+                email.send()
+            except Exception as e:
+                print("Error enviando correo:", e)
 
-    if iva_total > 0:
-        y -= 15
-        p.drawString(340, y, "IVA:")
-        p.drawRightString(540, y, f"${iva_total:,.0f}".replace(",", "."))
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="factura_{pedido.numero_orden}.pdf"'
+        return response
 
-    if descuento_total > 0 or porcentaje_desc > 0:
-        y -= 15
-        p.drawString(340, y, f"Descuento ({porcentaje_desc}%):")
-        p.drawRightString(540, y, f"-${descuento_total:,.0f}".replace(",", "."))
-
-    if retefuente_total > 0:
-        y -= 15
-        p.drawString(340, y, "ReteFuente:")
-        p.drawRightString(540, y, f"-${retefuente_total:,.0f}".replace(",", "."))
-
-    y -= 15
-    p.drawString(340, y, "Envío:")
-    if costo_envio_num == 0:
-        p.drawRightString(540, y, "GRATIS")
-    else:
-        p.drawRightString(540, y, f"${costo_envio_num:,.0f}".replace(",", "."))
-
-    y -= 22
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(340, y, "TOTAL:")
-    p.drawRightString(540, y, f"${total_final:,.0f}".replace(",", "."))
-
-    draw_footer()
-    p.save()
-    pdf = buffer.getvalue()
-    buffer.close()
-
-    # ENVÍO AUTOMÁTICO DE CORREO COPIANDO AL CLIENTE DE LA BASE DE DATOS
-    email_cliente = getattr(pedido, 'cliente_email', None)
-    if email_cliente:
-        try:
-            email = EmailMessage(
-                subject=f"Factura {pedido.numero_orden} - {nombre_tienda}",
-                body="¡Gracias por tu confianza! Adjuntamos el detalle formal de tu pedido de joyería. 💎",
-                from_email=correo_empresa,
-                to=[email_cliente]
-            )
-            email.attach(f"factura_{pedido.numero_orden}.pdf", pdf, 'application/pdf')
-            email.send()
-        except Exception as e:
-            print("Error enviando correo:", e)
-
-    response = HttpResponse(pdf, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="factura_{pedido.numero_orden}.pdf"'
-    return response
+    except Exception as e:
+        print(f"💥 ERROR EN GENERAR FACTURA: {str(e)}")
+        return HttpResponse(f"Error al generar la factura PDF: {str(e)}", status=500)
