@@ -7,7 +7,7 @@ class MotorFiscal:
     descuentos promocionales y costos de envío según las reglas fijadas en Perfil.
     """
 
-    def _init_(self, perfil_empresa):
+    def __init__(self, perfil_empresa=None, *args, **kwargs):
         self.perfil = perfil_empresa
 
     def calcular_descuento(self, subtotal: Decimal) -> Decimal:
