@@ -118,7 +118,7 @@ def dashboard(request):
         total_hoy = pedidos.filter(fecha__date=hoy).aggregate(total=Sum('total'))['total'] or 0
         total_ayer = pedidos.filter(fecha__date=ayer).aggregate(total=Sum('total'))['total'] or 0
         total_general = pedidos.aggregate(total=Sum('total'))['total'] or 0
-        ganancias_mes = pedidos.filter(fecha_month=hoy.month, fecha_year=hoy.year).aggregate(total=Sum('total'))['total'] or 0
+        ganancias_mes = pedidos.filter(fecha__month=hoy.month, fecha__year=hoy.year).aggregate(total=Sum('total'))['total'] or 0
 
         total_ingresos = float(total_general or 0)
 
