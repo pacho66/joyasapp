@@ -153,3 +153,14 @@ def calcular_totales_pedido(pedido, config=None, items=None):
 
     tipo_envio = getattr(pedido, 'tipo_envio', 'envio')
     return motor.liquidar_pedido(subtotal_base, tipo_envio=tipo_envio)
+
+def calcular_valores_item(self, subtotal_item: Decimal) -> dict:
+        """Calcula el IVA y retenciones específicas para un ítem dado."""
+        subtotal = Decimal(str(subtotal_item or '0.00'))
+        iva, retefuente = self.calcular_impuestos(subtotal)
+        total_item = subtotal + iva - retefuente
+        return {
+            'iva_item': iva,
+            'retefuente_item': retefuente,
+            'total_item': max(Decimal('0.00'), total_item)
+        }
