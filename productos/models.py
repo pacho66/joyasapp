@@ -758,14 +758,15 @@ class PedidoItem(models.Model):
         return self.cantidad * self.precio  
 
     def save(self, *args, **kwargs):
-        self.subtotal = self.calcular_subtotal()
+        self.subtotal = Decimal(str(self.calcular_subtotal() or 0))
         
         if getattr(self.pedido, 'aplica_iva', False):
             self.iva = self.subtotal * Decimal('0.19')
         else:
             self.iva = Decimal('0.00')
 
-        self.total_final = self.subtotal + self.iva - self.descuento
+        descuento = Decimal(str(getattr(self, 'descuento', 0) or 0))
+        self.total_final = self.subtotal + self.iva - descuento
         
         # Validación de stock previa a la escritura en DB
         if self.variante and self.variante.stock < self.cantidad:
@@ -774,7 +775,6 @@ class PedidoItem(models.Model):
             raise ValidationError(f"No hay stock suficiente. Disponibles: {self.producto.stock} unidades de este producto.")
 
         super().save(*args, **kwargs)
-
 
 class Gasto(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
