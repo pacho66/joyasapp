@@ -182,65 +182,78 @@ def calcular_totales_con_reglas_fiscales(pedido):
     
     return pedido
 
-def calcular_totales_pedido(pedido, perfil, items):
+def calcular_totales_pedido(pedido=None, perfil=None, items=None, porcentaje_descuento=None, tipo_envio=None, costo_envio=None):
     """
     Motor fiscal único para JoyasApp. Centraliza las matemáticas de IVA,
-    descuentos, envíos y retenciones para evitar duplicidad.
+    descuentos, envíos y retenciones. Soporta llamadas antes de crear el pedido.
     """
-    subtotal_base = sum(Decimal(str(item.subtotal or 0)) for item in items)
+    # 1. Subtotal base desde los ítems
+    if items:
+        subtotal_base = sum(Decimal(str(getattr(item, 'subtotal', 0) or 0)) for item in items)
+    elif pedido and hasattr(pedido, 'items'):
+        subtotal_base = sum(Decimal(str(getattr(item, 'subtotal', 0) or 0)) for item in pedido.items.all())
+    else:
+        subtotal_base = Decimal('0')
     
-    # 1. Descuentos promocionales del negocio o del pedido
-    porcentaje_desc = getattr(pedido, 'porcentaje_descuento', 0) or 0
+    # 2. Descuentos promocionales
+    if porcentaje_descuento is not None:
+        porcentaje_desc = porcentaje_descuento
+    elif pedido is not None:
+        porcentaje_desc = getattr(pedido, 'porcentaje_descuento', 0) or 0
+    else:
+        porcentaje_desc = 0
+
     if not porcentaje_desc and perfil and getattr(perfil, 'aplicar_descuentos', False):
         porcentaje_desc = getattr(perfil, 'porcentaje_descuento_promo', 0) or 0
+        
     descuento_total = subtotal_base * (Decimal(str(porcentaje_desc)) / Decimal('100')) if porcentaje_desc else Decimal('0')
 
     # =========================================================================
-    # 🎯 2. LOGÍSTICA Y ENVÍOS (CORREGIDO CON PRIORIDAD DE RECOGIDA)
+    # 🎯 3. LOGÍSTICA Y ENVÍOS
     # =========================================================================
-    tipo_envio = getattr(pedido, 'tipo_envio', '').lower() if pedido.tipo_envio else ''
+    if tipo_envio is None and pedido is not None:
+        tipo_envio = getattr(pedido, 'tipo_envio', '')
+    tipo_envio_str = str(tipo_envio).lower() if tipo_envio else ''
     
-    if tipo_envio == 'recogida':
-        # Prioridad Absoluta: Si recoge en tienda, el envío es $0, sin importar el monto de compra
+    if tipo_envio_str == 'recogida':
         envio = Decimal('0')
     else:
-        # Si es domicilio/transportadora, evaluamos las reglas dinámicas del negocio
-        envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
+        if costo_envio is not None:
+            envio = Decimal(str(costo_envio))
+        elif pedido is not None:
+            envio = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
+        else:
+            envio = Decimal('0')
+
         if envio == 0 and perfil and getattr(perfil, 'cobrar_envio', False):
-            limite_gratis = Decimal(str(getattr(perfil, 'envio_gratis_desde', 0) or 0)) # Ej: 300000
-            
+            limite_gratis = Decimal(str(getattr(perfil, 'envio_gratis_desde', 0) or 0))
             if subtotal_base < limite_gratis:
-                # Si no llega al mínimo, se cobra la tarifa estándar (Ej: 15000)
                 envio = Decimal(str(getattr(perfil, 'costo_envio_estandar', 0) or 0))
             else:
-                # Si supera el mínimo, el envío se fuerza a $0 (Envío Gratis)
                 envio = Decimal('0')
     # =========================================================================
 
-    # 3. IVA (Cálculo limpio y determinista desde las reglas del perfil)
+    # 4. IVA
     es_responsable_iva = perfil and getattr(perfil, 'responsable_iva', False)
     mostrar_iva_disc = perfil and getattr(perfil, 'mostrar_iva_discriminado', False)
     porcentaje_iva = Decimal(str(getattr(perfil, 'porcentaje_iva', 19) or 19))
     
     if es_responsable_iva:
         if mostrar_iva_disc:
-            # IVA Incluido: Se desglosa matemáticamente del precio base
             iva_total = subtotal_base - (subtotal_base / (Decimal('1') + (porcentaje_iva / Decimal('100'))))
             subtotal_render = subtotal_base - iva_total
             total_final = subtotal_base + envio - descuento_total
         else:
-            # IVA Adicional: Se calcula por encima del subtotal
             iva_total = subtotal_base * (porcentaje_iva / Decimal('100'))
             subtotal_render = subtotal_base
             total_final = subtotal_base + iva_total + envio - descuento_total
     else:
-        # Si la empresa no es responsable de IVA, el impuesto se apaga ($0)
         iva_total = Decimal('0')
         subtotal_render = subtotal_base
         total_final = subtotal_base + envio - descuento_total
 
-    # 4. Retenciones (Se restan del total final si disminuyen el pago exigible)
-    retefuente_total = sum(Decimal(str(item.retefuente or 0)) for item in items)
+    # 5. Retenciones
+    retefuente_total = sum(Decimal(str(getattr(item, 'retefuente', 0) or 0)) for item in items) if items else Decimal('0')
     total_final = max(Decimal('0'), total_final - retefuente_total)
 
     return {
@@ -253,7 +266,8 @@ def calcular_totales_pedido(pedido, perfil, items):
         'porcentaje_descuento': porcentaje_desc,
         'retefuente_total': retefuente_total,
         'envio': envio,
-        'costo_envio': envio, # Duplicado por compatibilidad con tus templates antiguos
+        'costo_envio': envio,
+        'tipo_envio': tipo_envio_str,
         'total_final': total_final,
     }
 

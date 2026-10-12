@@ -427,7 +427,13 @@ def pagar_pedido(request):
                 valor_envio_personalizado = Decimal(str(calcular_envio(ciudad, subtotal_con_descuento)))
 
         # ⚡ CÁLCULO GENERAL DE LA CASCADA MATEMÁTICA
-        totales = utilidades.calcular_totales_pedido(pedido, perfil, items)
+        totales = utilidades.calcular_totales_pedido(
+            perfil=perfil,
+            items=lineas_items, # o tu lista de ítems del carrito
+            porcentaje_descuento=porcentaje_descuento,
+            tipo_envio=tipo_envio,
+            costo_envio=valor_envio_personalizado
+        )
 
         # 👤 Buscar o crear cliente (Conserva tu lógica)
         cliente, creado = Cliente.objects.get_or_create(
