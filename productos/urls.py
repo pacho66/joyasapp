@@ -7,6 +7,7 @@ from .views import admin_catalogo
 from .views import carrito
 from .views import checkout
 from . import views
+from productos.views import checkout, pedidos, utilidades
 
 urlpatterns = [
 
@@ -57,7 +58,7 @@ urlpatterns = [
     path('pagar/wompi/<uuid:token>/', checkout.pagar_wompi, name='pagar_wompi'), # <-- Corregido a uuid y renombrado para claridad
     path('pago-exitoso/<uuid:token>/', checkout.pago_exitoso),
     path('confirmar-pago/<uuid:token>/', views.confirmar_pago_publico, name='confirmar_pago_publico'),
-    path('confirmar-pago/<int:pedido_id>/', checkout.confirmar_pago, name='confirmar_pago'),
+    path('confirmar-pago/<int:pedido_id>/', pedidos.confirmar_pago, name='confirmar_pago'),
     path('pago-fallido/<uuid:token>/', checkout.pago_fallido, name='pago_fallido'),
 
     # ===============================
@@ -72,7 +73,7 @@ urlpatterns = [
     # ===============================
     path('pedidos/', views.lista_pedidos, name='lista_pedidos'),
     path('pedido/<int:pedido_id>/', views.detalle_pedido, name='detalle_pedido'),
-    path('pedido/<int:pedido_id>/pdf/', views.pedido_pdf, name='pedido_pdf'),
+    path('pedido/<int:pedido_id>/pdf/', views.generar_factura, name='pedido_pdf'),
     path('pedido/<int:pedido_id>/abono/', views.registrar_abono, name='registrar_abono'),
 
     # ===============================
@@ -112,7 +113,7 @@ urlpatterns = [
     # ===============================
     # 📲 MARKETING
     # ===============================
-    path('whatsapp-segmento/', whatsapp_segmento, name='whatsapp_segmento'),
+    path('whatsapp-segmento/', views.whatsapp_segmento, name='whatsapp_segmento'),
 
     # ===============================
     # 💼 CARTERA

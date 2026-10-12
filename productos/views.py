@@ -1859,7 +1859,7 @@ def pedido_pdf(request, pedido_id):
 # 📊 BLOQUE 7: DASHBOARD ADMINISTRATIVO, CRM Y ESTADÍSTICAS
 # =========================================================================
 
-login_required(login_url='/login/')
+@login_required(login_url='/login/')
 def dashboard(request):
     usuario = request.user
 

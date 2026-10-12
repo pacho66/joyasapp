@@ -19,7 +19,6 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.staticfiles import finders
 
 # =========================================================================
 # 🏪 MODELOS
@@ -843,35 +842,4 @@ def pago_fallido(request, token):
     # 🎯 CORREGIDO: Ajustado a 'pago_fallido.html' para consistencia de rutas
     return render(request, 'pago_fallido.html', context)
 
-# ────────────────────────────────────────────────────────────────
-# 🛠️ FUNCIÓN AUXILIAR: TRADUCTOR DE RUTAS ESTÁTICAS PARA EL PDF
-# ────────────────────────────────────────────────────────────────
-def link_callback(uri, rel):
-    """
-    Convierte rutas relativas de estáticos y media de Django en rutas 
-    absolutas del sistema operativo para que xhtml2pdf las encuentre en Render.
-    """
-    # 1. Buscar el archivo usando el motor de estáticos de Django
-    result = finders.find(uri)
-    if result:
-        if not isinstance(result, (list, tuple)):
-            result = [result]
-        path = result[0]
-    else:
-        # 2. Si no lo encuentra, construir la ruta usando settings
-        s_url = settings.STATIC_URL
-        s_root = settings.STATIC_ROOT
-        m_url = settings.MEDIA_URL
-        m_root = settings.MEDIA_ROOT
 
-        if uri.startswith(m_url):
-            path = os.path.join(m_root, uri.replace(m_url, ""))
-        elif uri.startswith(s_url):
-            path = os.path.join(s_root, uri.replace(s_url, ""))
-        else:
-            return uri
-
-    # Asegurarnos de que el archivo físico realmente existe en el servidor
-    if not os.path.isfile(path):
-        return uri
-    return path

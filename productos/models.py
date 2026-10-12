@@ -1,20 +1,20 @@
-from django.db import models, transaction
-from django.utils import timezone
-from django.contrib.auth.models import User
-from django.utils.text import slugify
-from django.db.models import Sum
-from django.core.exceptions import ValidationError
-from django.db.models.signals import post_save, post_delete, pre_save
-from django.dispatch import receiver
-
-from decimal import Decimal
-import uuid
 import random
+import urllib.parse
+import uuid
+from decimal import Decimal
 
 from cloudinary.models import CloudinaryField
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.db import models, transaction
+from django.db.models import Sum, UniqueConstraint
+from django.db.models.signals import post_delete, post_save, pre_save
+from django.dispatch import receiver
+from django.utils import timezone
+from django.utils.text import slugify
 
 # =========================================================================
-# ⚙️ CENTRO DE CONTROL DE TARIFAS DEL SAAS (Ubicación segura y limpia)
+# ⚙️ CENTRO DE CONTROL DE TARIFAS DEL SAAS
 # =========================================================================
 PRECIOS_PLANES = {
     'basico': {
@@ -34,12 +34,13 @@ PRECIOS_PLANES = {
     }
 }
 
+
 class Perfil(models.Model):
     PLANES = [
-    ('basico', 'Básico'),
-    ('pro', 'Pro'),
-    ('premium', 'Premium'),
-]
+        ('basico', 'Básico'),
+        ('pro', 'Pro'),
+        ('premium', 'Premium'),
+    ]
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -67,18 +68,15 @@ class Perfil(models.Model):
     tiktok = models.CharField(max_length=150, blank=True, null=True)
 
     # FACTURACIÓN
-    nit = models.CharField(max_length=50,blank=True,null=True,verbose_name="NIT")
+    nit = models.CharField(max_length=50, blank=True, null=True, verbose_name="NIT")
 
     # PLAN SaaS
-    plan = models.CharField(max_length=20,choices=PLANES,default='basico')
-
+    plan = models.CharField(max_length=20, choices=PLANES, default='basico')
     activa = models.BooleanField(default=True)
-
     plan_vence = models.DateField(default=timezone.localdate)
 
     # DISEÑO
-    color_principal = models.CharField(max_length=20,default="#000000",verbose_name="Color principal")
-
+    color_principal = models.CharField(max_length=20, default="#000000", verbose_name="Color principal")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     # 🔒 Identificador único y seguro para el Webhook del SaaS
@@ -91,7 +89,7 @@ class Perfil(models.Model):
     # 🚚 CONFIGURACIÓN DE ENVÍOS 
     costo_envio_estandar = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name="Costo de Envío")
 
-    # ⚖️ NUEVA CONFIGURACIÓN TRIBUTARIA (Indispensable para Facturación Legal)
+    # ⚖️ CONFIGURACIÓN TRIBUTARIA
     responsable_iva = models.BooleanField(default=False, verbose_name="¿Es Responsable de IVA?")
     porcentaje_iva = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('19.00'), verbose_name="Porcentaje de IVA (%)")
     mostrar_iva_discriminado = models.BooleanField(default=True, verbose_name="Mostrar IVA Discriminado en Factura")
@@ -113,15 +111,14 @@ class Perfil(models.Model):
     @property
     def get_precio_plan(self):
         """Devuelve el costo mensual del plan actual del perfil."""
-        # Al estar en el mismo archivo, ya no necesitas importar nada de las vistas
         plan_info = PRECIOS_PLANES.get(self.plan, PRECIOS_PLANES['basico'])
         return plan_info['precio_mensual']
 
     def __str__(self):
         return f"{self.user.username} - {self.nombre_tienda}"
-    
+
+
 class ConfiguracionEmpresa(models.Model):
-    # Tipos de envío soportados por el negocio
     class TipoEnvio(models.TextChoices):
         RECOGIDA = 'recogida', 'Recogida en tienda (Sin costo)'
         ESTANDAR = 'estandar', 'Envío Estándar / Transportadora'
@@ -152,7 +149,8 @@ class ConfiguracionEmpresa(models.Model):
 
     def __str__(self):
         return f"Configuración Fiscal - {self.perfil.nombre_tienda}"
-    
+
+
 class Categoria(models.Model):
     nombre = models.CharField(max_length=100)
     usuario = models.ForeignKey(
@@ -164,6 +162,7 @@ class Categoria(models.Model):
 
     def __str__(self):
         return self.nombre
+
 
 class Producto(models.Model):
     # --- Campos Base ---
@@ -190,7 +189,7 @@ class Producto(models.Model):
     cantidad_mayorista = models.IntegerField(default=6)
 
     # --- Precios Base (Costo y Unidad) ---
-    precio_costo = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Precio de costo")
+    precio_costo = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), verbose_name="Precio de costo")
     precio_detal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     precio_semimayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     precio_mayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -201,7 +200,7 @@ class Producto(models.Model):
     precio_por_gramo_mayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     # =======================================================================
-    # 📊 MOTORES DE CÁLCULO DINÁMICO (Sincronizados con Decimales)
+    # 📊 MOTORES DE CÁLCULO DINÁMICO
     # =======================================================================
     @property
     def precio_calculado_detal(self):
@@ -221,7 +220,7 @@ class Producto(models.Model):
             return Decimal(str(self.precio_por_gramo_mayor or 0)) * Decimal(str(self.peso_producto or 0))
         return Decimal(str(self.precio_mayor or 0))
 
-    # --- Aliases para soporte dinámico en Plantillas HTML de Catálogos ---
+    # Aliases
     @property
     def precio_total_detal_dinamico(self): return self.precio_calculado_detal
     @property
@@ -230,7 +229,7 @@ class Producto(models.Model):
     def precio_total_mayor_dinamico(self): return self.precio_calculado_mayor
 
     # =======================================================================
-    # 📈 INDICADORES DE RENTABILIDAD (AUDITORÍA FINANCIERA)
+    # 📈 INDICADORES DE RENTABILIDAD
     # =======================================================================
     @property
     def utilidad_detal(self):
@@ -251,12 +250,12 @@ class Producto(models.Model):
         return self.stock
 
     # =======================================================================
-    # 🔥 LÓGICA CENTRAL DE ESCALAS (Carrito y Facturación)
+    # 🔥 LÓGICA CENTRAL DE ESCALAS
     # =======================================================================
     def precio_por_cantidad(self, cantidad):
         if self.tipo_venta == 'gramo':
             if not self.peso_producto:
-                return Decimal('0')
+                return Decimal('0.00')
 
             total_gramos = Decimal(str(cantidad)) * Decimal(str(self.peso_producto))
 
@@ -297,13 +296,14 @@ class Producto(models.Model):
             self.slug = slug
         super().save(*args, **kwargs)
 
+
 class ProductoImagen(models.Model):
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='imagenes')
-    # 🚀 Cambiamos ImageField por CloudinaryField
     imagen = CloudinaryField('imagen', blank=True, null=True)
 
     def __str__(self):
         return f"Imagen de {self.producto.nombre}"
+
 
 class ProductoVariante(models.Model):
     producto = models.ForeignKey(
@@ -312,34 +312,32 @@ class ProductoVariante(models.Model):
         related_name='variantes'
     )
     
-    # Parámetros Base
     color = models.CharField(max_length=100, null=True, blank=True)
     talla = models.CharField(max_length=50, null=True, blank=True)
     stock = models.PositiveIntegerField(default=0)
-    precio_venta = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, blank=True, null=True)
+    precio_venta = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), blank=True, null=True)
 
     @property
     def precio_total_dinamico(self):
         if self.producto.tipo_venta == 'gramo':
-            return (self.precio_venta or 0) * (self.peso or 0)
-        return self.precio_venta or 0
+            return (self.precio_venta or Decimal('0.00')) * (self.peso or Decimal('0.00'))
+        return self.precio_venta or Decimal('0.00')
     
-    # 💎 NUEVOS PARÁMETROS DE ESPECIFICACIÓN (JSVE™)
-    peso = models.DecimalField(max_digits=6, decimal_places=2, default=0.00, blank=True, null=True) # En gramos (ej: 4.50)
-    codigo = models.CharField(max_length=50, blank=True, null=True) # SKU único por variante
+    peso = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('0.00'), blank=True, null=True)
+    codigo = models.CharField(max_length=50, blank=True, null=True)
     activo = models.BooleanField(default=True)
-    
-    # Foto específica de la variante (Usando Cloudinary o models.ImageField)
     foto = CloudinaryField('imagen_variante', blank=True, null=True) 
 
     class Meta:
-        unique_together = ('producto', 'color', 'talla')
+        constraints = [
+            models.UniqueConstraint(fields=['producto', 'color', 'talla'], name='unique_variante_producto_color_talla')
+        ]
 
     def __str__(self):
         return f"{self.producto.nombre} | {self.color or 'U'}-{self.talla or 'U'} | ${self.precio_venta} ({self.stock} unds)"
 
+
 class CarritoItem(models.Model):
-    # ... tus campos se quedan exactamente igual ...
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
     variante = models.ForeignKey(ProductoVariante, null=True, blank=True, on_delete=models.CASCADE)
@@ -350,19 +348,15 @@ class CarritoItem(models.Model):
     talla = models.CharField(max_length=50, null=True, blank=True)
 
     def precio_aplicado(self):
-        """
-        Retorna el precio unitario correcto respetando la escala global del carrito
-        si fue calculada por la vista, o evaluando el item individualmente como respaldo.
-        """
-        # ✨ EL TRUCO MAESTRO: Si la vista le inyectó el tipo global en memoria, lo usamos.
-        # Si no (ej. desde el admin o un script), lo calcula por su propia cantidad.
         tipo = getattr(self, '_tipo_global', None)
         if not tipo:
-            if self.cantidad >= 12: tipo = "Mayorista"
-            elif self.cantidad >= 6: tipo = "Semi-Mayorista"
-            else: tipo = "Detal"
+            if self.cantidad >= 12: 
+                tipo = "Mayorista"
+            elif self.cantidad >= 6: 
+                tipo = "Semi-Mayorista"
+            else: 
+                tipo = "Detal"
 
-        # 🔵 MONTAJE PARA PRODUCTOS POR GRAMOS
         if self.producto.tipo_venta == 'gramo':
             if tipo == "Mayorista":
                 precio = self.producto.precio_por_gramo_mayor
@@ -371,10 +365,8 @@ class CarritoItem(models.Model):
             else:
                 precio = self.producto.precio_por_gramo_detal
             
-            # Si el precio de la escala es None, retrocedemos al detal por seguridad
             return Decimal(str(precio or self.producto.precio_por_gramo_detal or 0))
         
-        # 🟡 MONTAJE PARA PRODUCTOS POR UNIDAD
         else:
             if tipo == "Mayorista":
                 precio = self.producto.precio_mayor
@@ -386,14 +378,12 @@ class CarritoItem(models.Model):
             return Decimal(str(precio or self.producto.precio_detal or 0))
     
     def precio_unitario_articulo(self):
-        """Retorna el precio de una sola pieza completa ajustada al nivel actual del carrito."""
-        precio_base = self.precio_aplicado()  # Trae el valor base (por gramo o unidad)
+        precio_base = self.precio_aplicado()
         if self.producto.tipo_venta == 'gramo':
             return Decimal(str(self.producto.peso_producto or 0)) * precio_base
         return precio_base
 
     def subtotal(self):
-        """Calcula el subtotal real multiplicando gramos totales o unidades fijas."""
         precio_uni = self.precio_aplicado()
         cantidad_val = Decimal(str(self.cantidad or 1))
 
@@ -405,7 +395,6 @@ class CarritoItem(models.Model):
         return cantidad_val * precio_uni
 
     def ahorro(self):
-        """Calcula cuánto se está ahorrando el cliente real contra el precio detal base."""
         precio_act = self.precio_aplicado()
         cantidad_val = Decimal(str(self.cantidad or 1))
 
@@ -421,35 +410,36 @@ class CarritoItem(models.Model):
     def __str__(self):
         return f"{self.cantidad} x {self.producto.nombre}"
 
+
 class Cliente(models.Model):
     # 🏢 AISLAMIENTO SAAS (Multi-tenant)
-    usuario = models.ForeignKey(User, on_delete=models.CASCADE) # El dueño de la joyería
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     
-    # 👤 DATOS BÁSICOS e IDENTIFICACIÓN
+    # 👤 DATOS BÁSICOS
     nombre = models.CharField(max_length=100)
     nit = models.CharField(max_length=50, blank=True, null=True)
-    telefono = models.CharField(max_length=20, unique=True) # Llave maestra para WhatsApp
+    telefono = models.CharField(max_length=20, unique=True)
     email = models.EmailField(blank=True, null=True)
     ciudad = models.CharField(max_length=100, blank=True, null=True)
     direccion = models.CharField(max_length=255, blank=True, null=True)
-    fecha_cumpleanos = models.DateField(blank=True, null=True)  # 🎂 Para campaña: Cumpleaños
-    observaciones = models.TextField(blank=True)                # Notas internas del vendedor
-    etiquetas = models.CharField(max_length=300, blank=True, help_text="Ej: Novias, Mayorista, Plata") # 🏷️ Tags
+    fecha_cumpleanos = models.DateField(blank=True, null=True)
+    observaciones = models.TextField(blank=True)
+    etiquetas = models.CharField(max_length=300, blank=True, help_text="Ej: Novias, Mayorista, Plata")
     
-    # 🏢 CRM COLABORATIVO (Asignación interna)
+    # 🏢 CRM COLABORATIVO
     asesor = models.ForeignKey(
         User, 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True, 
         related_name="clientes_asignados"
-    ) # Para joyerías con varios vendedores
+    )
 
     # 🔒 PRIVACIDAD Y SEGUIMIENTO
-    acepta_whatsapp = models.BooleanField(default=True) # 📱 Control de bajas/Opt-in
+    acepta_whatsapp = models.BooleanField(default=True)
     activo = models.BooleanField(default=True)
 
-    # 💎 CLASIFICACIÓN Y DESCUENTOS ORIGINALES
+    # 💎 CLASIFICACIÓN
     tipo_cliente = models.CharField(
         max_length=20,
         choices=[
@@ -460,7 +450,7 @@ class Cliente(models.Model):
         ],
         default='detalle'
     )
-    porcentaje_descuento = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    porcentaje_descuento = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
 
     # 📈 SEGMENTACIÓN CRM AVANZADA
     origen = models.CharField(
@@ -499,21 +489,21 @@ class Cliente(models.Model):
         ]
     )
 
-    # 📊 CONTROL Y MÉTRICAS FINANCIERAS
-    total_compras = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    saldo_pendiente = models.DecimalField(max_digits=12, decimal_places=2, default=0.00) # 🪙 Control de apartados
+    # 📊 METRICAS FINANCIERAS
+    total_compras = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    saldo_pendiente = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     numero_pedidos = models.IntegerField(default=0)
     ultima_compra = models.DateTimeField(null=True, blank=True)
     
-    # 🎯 PREFERENCIAS DE CONSUMO (Historial inteligente)
+    # 🎯 PREFERENCIAS DE CONSUMO
     categoria_favorita = models.CharField(max_length=100, blank=True, null=True)
     variante_favorita_resumen = models.CharField(max_length=150, blank=True, null=True)
     
-    # 🔄 RETENCIÓN Y REACTIVACIÓN FUTURA
+    # 🔄 RETENCIÓN
     ultima_categoria = models.CharField(max_length=100, blank=True, null=True)
     ultima_variante = models.CharField(max_length=150, blank=True, null=True)
     ultima_factura = models.CharField(max_length=40, blank=True, null=True)
-    dias_sin_comprar = models.IntegerField(default=0) # 🎁 Base para el automatizador
+    dias_sin_comprar = models.IntegerField(default=0)
     ultimo_contacto = models.DateTimeField(blank=True, null=True)
     proxima_tarea = models.DateTimeField(blank=True, null=True)
 
@@ -524,17 +514,11 @@ class Cliente(models.Model):
         
     @property
     def ticket_promedio(self):
-        """Calcula dinámicamente el valor promedio por pedido"""
         if self.numero_pedidos > 0:
             return self.total_compras / self.numero_pedidos
-        return 0.00
+        return Decimal('0.00')
 
     def actualizar_ciclo_y_rangos(self):
-        """
-        🚀 MÓDULO INTELIGENTE POST-VENTA
-        Evalúa automáticamente la inactividad, promueve a VIP y gestiona los rangos del CRM.
-        """
-        # 1. Control de Días sin comprar (Reactivación)
         if self.ultima_compra:
             delta = timezone.now() - self.ultima_compra
             self.dias_sin_comprar = delta.days
@@ -543,11 +527,10 @@ class Cliente(models.Model):
         else:
             self.dias_sin_comprar = 0
 
-        # 2. Asignación Inteligente de Niveles (Gamificación basada en tus metas de negocio)
         if self.total_compras >= 5000000 or self.numero_pedidos >= 20:
             self.nivel = "Diamante"
             self.estado = "VIP"
-            self.tipo_cliente = "vip" # Sincroniza con tu campo original
+            self.tipo_cliente = "vip"
         elif self.total_compras >= 3000000 or self.numero_pedidos >= 10:
             self.nivel = "Oro"
             if self.dias_sin_comprar <= 90: 
@@ -561,21 +544,16 @@ class Cliente(models.Model):
             if self.numero_pedidos == 1: 
                 self.estado = "Nuevo"
 
-    # === 📱 MÓDULO DE AUTOMATIZACIÓN DE WHATSAPP (ENLACES DINÁMICOS MULTI-TENANT) ===
+    # === 📱 AUTOMATIZACIÓN DE WHATSAPP ===
     
     @property
     def link_whatsapp_cumpleanos(self):
-        """Mensaje de felicitación + gancho de fidelización (10% de descuento)"""
-        import urllib.parse
-        
-        # 🏢 Intentamos traer el nombre de la tienda configurado en su perfil SaaS
         try:
-            # Reemplaza 'perfil' por el related_name exacto de tu modelo de configuración
             nombre_negocio = self.usuario.perfil.nombre_tienda
         except AttributeError:
             nombre_negocio = "nuestra joyería"
             
-        if not nombre_negocio: # Por si el campo está vacío en la base de datos
+        if not nombre_negocio:
             nombre_negocio = "nuestra joyería"
         
         texto = (
@@ -588,9 +566,6 @@ class Cliente(models.Model):
 
     @property
     def link_whatsapp_saldo(self):
-        """Recordatorio sutil y elegante de saldo pendiente"""
-        import urllib.parse
-        
         try:
             nombre_negocio = self.usuario.perfil.nombre_tienda
         except AttributeError:
@@ -610,9 +585,6 @@ class Cliente(models.Model):
 
     @property
     def link_whatsapp_inactivo(self):
-        """Campaña de reactivación para clientes perdidos (+90 días)"""
-        import urllib.parse
-        
         try:
             nombre_negocio = self.usuario.perfil.nombre_tienda
         except AttributeError:
@@ -628,21 +600,16 @@ class Cliente(models.Model):
             f"válido por esta semana si deseas consentirte de nuevo. ¡Un abrazo!"
         )
         return f"https://wa.me/{self.telefono}?text={urllib.parse.quote(texto)}"
-    
+
+
 class Pedido(models.Model):
-
     # 🔹 IDENTIFICACIÓN
-    usuario = models.ForeignKey(User,on_delete=models.CASCADE,null=True,blank=True)
-
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     tienda = models.ForeignKey(Perfil, on_delete=models.CASCADE, null=True, blank=True)
-
     numero_orden = models.CharField(max_length=20, unique=True)
-
     token_publico = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-
     fecha = models.DateTimeField(auto_now_add=True)
-
-    cliente = models.ForeignKey('Cliente',on_delete=models.SET_NULL,null=True,blank=True,related_name='pedidos')
+    cliente = models.ForeignKey('Cliente', on_delete=models.SET_NULL, null=True, blank=True, related_name='pedidos')
 
     # 🔹 CLIENTE
     cliente_nombre = models.CharField(max_length=100, blank=True, null=True)
@@ -653,40 +620,39 @@ class Pedido(models.Model):
     cliente_ciudad = models.CharField(max_length=100, blank=True, null=True)
 
     # 🔹 ESTADO Y TIPO
-    ESTADOS = [('pendiente', 'Pendiente'),('pagado', 'Pagado'),('enviado', 'Enviado'),('vencido', 'Vencido'),]
-    estado = models.CharField(max_length=20,choices=ESTADOS,default='pendiente')
+    ESTADOS = [('pendiente', 'Pendiente'), ('pagado', 'Pagado'), ('enviado', 'Enviado'), ('vencido', 'Vencido')]
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
     es_credito = models.BooleanField(default=False)
-    TIPO_PAGO = (('contado', 'Contado'),('credito', 'Crédito'),)
-    tipo_pago = models.CharField(max_length=10,choices=TIPO_PAGO,default='contado')
-    saldo_pendiente = models.DecimalField(max_digits=12,decimal_places=2,default=0)
-    fecha_limite = models.DateField(null=True,blank=True)
+    TIPO_PAGO = (('contado', 'Contado'), ('credito', 'Crédito'))
+    tipo_pago = models.CharField(max_length=10, choices=TIPO_PAGO, default='contado')
+    saldo_pendiente = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    fecha_limite = models.DateField(null=True, blank=True)
     fecha_pago = models.DateField(null=True, blank=True)
 
-    # 🔍 Auditoría y Soporte de Transacciones
+    # 🔍 AUDITORÍA Y PASARELAS
     mercadopago_payment_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="ID Pago Mercado Pago")
     wompi_transaction_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="ID Transacción Wompi")
 
     # 🔹 IMPUESTOS Y DESCUENTOS
-    aplica_iva = models.BooleanField(default=False)  # 👈 ESTE AGREGAS
+    aplica_iva = models.BooleanField(default=False)
     es_retenedor = models.BooleanField(default=False)
-    iva = models.DecimalField(max_digits=12,decimal_places=2,default=0)
-    retefuente = models.DecimalField(max_digits=12,decimal_places=2,default=0)
-    descuento_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    porcentaje_descuento = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    tipo_envio = models.CharField(max_length=20,choices=[('recogida', 'Recogida en tienda'),('domicilio', 'Domicilio'),('transportadora', 'Transportadora'),],default='recogida')
-    costo_envio = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    iva = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    retefuente = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    descuento_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    porcentaje_descuento = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
+    tipo_envio = models.CharField(
+        max_length=20,
+        choices=[('recogida', 'Recogida en tienda'), ('domicilio', 'Domicilio'), ('transportadora', 'Transportadora')],
+        default='recogida'
+    )
+    costo_envio = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     direccion_envio = models.CharField(max_length=255, blank=True, null=True)
     ciudad_envio = models.CharField(max_length=100, blank=True, null=True)
 
-     # 🔹 TOTAL
-    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-
-    # 🔹 COSTOS (🔥 PRO)
-    costo_material = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    costo_mano_obra = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
-    # Asegúrate de tener estos campos si usas créditos/descuentos en la sincronización:
-    saldo_pendiente = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    # 🔹 TOTAL Y COSTOS
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    costo_material = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    costo_mano_obra = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
 
     @property
     def utilidad(self):
@@ -698,27 +664,21 @@ class Pedido(models.Model):
     
     @property
     def total_limpio(self):
-        """Devuelve el total como un entero para usar fácilmente en HTML o pasarelas"""        
         return int(self.total)
     
     @property
     def subtotal_antes_de_descuento(self):
-        """Suma de todos los subtotales de productos antes de aplicar promociones"""
         return sum(item.subtotal for item in self.items.all())
 
     @property
     def subtotal_neto(self):
-        """Base imponible tras aplicar el descuento (Subtotal de factura)"""
         return self.subtotal_antes_de_descuento - self.descuento_total
 
     def __str__(self):
         return self.numero_orden
 
     def sincronizar_pedido(self):
-        """
-        🔥 PUNTO ÚNICO DE VERDAD FINANCIERA
-        Centraliza el cálculo matemático total de la orden de forma atómica.
-        """
+        """PUNTO ÚNICO DE VERDAD FINANCIERA"""
         with transaction.atomic():
             items_relacionados = self.items.select_related('producto').all()
             
@@ -726,16 +686,12 @@ class Pedido(models.Model):
             descuento_items = sum(item.descuento for item in items_relacionados)
             iva_items = sum(item.iva for item in items_relacionados)
             
-            # Recalcular costo real de manufactura (precio_costo de cada producto)
             self.costo_material = sum(Decimal(str(item.producto.precio_costo or 0)) * item.cantidad for item in items_relacionados)
-            
-            # Sumar costos adicionales si tuvieras fletes en el modelo base (ej: costo_envio)
             envio = Decimal(str(getattr(self, 'costo_envio', 0) or 0))
             
             self.total = subtotal_items + iva_items + envio - descuento_items
             self.descuento_total = descuento_items
 
-            # Sistema de cuentas por cobrar (Créditos / Apartados)
             if getattr(self, 'tipo_pago', 'contado') == 'credito' or getattr(self, 'es_credito', False):
                 total_abonos = self.abonos.aggregate(suma=Sum('monto'))['suma'] or Decimal('0.00')
                 self.saldo_pendiente = max(Decimal('0.00'), self.total - total_abonos)
@@ -747,10 +703,7 @@ class Pedido(models.Model):
                 self.saldo_pendiente = Decimal('0.00')
 
             self.save(update_fields=['total', 'costo_material', 'descuento_total', 'saldo_pendiente'])
-    
-# ==========================================
-# 💵 CONTROL DE INGRESOS: ABONOS
-# ==========================================
+
 
 class Abono(models.Model):
     pedido = models.ForeignKey(
@@ -767,20 +720,14 @@ class Abono(models.Model):
     def save(self, *args, **kwargs):
         with transaction.atomic():
             super().save(*args, **kwargs)
-            # Sincroniza automáticamente el saldo pendiente del pedido al agregar/editar abonos
             self.pedido.sincronizar_pedido()
 
     def delete(self, *args, **kwargs):
         with transaction.atomic():
             pedido_padre = self.pedido
             super().delete(*args, **kwargs)
-            # Si se elimina un abono, recalculamos para subir el saldo pendiente de inmediato
             pedido_padre.sincronizar_pedido()
 
-
-# ==========================================
-# 📦 DETALLE DE FACTURA: PEDIDOITEM
-# ==========================================
 
 class PedidoItem(models.Model):
     usuario = models.ForeignKey(
@@ -794,12 +741,12 @@ class PedidoItem(models.Model):
     variante = models.ForeignKey(ProductoVariante, null=True, blank=True, on_delete=models.SET_NULL)
     cantidad = models.PositiveIntegerField()
     precio = models.DecimalField(max_digits=10, decimal_places=2)
-    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    descuento = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    iva = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    retefuente = models.DecimalField(max_digits=12, decimal_places=2, default=0)  
-    total_final = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    total_gramos = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    descuento = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
+    iva = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    retefuente = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))  
+    total_final = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    total_gramos = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
 
     def calcular_subtotal(self):
         if self.producto.tipo_venta == 'gramo':
@@ -807,7 +754,7 @@ class PedidoItem(models.Model):
             self.total_gramos = Decimal(str(self.cantidad)) * peso_unitario
             return self.total_gramos * self.precio
         
-        self.total_gramos = 0
+        self.total_gramos = Decimal('0.00')
         return self.cantidad * self.precio  
 
     def save(self, *args, **kwargs):
@@ -816,11 +763,11 @@ class PedidoItem(models.Model):
         if getattr(self.pedido, 'aplica_iva', False):
             self.iva = self.subtotal * Decimal('0.19')
         else:
-            self.iva = 0
+            self.iva = Decimal('0.00')
 
         self.total_final = self.subtotal + self.iva - self.descuento
         
-        # Validación estricta antes de escribir en Base de Datos para evitar ventas sin stock
+        # Validación de stock previa a la escritura en DB
         if self.variante and self.variante.stock < self.cantidad:
             raise ValidationError(f"No hay stock suficiente. Disponibles: {self.variante.stock} unidades de esta variante.")
         elif not self.variante and self.producto.stock < self.cantidad:
@@ -829,21 +776,19 @@ class PedidoItem(models.Model):
         super().save(*args, **kwargs)
 
 
-# ==========================================
-# 📉 CONTROL DE EGRESOS: GASTOS
-# ==========================================
 class Gasto(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     nombre = models.CharField(max_length=150)
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     categoria = models.CharField(max_length=50, null=True, blank=True) 
-    observaciones = models.TextField(null=True, blank=True) # ✅ Añadido para auditoría
-    activo = models.BooleanField(default=True)              # ✅ NUEVO: Borrado lógico contable
+    observaciones = models.TextField(null=True, blank=True)
+    activo = models.BooleanField(default=True)
     fecha = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.nombre} - {self.monto}"
- 
+
+
 # ==========================================
 # 🛡️ ESCUDO DE SEÑALES (MÓDULO LOGÍSTICO)
 # ==========================================
@@ -862,7 +807,6 @@ def capturar_estado_anterior_inventario(sender, instance, **kwargs):
 @receiver(post_save, sender=PedidoItem)
 def procesar_ajuste_inventario_dinamico(sender, instance, created, **kwargs):
     with transaction.atomic():
-        # CASO A: Registro de una nueva venta
         if created:
             if instance.variante:
                 if instance.variante.stock < instance.cantidad:
@@ -875,15 +819,12 @@ def procesar_ajuste_inventario_dinamico(sender, instance, created, **kwargs):
                 instance.producto.stock -= instance.cantidad
                 instance.producto.save(update_fields=['stock'])
                 
-        # CASO B: Corrección de factura (Edición de ítem)
         else:
             previo = getattr(instance, '_estado_previo', None)
             if not previo:
                 return
 
-            # Si el usuario cambió de variante/talla/color en la edición
             if previo.variante != instance.variante:
-                # Devolución a la variante anterior
                 if previo.variante:
                     previo.variante.stock += previo.cantidad
                     previo.variante.save(update_fields=['stock'])
@@ -891,7 +832,6 @@ def procesar_ajuste_inventario_dinamico(sender, instance, created, **kwargs):
                     previo.producto.stock += previo.cantidad
                     previo.producto.save(update_fields=['stock'])
 
-                # Descuento a la nueva variante elegida
                 if instance.variante:
                     if instance.variante.stock < instance.cantidad:
                         raise ValidationError("Stock insuficiente en la nueva variante.")
@@ -903,7 +843,6 @@ def procesar_ajuste_inventario_dinamico(sender, instance, created, **kwargs):
                     instance.producto.stock -= instance.cantidad
                     instance.producto.save(update_fields=['stock'])
             
-            # Si mantuvo la variante pero alteró las cantidades numéricas
             else:
                 diferencia = instance.cantidad - previo.cantidad
                 if instance.variante:
@@ -917,7 +856,6 @@ def procesar_ajuste_inventario_dinamico(sender, instance, created, **kwargs):
                     instance.producto.stock -= diferencia
                     instance.producto.save(update_fields=['stock'])
 
-        # Se lanza la sincronización financiera consolidada una única vez
         instance.pedido.sincronizar_pedido()
 
 
@@ -931,6 +869,4 @@ def devolver_inventario_por_eliminacion(sender, instance, **kwargs):
             instance.producto.stock += instance.cantidad
             instance.producto.save(update_fields=['stock'])
             
-        # Sincroniza los totales financieros tras la eliminación del ítem
         instance.pedido.sincronizar_pedido()
-    
