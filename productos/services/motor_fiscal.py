@@ -7,7 +7,7 @@ class MotorFiscal:
     descuentos promocionales y costos de envío según las reglas fijadas en Perfil.
     """
 
-    def __init__(self, perfil_empresa):
+    def _init_(self, perfil_empresa):
         self.perfil = perfil_empresa
 
     def calcular_descuento(self, subtotal: Decimal) -> Decimal:
@@ -73,12 +73,22 @@ class MotorFiscal:
 
         return iva, retefuente
 
+    def calcular_valores_item(self, subtotal_item: Decimal) -> dict:
+        """Calcula el IVA y retenciones específicas para un ítem dado."""
+        subtotal = Decimal(str(subtotal_item or '0.00'))
+        iva, retefuente = self.calcular_impuestos(subtotal)
+        total_item = subtotal + iva - retefuente
+        return {
+            'iva_item': iva,
+            'retefuente_item': retefuente,
+            'total_item': max(Decimal('0.00'), total_item)
+        }
+
     def liquidar_pedido(
         self, subtotal_base: Decimal, tipo_envio: str = 'envio'
     ) -> dict:
         """
         Calcula de principio a fin el resumen financiero para un carrito o pedido.
-        Retorna claves compatibles tanto con las vistas como con la generación de facturas.
         """
         descuento = self.calcular_descuento(subtotal_base)
         subtotal_neto = max(Decimal('0.00'), subtotal_base - descuento)
@@ -120,7 +130,6 @@ def calcular_totales_pedido(pedido, config=None, items=None):
     Función helper de compatibilidad para ser usada por vistas y PDFs.
     Instancia MotorFiscal y ejecuta la liquidación completa.
     """
-    # Prioridad de perfil/configuración
     perfil_empresa = (
         config
         or getattr(pedido, 'perfil', None)
@@ -128,8 +137,7 @@ def calcular_totales_pedido(pedido, config=None, items=None):
     )
     motor = MotorFiscal(perfil_empresa)
 
-    # Cálculo del subtotal base según los items
-    lista_items = items if items is not None else pedido.items.all()
+    lista_items = items if items is not None else getattr(pedido, 'items', None) and pedido.items.all() or []
     if lista_items:
         subtotal_base = sum(
             Decimal(
@@ -153,14 +161,3 @@ def calcular_totales_pedido(pedido, config=None, items=None):
 
     tipo_envio = getattr(pedido, 'tipo_envio', 'envio')
     return motor.liquidar_pedido(subtotal_base, tipo_envio=tipo_envio)
-
-def calcular_valores_item(self, subtotal_item: Decimal) -> dict:
-        """Calcula el IVA y retenciones específicas para un ítem dado."""
-        subtotal = Decimal(str(subtotal_item or '0.00'))
-        iva, retefuente = self.calcular_impuestos(subtotal)
-        total_item = subtotal + iva - retefuente
-        return {
-            'iva_item': iva,
-            'retefuente_item': retefuente,
-            'total_item': max(Decimal('0.00'), total_item)
-        }
