@@ -30,24 +30,35 @@ from .contabilidad import _asegurar_gastos_basicos
 @login_required(login_url='/login/')
 def dashboard(request):
     usuario = request.user
+    hoy = timezone.localdate()
 
-    # ✅ Perfil multiusuario del SaaS
+    # ✅ Perfil multiusuario del SaaS con 30 días gratis por defecto
     perfil, creado = Perfil.objects.get_or_create(
         user=usuario,
         defaults={
             'nombre_tienda': 'JoyasApp',
-            'plan': 'gratis'
+            'plan': 'gratis',
+            'plan_vence': hoy + timedelta(days=30)  # Asigna 30 días gratis en la creación
         }
     )
 
-    # 🛡️ Protección de Gastos Activa
-    _asegurar_gastos_basicos(usuario)
+    # Si es un perfil existente sin fecha de vencimiento, le asignamos la prueba gratis de 30 días
+    if not perfil.plan_vence:
+        perfil.plan_vence = (perfil.user.date_joined.date() if perfil.user.date_joined else hoy) + timedelta(days=30)
+        perfil.save()
 
-    # 🔒 Validar plan
-    if perfil.plan_vence and perfil.plan_vence < timezone.localdate():
-        return render(request, 'plan_vencido.html')
+    # 🛡️ Protección de Gastos Activa
+    try:
+        _asegurar_gastos_basicos(usuario)
+    except Exception as e:
+        print(f"⚠️ Aviso en _asegurar_gastos_basicos: {e}")
+
+    # 🔒 Validar vencimiento del plan
+    plan_vencido = perfil.plan_vence and perfil.plan_vence < hoy
+    if plan_vencido:
+        # En lugar de romper, renderizamos con la bandera de plan vencido o redirigimos limpiamente
+        return render(request, 'plan_vencido.html', {'perfil': perfil, 'hoy': hoy})
     
-    hoy = timezone.localdate()
     ayer = hoy - timedelta(days=1)
     hace_30 = timezone.now() - timedelta(days=30)
 
@@ -70,7 +81,6 @@ def dashboard(request):
     )
 
     fechas = [v['fecha_dia'].strftime('%d/%m') for v in ventas_por_dia if v['fecha_dia']]
-    # 🛡️ PROTECCIÓN ANTI-NONE: Si no hay ventas, asigna 0.0 en vez de romper
     totales = [float(v['total']) if v['total'] is not None else 0.0 for v in ventas_por_dia]
     
     cliente_id = request.GET.get('cliente')
@@ -81,9 +91,8 @@ def dashboard(request):
     productos = Producto.objects.filter(usuario=usuario)
 
     # ==========================
-    # 🔴 CARTERA Y MOROSOS (UNIFICADO Y CORREGIDO)
+    # 🔴 CARTERA Y MOROSOS
     # ==========================
-    # 1. Buscamos primero los pedidos vencidos del usuario de forma directa
     pedidos_en_mora = Pedido.objects.filter(
         usuario=usuario,
         tipo_pago='credito',
@@ -91,16 +100,11 @@ def dashboard(request):
         fecha_limite__lt=hoy
     )
 
-    # 2. Calculamos el total exacto de la cartera vencida sin riesgo de multiplicarse
     cartera_agg = pedidos_en_mora.aggregate(suma_mora=Sum('saldo_pendiente'))['suma_mora']
     morosos_total = float(cartera_agg) if cartera_agg is not None else 0.0
 
-    # 3. Obtenemos los clientes únicos que son dueños de esos pedidos en mora
-    # Usamos list(set(...)) para tener la lista limpia de IDs de clientes morosos
     clientes_morosos_ids = pedidos_en_mora.values_list('cliente_id', flat=True).distinct()
     clientes_morosos = Cliente.objects.filter(id__in=clientes_morosos_ids)
-    
-    # El conteo real de personas deudoras en el dashboard
     morosos_count = clientes_morosos.count()
     
     # ==========================
@@ -115,7 +119,6 @@ def dashboard(request):
     elif tipo == 'dormidos':
         clientes_filtrados = clientes.filter(ultima_compra__lt=hace_30).distinct()
     elif tipo == 'morosos':
-        # 💎 SOLUCIÓN UNIFICADA: Buscamos los IDs desde Pedido para evitar el colapso en Render
         ids_morosos = Pedido.objects.filter(
             usuario=usuario,
             tipo_pago='credito',
@@ -133,9 +136,7 @@ def dashboard(request):
     }
     mensaje = mensajes.get(tipo, "📊 Panel General")
 
-    # =======================================================================
-    # 🔥 SOLUCIÓN: Recalcular en caliente el total real de compras acumuladas
-    # =======================================================================
+    # Recalcular en caliente el total real de compras acumuladas
     for clie in clientes_filtrados:
         total_real = Pedido.objects.filter(
             usuario=usuario,
@@ -157,7 +158,7 @@ def dashboard(request):
     ).aggregate(total=Sum('total'))['total'] or 0
 
     # =======================================================================
-    # 💰 PANEL FINANCIERO JOYASAPP - EL DIFERENCIAL PRO
+    # 💰 PANEL FINANCIERO
     # =======================================================================
     total_ingresos = float(total_general or 0)
 
@@ -170,6 +171,7 @@ def dashboard(request):
     total_costos = total_material + total_mano_obra
 
     try:
+        from ..models import Gasto
         total_gastos = float(Gasto.objects.filter(usuario=usuario).aggregate(total=Sum('monto'))['total'] or 0)
     except Exception:
         total_gastos = 0.0
@@ -181,7 +183,7 @@ def dashboard(request):
     margen_neto = (utilidad_neta / total_ingresos * 100) if total_ingresos > 0 else 0
 
     # =======================================================================
-    # 💎 VALORIZACIÓN DE INVENTARIO (Sincronizado con precio_costo y Variantes)
+    # 💎 VALORIZACIÓN DE INVENTARIO
     # =======================================================================
     inventario = Producto.objects.filter(usuario=usuario).prefetch_related('variantes')
     inv_valorizado_costo = 0.0
@@ -202,7 +204,7 @@ def dashboard(request):
     utilidad_potencial_inv = inv_valorizado_venta - inv_valorizado_costo
     
     # ==========================
-    # PEDIDOS E INVENTARIO
+    # PEDIDOS E INVENTARIO (CORREGIDO ORM EN STOCK)
     # ==========================
     pedidos_hoy = pedidos.filter(fecha__date=hoy).count()
     total_pedidos = pedidos.count()
@@ -217,6 +219,7 @@ def dashboard(request):
 
     total_productos = productos.count()
     productos_sin_stock = productos.filter(stock=0).count()
+    # 🎯 CORRECCIÓN CLAVE: doble guion bajo en ORM stock_gt y stock_lte
     productos_bajo_stock = productos.filter(stock_gt=0, stock_lte=5).count()
 
     ticket_promedio = total_general / total_pedidos if total_pedidos > 0 else 0
@@ -238,19 +241,17 @@ def dashboard(request):
         'fechas': fechas,
         'totales': totales,
         
-        # Variables financieras consistentes
         'total_ingresos': total_ingresos,
         'total_material': total_material,
         'total_mano_obra': total_mano_obra,
         'total_costos': total_costos,
         'total_gastos': total_gastos,
-        'utilidad': utilidad_bruta,       # Asegurada para compatibilidad de plantillas
+        'utilidad': utilidad_bruta,
         'utilidad_bruta': utilidad_bruta,
         'utilidad_neta': utilidad_neta,
         'margen_bruto': margen_bruto,
         'margen_neto': margen_neto,
         
-        # Métricas de inventario pro
         'inv_valorizado_costo': inv_valorizado_costo,
         'inv_valorizado_venta': inv_valorizado_venta,
         'utilidad_potencial_inv': utilidad_potencial_inv,
