@@ -1,7 +1,8 @@
+from decimal import Decimal
 import urllib.parse
 import traceback
 
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.http import HttpResponse
 from django.template.loader import get_template
 from django.utils import timezone
@@ -10,97 +11,143 @@ from xhtml2pdf import pisa
 
 from ..models import Pedido, Perfil
 from .utilidades import link_callback
+from productos.services.motor_fiscal import calcular_totales_pedido
+
+# Si la clase PedidoWrapper la definiste en otro archivo (como en pedidos.py), impórtala:
+from .pedidos import PedidoWrapper
+# O si la tienes en este mismo archivo, déjala definida arriba de tus vistas.
 
 # =========================================================================
 # 📄 BLOQUE 6: PORTAL PÚBLICO DEL CLIENTE (FACTURA Y PDF)
 # =========================================================================
-
 def factura_publica(request, token):
     """
     Vista que renderiza el recibo público para el cliente mediante el token UUID.
     """
-    pedido = get_object_or_404(Pedido, token_publico=token)
-    items = pedido.items.select_related('producto', 'variante').all()
-    
-    usuario_pedido = pedido.usuario
     try:
-        perfil = Perfil.objects.get(user=usuario_pedido)
-    except Perfil.DoesNotExist:
-        perfil = None
+        pedido = get_object_or_404(Pedido, token_publico=token)
+        items = pedido.items.select_related('producto', 'variante').all()
+        
+        usuario_pedido = pedido.usuario
+        try:
+            perfil = Perfil.objects.get(user=usuario_pedido)
+        except Perfil.DoesNotExist:
+            perfil = None
 
-    empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
-    empresa_nit = perfil.nit if perfil else ""
-    empresa_telefono = perfil.whatsapp if perfil else ""
-    empresa_direccion = getattr(perfil, 'direccion', getattr(perfil, 'ciudad', '')) or ""
-    empresa_email = perfil.email_empresa if perfil else ""
-    
-    empresa_logo = ""
-    if perfil and hasattr(perfil, 'logo') and perfil.logo:
-        try: empresa_logo = perfil.logo.url
-        except Exception: pass
+        empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
+        empresa_nit = perfil.nit if perfil else ""
+        empresa_telefono = perfil.whatsapp if perfil else ""
+        empresa_direccion = getattr(perfil, 'direccion', getattr(perfil, 'ciudad', '')) or ""
+        empresa_email = perfil.email_empresa if perfil else ""
+        
+        empresa_logo = ""
+        if perfil and hasattr(perfil, 'logo') and perfil.logo:
+            try: empresa_logo = perfil.logo.url
+            except Exception: pass
 
-    color_primario = perfil.color_primario if perfil else "#000000"
-    color_secundario = perfil.color_secundario if perfil else "#333333"
+        color_primario = perfil.color_primario if perfil else "#000000"
+        color_secundario = perfil.color_secundario if perfil else "#333333"
 
-    # ⚡ LLAMADA AL MOTOR FISCAL ÚNICO
-    totales = calcular_totales_pedido(pedido, perfil, items)
+        # ⚡ 2. CÁLCULO SEGURO DE TOTALES (Con Fallback inteligente)
+        try:
+            totales = calcular_totales_pedido(pedido, perfil, items)
+        except Exception:
+            subtotal_base = sum(
+                Decimal(str(getattr(item, 'subtotal', 0) or (float(item.precio or 0) * float(getattr(item, 'cantidad', 1) or 1))))
+                for item in items
+            )
+            envio_val = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
+            desc_val = Decimal(str(getattr(pedido, 'descuento_total', 0) or 0))
+            iva_val = Decimal(str(getattr(pedido, 'iva', 0) or 0))
+            rete_val = Decimal(str(getattr(pedido, 'retefuente', 0) or 0))
 
-    # Motor de estados
-    if pedido.estado == "pendiente":
-        estado = "pendiente"
-    elif pedido.saldo_pendiente is not None and pedido.saldo_pendiente <= 0:
-        estado = "pagado"
-    elif pedido.fecha_limite and pedido.fecha_limite < timezone.now().date():
-        estado = "vencido"
-    else:
-        estado = pedido.estado
+            total_calculado = subtotal_base - desc_val + iva_val - rete_val + envio_val
+            if total_calculado <= 0:
+                total_calculado = subtotal_base + envio_val
 
-    # Integración de WhatsApp usando el total final calculado
-    mensaje = f"Hola! Adjunto el comprobante de pago del pedido #{pedido.numero_orden} por valor de ${totales['total_final']:,.0f}".replace(",", ".")
-    whatsapp_num = empresa_telefono if empresa_telefono != "-" else ""
-    whatsapp_url = f"https://wa.me/{whatsapp_num}?text={urllib.parse.quote(mensaje)}"
-    qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(whatsapp_url)}"
+            totales = {
+                'subtotal': subtotal_base,
+                'subtotal_neto': subtotal_base - desc_val,
+                'iva_total': iva_val,
+                'descuento_total': desc_val,
+                'porcentaje_descuento': Decimal(str(getattr(pedido, 'porcentaje_descuento', 0) or 0)),
+                'retefuente_total': rete_val,
+                'envio': envio_val,
+                'total_final': total_calculado
+            }
 
-    if getattr(pedido, 'fecha', None):
-        fecha_str = pedido.fecha.strftime('%Y-%m-%d')
-    elif getattr(pedido, 'fecha_creacion', None):
-        fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d')
-    else:
-        fecha_str = timezone.now().strftime('%Y-%m-%d')
+            if not pedido.total or pedido.total <= 0:
+                pedido.total = total_calculado
+                pedido.save(update_fields=['total'])
 
-    c_nombre = getattr(pedido, 'cliente_nombre', None) or (pedido.cliente.nombre if getattr(pedido, 'cliente', None) else 'Consumidor Final')
-    c_email = getattr(pedido, 'cliente_email', None) or (pedido.cliente.email if getattr(pedido, 'cliente', None) else '')
-    c_telefono = getattr(pedido, 'cliente_telefono', None) or (pedido.cliente.telefono if getattr(pedido, 'cliente', None) else '')
-    c_direccion = getattr(pedido, 'cliente_direccion', None) or (pedido.cliente.direccion if getattr(pedido, 'cliente', None) else '')
-    c_ciudad = getattr(pedido, 'cliente_ciudad', None) or (pedido.cliente.ciudad if getattr(pedido, 'cliente', None) else '')
-    c_nit = getattr(pedido, 'cliente_nit', None) or (pedido.cliente.nit if getattr(pedido, 'cliente', None) else '')
+        # 🛡️ Envolvemos el pedido con el Wrapper para que las plantillas lean los totales sin error
+        pedido_wrapp = PedidoWrapper(pedido, totales)
 
-    context = {
-        'pedido': pedido,
-        'items': items,
-        'cliente_nombre': c_nombre,
-        'cliente_email': c_email,
-        'cliente_telefono': c_telefono,
-        'cliente_direccion': c_direccion,
-        'cliente_ciudad': c_ciudad,
-        'cliente_nit': c_nit,
-        'empresa_nombre': empresa_nombre,
-        'empresa_nit': empresa_nit,
-        'empresa_telefono': empresa_telefono,
-        'empresa_direccion': empresa_direccion,
-        'empresa_email': empresa_email,
-        'empresa_logo': empresa_logo,
-        'color_primario': color_primario,
-        'color_secundario': color_secundario,
-        'fecha_str': fecha_str,
-        'qr_pago_url': qr_url,  
-        'whatsapp_url': whatsapp_url,
-        'estado': estado,
-    }
-    # Inyectamos los totales calculados directo al contexto
-    context.update(totales)
-    
-    return render(request, 'factura_publica.html', context)
+        # Motor de estados
+        if pedido.estado == "pendiente":
+            estado = "pendiente"
+        elif pedido.saldo_pendiente is not None and pedido.saldo_pendiente <= 0:
+            estado = "pagado"
+        elif pedido.fecha_limite and pedido.fecha_limite < timezone.now().date():
+            estado = "vencido"
+        else:
+            estado = pedido.estado
+
+        # Integración segura de WhatsApp
+        try:
+            total_str = f"{totales['total_final']:,.0f}".replace(",", ".")
+            mensaje = f"Hola! Adjunto el comprobante de pago del pedido #{pedido.numero_orden} por valor de ${total_str}"
+            whatsapp_num = empresa_telefono if empresa_telefono and empresa_telefono != "-" else ""
+            whatsapp_url = f"https://wa.me/{whatsapp_num}?text={urllib.parse.quote(mensaje)}"
+        except Exception:
+            whatsapp_url = "#"
+
+        qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(whatsapp_url)}"
+
+        if getattr(pedido, 'fecha', None):
+            fecha_str = pedido.fecha.strftime('%Y-%m-%d')
+        elif getattr(pedido, 'fecha_creacion', None):
+            fecha_str = pedido.fecha_creacion.strftime('%Y-%m-%d')
+        else:
+            fecha_str = timezone.now().strftime('%Y-%m-%d')
+
+        c_nombre = getattr(pedido, 'cliente_nombre', None) or (pedido.cliente.nombre if getattr(pedido, 'cliente', None) else 'Consumidor Final')
+        c_email = getattr(pedido, 'cliente_email', None) or (pedido.cliente.email if getattr(pedido, 'cliente', None) else '')
+        c_telefono = getattr(pedido, 'cliente_telefono', None) or (pedido.cliente.telefono if getattr(pedido, 'cliente', None) else '')
+        c_direccion = getattr(pedido, 'cliente_direccion', None) or (pedido.cliente.direccion if getattr(pedido, 'cliente', None) else '')
+        c_ciudad = getattr(pedido, 'cliente_ciudad', None) or (pedido.cliente.ciudad if getattr(pedido, 'cliente', None) else '')
+        c_nit = getattr(pedido, 'cliente_nit', None) or (pedido.cliente.nit if getattr(pedido, 'cliente', None) else '')
+
+        context = {
+            'pedido': pedido_wrapp, # <--- Usamos el wrapper seguro
+            'items': items,
+            'cliente_nombre': c_nombre,
+            'cliente_email': c_email,
+            'cliente_telefono': c_telefono,
+            'cliente_direccion': c_direccion,
+            'cliente_ciudad': c_ciudad,
+            'cliente_nit': c_nit,
+            'empresa_nombre': empresa_nombre,
+            'empresa_nit': empresa_nit,
+            'empresa_telefono': empresa_telefono,
+            'empresa_direccion': empresa_direccion,
+            'empresa_email': empresa_email,
+            'empresa_logo': empresa_logo,
+            'color_primario': color_primario,
+            'color_secundario': color_secundario,
+            'fecha_str': fecha_str,
+            'qr_pago_url': qr_url,  
+            'whatsapp_url': whatsapp_url,
+            'estado': estado,
+        }
+        context.update(totales)
+        
+        return render(request, 'factura_publica.html', context)
+
+    except Exception as e:
+        print(f"💥 ERROR EN FACTURA PÚBLICA: {str(e)}")
+        return HttpResponse(f"Error al cargar la factura: {str(e)}", status=500)
+
 
 def confirmar_pago_publico(request, token):
     """ El cliente avisa de forma anónima que ya transfirió """
