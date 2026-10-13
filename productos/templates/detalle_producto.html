@@ -153,11 +153,14 @@ Uso exclusivo para joyas en <strong>oro 18K, diamantes y esmeraldas</strong>.
     <!-- 📦 CONTROL DE STOCK UNIFICADO Y SANEADO -->
     <input type="hidden" id="whatsapp-numero" value="{{ perfil_tienda.whatsapp }}">
 
-    {% if tiene_stock or stock_disponible > 0 %}
-        <button type="submit" id="btn-carrito"
-            style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;width:100%;">
-            🛒 Agregar al carrito
-        </button>
+    <!-- Indicadores de stock para la UX -->
+    <div id="stock-general" style="font-weight: bold; margin-bottom: 8px;"></div>
+    <div id="stock-info" style="font-size: 14px; margin-bottom: 12px; color: #555;"></div>
+
+    <button type="submit" id="btn-carrito"
+        {% if not tiene_stock and stock_disponible <= 0 %}disabled style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;width:100%;opacity:0.5;"{% else %}style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;width:100%;"{% endif %}>
+        🛒 Agregar al carrito
+    </button>
     {% else %}
         <p id="mensaje-agotado-backend" style="color:red;font-weight:bold;padding:12px 0;">❌ Producto agotado temporalmente</p>
     {% endif %}
@@ -194,10 +197,12 @@ transition:.2s;
 </script>
 
 <script>
-const variantes = JSON.parse(
-    document.getElementById("variantes-data").textContent
-);
+// 🛡️ Captura segura de variantes
+const variantesDataElem = document.getElementById("variantes-data");
+const variantes = variantesDataElem ? JSON.parse(variantesDataElem.textContent) : [];
+
 function actualizarStockDisponible() {
+    if (!variantes || variantes.length === 0) return;
 
     let color = document.getElementById("color")?.value || "";
     let talla = document.getElementById("talla")?.value || "";
@@ -208,52 +213,54 @@ function actualizarStockDisponible() {
 
     let inputCantidad = document.getElementById("cantidad");
     let boton = document.getElementById("btn-carrito");
+    let stockInfo = document.getElementById("stock-info");
 
     if (variante) {
-
-        inputCantidad.max = variante.stock;
-
-        if (parseInt(inputCantidad.value) > variante.stock) {
-            inputCantidad.value = variante.stock;
+        if (inputCantidad) {
+            inputCantidad.max = variante.stock;
+            if (parseInt(inputCantidad.value) > variante.stock) {
+                inputCantidad.value = variante.stock;
+            }
         }
 
-    if (variante.stock > 0) {
-    document.getElementById("stock-info").innerHTML =
-        "✅ Disponibles: " + variante.stock;
-} else {
-    document.getElementById("stock-info").innerHTML =
-        "❌ Agotado";
-}
-
-        // 🔥 BOTÓN
-        if (variante.stock > 0) {
-            boton.disabled = false;
-            boton.style.opacity = "1";
-        } else {
-            boton.disabled = true;
-            boton.style.opacity = "0.5";
+        if (stockInfo) {
+            if (variante.stock > 0) {
+                stockInfo.innerHTML = "✅ Disponibles: " + variante.stock;
+            } else {
+                stockInfo.innerHTML = "❌ Agotado";
+            }
         }
 
+        if (boton) {
+            if (variante.stock > 0) {
+                boton.disabled = false;
+                boton.style.opacity = "1";
+            } else {
+                boton.disabled = true;
+                boton.style.opacity = "0.5";
+            }
+        }
     } else {
-
         let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
-        if (hayTallas && color && !talla) {
-            document.getElementById("stock-info").innerHTML = "Por favor, seleccione una talla";
-        } else {
-            document.getElementById("stock-info").innerHTML = "Seleccione una combinación válida";
+        if (stockInfo) {
+            if (hayTallas && color && !talla) {
+                stockInfo.innerHTML = "Por favor, seleccione una talla";
+            } else {
+                stockInfo.innerHTML = "Seleccione una combinación válida";
+            }
         }
 
-        // 🔥 BLOQUEAR BOTÓN
         if (boton) {
             boton.disabled = true;
             boton.style.opacity = "0.5";
         }
     }
 }
+
 function actualizarStockGeneral() {
+    if (!variantes || variantes.length === 0) return;
 
     let totalStock = variantes.reduce((total, v) => total + v.stock, 0);
-
     let mensaje = "";
 
     if (totalStock > 15) {
@@ -266,39 +273,32 @@ function actualizarStockGeneral() {
         mensaje = "❌ Producto agotado";
     }
 
-    document.getElementById("stock-general").innerHTML = mensaje;
-}
+    let elemStockGeneral = document.getElementById("stock-general");
+    if (elemStockGeneral) {
+        elemStockGeneral.innerHTML = mensaje;
+    }
+} // 👈 ¡ESTA LLAVE FALTABA Y CERRABA LA FUNCIÓN ANTERIOR!
 
 // ===============================
 // FUNCIONES BÁSICAS
 // ===============================
 function cambiarImagen(url, elemento){
-
-    // Cambiar imagen principal
     document.getElementById("imagen-principal").src = url;
 
-    // Quitar activa de todas
     document.querySelectorAll(".miniatura").forEach(img => {
         img.classList.remove("activa");
     });
 
-    // Activar la seleccionada
     elemento.classList.add("activa");
 }
 
 function comprarWhatsApp(){
-
     let cantidad = document.getElementById("cantidad").value;
     let color = document.getElementById("color")?.value || "";
     let talla = document.getElementById("talla")?.value || "";
+    let campoWhatsapp = document.getElementById("whatsapp-numero");
+    let numero = campoWhatsapp ? campoWhatsapp.value : "";
 
-    let campoWhatsapp =
-        document.getElementById("whatsapp-numero");
-
-    let numero =
-        campoWhatsapp ? campoWhatsapp.value : "";
-
-    // 🔥 VALIDACIONES
     let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
 
     if (variantes.length > 0 && !color) {
@@ -316,7 +316,6 @@ function comprarWhatsApp(){
         return;
     }
 
-    // 🔥 MENSAJE PRO
     let mensaje = "🛍️ Pedido desde tienda\n\n";
     mensaje += "Producto: {{ producto.nombre }}\n";
     mensaje += "Cantidad: " + cantidad + "\n";
@@ -331,77 +330,66 @@ function comprarWhatsApp(){
     mensaje += "\n🙏 Gracias, quedo atento";
 
     let url = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensaje);
-
     window.open(url, "_blank");
 }
 
 // =================================================================
-// 💎 1. CONFIGURACIÓN DE PRECIOS DINÁMICOS (LIMPING DE STRINGS)
+// 💎 CONFIGURACIÓN DE PRECIOS DINÁMICOS
 // =================================================================
-// Forzamos a que las variables de Django se inyecten como strings y les removemos
-// cualquier punto o coma de miles/decimales extraños para garantizar que JavaScript lea un número puro.
 let tipoVenta = "{{ producto.tipo_venta }}";
 
 let pesoRaw = "{{ producto.peso_producto|default_if_none:'0' }}".replace(',', '.');
 let pesoProducto = parseFloat(pesoRaw) || 0;
 
-// Limpiamos los precios de cualquier formateo de miles que traiga el contexto de Django
 let precioDetalRaw = "{{ producto.precio_detal|default:0 }}".replace(/\./g, '').replace(',', '.');
 let precioDetal = parseFloat(precioDetalRaw) || 0;
 
 let precioGramoRaw = "{{ producto.precio_por_gramo_detal|default_if_none:'0' }}".replace(/\./g, '').replace(',', '.');
 let precioGramoDetal = parseFloat(precioGramoRaw) || 0;
 
-// =================================================================
-// 🧠 2. FUNCIÓN ÚNICA DE ACTUALIZACIÓN DE PRECIOS (TU LÓGICA INTACTA)
-// =================================================================
 function actualizarPrecio(){
-    // Captura las unidades de piezas seleccionadas (1, 2, 3...)
     let cantidadPiezas = parseFloat(document.getElementById("cantidad").value) || 1;
     let subtotal = 0;
 
     if (tipoVenta === "gramo") {
-        // 🛍️ MATEMÁTICA EXACTA: Piezas x Peso Real (Ej: 1 x 7.77 = 7.77)
         let totalGramos = cantidadPiezas * pesoProducto; 
 
-        // Pintará "7.77" con sus decimales reales en el HTML si existe el contenedor
         let contenedorGramos = document.getElementById("total-gramos");
         if (contenedorGramos) {
             contenedorGramos.innerHTML = totalGramos.toFixed(2);
         }
 
-        // Subtotal exacto en base a los gramos decimales reales
         subtotal = totalGramos * precioGramoDetal;
 
-        // Desglose nítido en pantalla
         document.getElementById("detalle-calculo").innerHTML =
             totalGramos.toFixed(2) + "g x $" + precioGramoDetal.toLocaleString('es-CO', { maximumFractionDigits: 0 });
 
     } else {
-        // PRODUCTOS POR UNIDADES FIJAS
         subtotal = cantidadPiezas * precioDetal;
 
         document.getElementById("detalle-calculo").innerHTML =
             parseInt(cantidadPiezas) + " unidades x $" + precioDetal.toLocaleString('es-CO', { maximumFractionDigits: 0 });
     }
 
-    document.getElementById("mensaje-mayorista").innerHTML =
-        "💡 Descuentos por cantidad se aplican en el carrito";
+    let msgMayorista = document.getElementById("mensaje-mayorista");
+    if (msgMayorista) {
+        msgMayorista.innerHTML = "💡 Descuentos por cantidad se aplican en el carrito";
+    }
 
-    // Pinta el subtotal totalizado y formateado correctamente como moneda de Colombia
-    document.getElementById("subtotal").innerHTML =
-        subtotal ? subtotal.toLocaleString('es-CO', { maximumFractionDigits: 0 }) : "0";
+    let subtotalElem = document.getElementById("subtotal");
+    if (subtotalElem) {
+        subtotalElem.innerHTML = subtotal ? subtotal.toLocaleString('es-CO', { maximumFractionDigits: 0 }) : "0";
+    }
 }
 
 // =================================================================
-// 🔢 3. CONTROL DE CANTIDAD (PIEZAS FÍSICAS)
+// 🔢 CONTROL DE CANTIDAD
 // =================================================================
 function cambiarCantidad(valor){
     let input = document.getElementById("cantidad");
+    if (!input) return;
     
-    // Tratamos la cantidad como pieza entera para los botones de + y -
     let nueva = parseInt(input.value || 1) + valor;
-
     if(nueva < 1) nueva = 1;
 
     if(input.max){
@@ -414,6 +402,7 @@ function cambiarCantidad(valor){
 
 function validarCantidad(){
     let input = document.getElementById("cantidad");
+    if (!input) return;
 
     if(parseInt(input.value) < 1 || !input.value){
         input.value = 1;
@@ -425,14 +414,8 @@ function validarCantidad(){
     actualizarPrecio();
 }
 
-// 🔥 DISPARADOR INICIAL: Ejecuta el cálculo apenas cargue la página 
-// para que no inicie en 0 si la cantidad por defecto es mayor a 1.
-document.addEventListener("DOMContentLoaded", function() {
-    actualizarPrecio();
-});
-
 // =================================================================
-// 💍 VARIANTES DINÁMICAS (ORDENACIÓN ALFANUMÉRICA DE ANILLOS)
+// 💍 VARIANTES DINÁMICAS
 // =================================================================
 function actualizarTallas(){
     if (!variantes.some(v => v.talla && v.talla.trim() !== "")) {
@@ -455,8 +438,6 @@ function actualizarTallas(){
         .map(v => v.talla);
 
     tallasDisponibles = [...new Set(tallasDisponibles)];
-
-    // 🔥 Ordenación natural inteligente para tallas (#5, #5.5, #6, #10)
     tallasDisponibles.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
     tallaSelect.innerHTML = '<option value="">Seleccione talla</option>';
@@ -478,10 +459,9 @@ function actualizarTallas(){
 }
 
 // =================================================================
-// 🚀 CARGA DE EVENTOS INICIALES
+// 🚀 INICIALIZACIÓN Y EVENTOS
 // =================================================================
 document.addEventListener("DOMContentLoaded", function() {
-
     actualizarPrecio();
     actualizarTallas();  
     if (typeof actualizarStockDisponible === "function") actualizarStockDisponible();
@@ -493,7 +473,6 @@ document.addEventListener("DOMContentLoaded", function() {
         btn.style.opacity = "1";
     }
 
-    // Escuchadores de cambio en los selectores
     document.getElementById("color")?.addEventListener("change", function() {
         actualizarTallas();
         if (typeof actualizarStockDisponible === "function") actualizarStockDisponible();
@@ -504,13 +483,12 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 });
 
-// Ocultar contenedor de tallas si el producto no las requiere (cadenas, hilos, etc.)
-let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
-if (!hayTallas) {
+// Ocultar contenedor de tallas si el producto no las requiere
+let productoTieneTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
+if (!productoTieneTallas) {
     let contenedorTalla = document.getElementById("contenedor-talla");
     if (contenedorTalla) contenedorTalla.style.display = "none";
 }
-
 </script>
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
