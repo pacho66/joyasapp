@@ -53,7 +53,7 @@
                     <!-- Nombre de la Tienda -->
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-uppercase text-secondary">Nombre de la Tienda</label>
-                        <input type="text" name="nombre_tienda" value="{{ perfil.nombre_tienda|default:'' }}" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Ej: PG Joyas o Platería González">
+                        <input type="text" id="input_titulo"name="nombre_tienda" value="{{ perfil.nombre_tienda|default:'' }}" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Ej: PG Joyas o Platería González">
                     </div>
 
                     <!-- 🌐 CONFIGURACIÓN DE REDES SOCIALES (CAMPOS REALES) -->
@@ -159,52 +159,37 @@
 <!-- JAVASCRIPT SEGURO PARA EL RENDER EN VIVO -->
 <script>
     function actualizarPreview() {
-        // Actualizar textos
-        document.getElementById('preview_titulo').innerText = document.getElementById('input_titulo').value || '¡Nueva Colección!';
-        document.getElementById('preview_mensaje').innerText = document.getElementById('input_mensaje').value || 'Completa los campos...';
-        document.getElementById('preview_icono').innerText = document.getElementById('input_icono').value;
-        
-        // Mapear el color seleccionado a un color o degradado real de CSS
-        const colorSeleccionado = document.getElementById('input_color').value;
+        // Actualizar textos dinámicamente con los campos reales
+        const tituloInput = document.getElementById('input_titulo');
+        const mensajeInput = document.getElementById('input_mensaje');
+        const colorSelect = document.getElementById('input_color');
         const banner = document.getElementById('preview_banner');
-        
-        if (colorSeleccionado === 'dorado') {
-            banner.style.background = "linear-gradient(135deg, #ecd06f 0%, #b38938 100%)";
-        } else if (colorSeleccionado === 'negro') {
-            banner.style.background = "linear-gradient(135deg, #2c2c2c 0%, #000000 100%)";
-        } else if (colorSeleccionado === 'azul') {
-            banner.style.background = "linear-gradient(135deg, #2b5876 0%, #4e4376 100%)";
-        } else if (colorSeleccionado === 'verde') {
-            banner.style.background = "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)";
-        } else if (colorSeleccionado === 'rojo') {
-            banner.style.background = "linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%)";
+
+        if (tituloInput) {
+            document.getElementById('preview_titulo').innerText = tituloInput.value || '¡Bienvenidos!';
+        }
+        if (mensajeInput) {
+            document.getElementById('preview_mensaje').innerText = mensajeInput.value || 'Tu mensaje publicitario se verá reflejado aquí en tiempo real.';
         }
         
-        // Controlar visibilidad del botón de acción
-        const checkboxBoton = document.getElementById('input_mostrar_boton');
-        const wrapperBoton = document.getElementById('wrapper_boton');
-        const btnPreview = document.getElementById('preview_boton');
-        
-        if (checkboxBoton.checked) {
-            wrapperBoton.classList.remove('d-none');
-            btnPreview.classList.remove('d-none');
-            btnPreview.innerText = document.getElementById('input_boton_texto').value || 'Comprar ahora';
-        } else {
-            wrapperBoton.classList.add('d-none');
-            btnPreview.classList.add('d-none');
+        // Sincronizar el color seleccionado directamente con el fondo del banner
+        if (colorSelect && banner) {
+            banner.style.backgroundColor = colorSelect.value;
         }
     }
 
     // Escuchas de eventos para actualizar en tiempo real
-    document.getElementById('input_titulo').addEventListener('input', actualizarPreview);
-    document.getElementById('input_mensaje').addEventListener('input', actualizarPreview);
-    document.getElementById('input_icono').addEventListener('change', actualizarPreview);
-    document.getElementById('input_color').addEventListener('change', actualizarPreview);
-    document.getElementById('input_mostrar_boton').addEventListener('change', actualizarPreview);
-    document.getElementById('input_boton_texto').addEventListener('input', actualizarPreview);
-    
-    // Lanzar al cargar la página
-    document.addEventListener("DOMContentLoaded", actualizarPreview);
+    document.addEventListener("DOMContentLoaded", function() {
+        const inputTitulo = document.getElementById('input_titulo');
+        const inputMensaje = document.getElementById('input_mensaje');
+        const inputColor = document.getElementById('input_color');
+
+        if (inputTitulo) inputTitulo.addEventListener('input', actualizarPreview);
+        if (inputMensaje) inputMensaje.addEventListener('input', actualizarPreview);
+        if (inputColor) inputColor.addEventListener('change', actualizarPreview);
+        
+        actualizarPreview();
+    });
 </script>
 
 {% endblock %}
