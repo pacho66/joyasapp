@@ -59,6 +59,17 @@ nav {
     padding: 12px 20px;
     box-shadow: var(--sombra);
     border-bottom: 1px solid var(--color-borde);
+    display: flex;
+    justify-content: center;
+}
+
+.nav-container {
+    max-width: 1200px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
 }
 
 nav ul {
@@ -67,7 +78,7 @@ nav ul {
     align-items: center;
     gap: 15px;
     padding: 0;
-    margin: 0 0 12px 0;
+    margin: 0; /* 👈 Eliminamos el margen inferior que desalineaba */
 }
 
 nav ul li a {
@@ -78,6 +89,7 @@ nav ul li a {
     border-radius: 6px;
     transition: 0.2s ease;
     font-size: 15px;
+    white-space: nowrap; /* Evita que los textos se corten */
 }
 
 nav ul li a:hover {
@@ -98,10 +110,11 @@ nav ul li a:hover {
     margin-bottom: 12px;
 }
 
-/* BUSCADOR INTEGRADO EN NAVBAR */
+/* BUSCADOR CONTROLADO PARA ESCRITORIO Y MÓVIL */
 .buscador {
     display: flex;
-    width: 100%;
+    width: 280px; /* Ancho compacto y fijo para PC */
+    transition: width 0.3s ease;
 }
 
 .buscador-wrapper {
@@ -296,42 +309,43 @@ nav ul li a:hover {
     <div>{{ perfil.nombre_tienda|default:"joyasapp" }}</div>
 </div>
 
-    
-<nav>
-    <div class="menu-toggle" onclick="toggleMenu()">
-        ☰ Menú
-    </div>
+    <nav>
+        <div class="nav-container">
+            <div class="menu-toggle" onclick="toggleMenu()">
+                ☰ Menú
+            </div>
 
-    <ul id="menu-lista">
-        <li><a href="{% url 'inicio' %}">Inicio</a></li>
+            <ul id="menu-lista">
+                <li><a href="{% url 'inicio' %}">Inicio</a></li>
 
-        {% if categorias_menu %}
-            {% for categoria in categorias_menu %}
-                <li><a href="#">{{ categoria.nombre }}</a></li>
-            {% endfor %}
-        {% endif %}
+                {% if categorias_menu %}
+                    {% for categoria in categorias_menu %}
+                        <li><a href="#">{{ categoria.nombre }}</a></li>
+                    {% endfor %}
+                {% endif %}
 
-        <li>
-            <a href="{% url 'ver_carrito' %}">
-                🛒 Carrito ({{ cantidad_carrito|default:0 }})
-            </a>
-        </li>
+                <li>
+                    <a href="{% url 'ver_carrito' %}">
+                        🛒 Carrito ({{ cantidad_carrito|default:0 }})
+                    </a>
+                </li>
 
-        {% if user.is_authenticated %}
-            <li><a href="/dashboard/">📊 Panel</a></li>
-            <li><a href="/logout/">🚪 Salir</a></li>
-        {% else %}
-            <li><a href="/login/">🔐 Iniciar sesión</a></li>
-        {% endif %}
-    </ul>
+                {% if user.is_authenticated %}
+                    <li><a href="/dashboard/">📊 Panel</a></li>
+                    <li><a href="/logout/">🚪 Salir</a></li>
+                {% else %}
+                    <li><a href="/login/">🔐 Iniciar sesión</a></li>
+                {% endif %}
+            </ul>
 
-    <form action="{% url 'buscar_productos' %}" method="GET" class="buscador">
-        <div class="buscador-wrapper">
-            <input type="text" name="q" placeholder="🔎 Buscar productos..." required>
-            <button type="submit">Buscar</button>
+            <form action="{% url 'buscar_productos' %}" method="GET" class="buscador">
+                <div class="buscador-wrapper">
+                    <input type="text" name="q" placeholder="🔎 Buscar productos..." required>
+                    <button type="submit">Buscar</button>
+                </div>
+            </form>
         </div>
-    </form>
-</nav>
+    </nav>
 
 {% if request.path == '/' %}
     <!-- 🎨 BANNER UNIFICADO SINCRO TOTAL (Solo se muestra en el Inicio público) -->
