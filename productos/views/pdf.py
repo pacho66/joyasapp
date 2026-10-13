@@ -160,77 +160,104 @@ def confirmar_pago_publico(request, token):
 # 📄 VISTA PRINCIPAL: GENERACIÓN DE PDF
 # ────────────────────────────────────────────────────────────────
 def pedido_pdf(request, pedido_id):
-    pedido = get_object_or_404(Pedido, id=pedido_id)
-    items = pedido.items.select_related('producto', 'variante').all()
-    usuario_pedido = pedido.usuario
-
     try:
-        perfil = Perfil.objects.get(user=usuario_pedido)
-    except Perfil.DoesNotExist:
-        perfil = None
+        pedido = get_object_or_404(Pedido, id=pedido_id)
+        items = pedido.items.select_related('producto', 'variante').all()
+        usuario_pedido = pedido.usuario
 
-    empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
-    empresa_nit = perfil.nit if perfil else ""
-    empresa_telefono = perfil.whatsapp if perfil else ""
-    empresa_direccion = perfil.direccion if perfil else ""
-    empresa_email = perfil.email_empresa if perfil else ""
-    color_primario = perfil.color_primario if perfil else "#111111"
-    color_secundario = perfil.color_secundario if perfil else "#333333"
-
-    # ⚡ LLAMADA AL MOTOR FISCAL ÚNICO
-    totales = calcular_totales_pedido(pedido, perfil, items)
-
-    # 🕵️‍♂️ Buscamos de forma segura el campo de fecha real que tiene tu modelo Pedido
-    fecha_obj = getattr(
-        pedido, 'created_at', 
-        getattr(pedido, 'fecha', 
-        getattr(pedido, 'fecha_registro', None))
-    )
-    
-    # Si encuentra el campo, lo formatea. Si no, pone "S/F" de forma segura
-    if fecha_obj:
         try:
-            fecha_str = fecha_obj.strftime('%Y-%m-%d')
-        except AttributeError:
-            fecha_str = str(fecha_obj)
-    else:
-        fecha_str = "S/F"
+            perfil = Perfil.objects.get(user=usuario_pedido)
+        except Perfil.DoesNotExist:
+            perfil = None
 
-    context = {
-        'pedido': pedido,
-        'items': items,
-        'cliente_nombre': pedido.cliente_nombre,
-        'cliente_email': pedido.cliente_email,
-        'cliente_telefono': pedido.cliente_telefono,
-        'cliente_direccion': pedido.cliente_direccion,
-        'cliente_ciudad': pedido.cliente_ciudad,
-        'cliente_nit': pedido.cliente_nit,
-        'empresa_nombre': empresa_nombre,
-        'empresa_nit': empresa_nit,
-        'empresa_telefono': empresa_telefono,
-        'empresa_direccion': empresa_direccion,
-        'empresa_email': empresa_email,
-        'color_primario': color_primario,
-        'color_secundario': color_secundario,
-        'fecha_str': fecha_str,
-    }
-    # Inyectamos exactamente los mismos totales
-    context.update(totales)
+        empresa_nombre = perfil.nombre_tienda if perfil else "Mi Joyería"
+        empresa_nit = perfil.nit if perfil else ""
+        empresa_telefono = perfil.whatsapp if perfil else ""
+        empresa_direccion = perfil.direccion if perfil else ""
+        empresa_email = perfil.email_empresa if perfil else ""
+        color_primario = perfil.color_primario if perfil else "#111111"
+        color_secundario = perfil.color_secundario if perfil else "#333333"
 
-    try:
+        # ⚡ 1. LLAMADA AL MOTOR FISCAL ÚNICO (Con fallback seguro)
+        try:
+            totales = calcular_totales_pedido(pedido, perfil, items)
+        except Exception:
+            subtotal_base = sum(
+                Decimal(str(getattr(item, 'subtotal', 0) or (float(item.precio or 0) * float(getattr(item, 'cantidad', 1) or 1))))
+                for item in items
+            )
+            envio_val = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
+            desc_val = Decimal(str(getattr(pedido, 'descuento_total', 0) or 0))
+            iva_val = Decimal(str(getattr(pedido, 'iva', 0) or 0))
+            rete_val = Decimal(str(getattr(pedido, 'retefuente', 0) or 0))
+
+            total_calculado = subtotal_base - desc_val + iva_val - rete_val + envio_val
+            if total_calculado <= 0:
+                total_calculado = subtotal_base + envio_val
+
+            totales = {
+                'subtotal': subtotal_base,
+                'subtotal_neto': subtotal_base - desc_val,
+                'iva_total': iva_val,
+                'descuento_total': desc_val,
+                'porcentaje_descuento': Decimal(str(getattr(pedido, 'porcentaje_descuento', 0) or 0)),
+                'retefuente_total': rete_val,
+                'envio': envio_val,
+                'total_final': total_calculado
+            }
+
+        # 🛡️ 2. ENVOLVER EL PEDIDO CON PEDIDO-WRAPPER PARA EL PDF
+        pedido_wrapp = PedidoWrapper(pedido, totales)
+
+        # 🕵️‍♂️ Buscamos de forma segura el campo de fecha real que tiene tu modelo Pedido
+        fecha_obj = getattr(
+            pedido, 'created_at', 
+            getattr(pedido, 'fecha', 
+            getattr(pedido, 'fecha_registro', None))
+        )
+        
+        if fecha_obj:
+            try:
+                fecha_str = fecha_obj.strftime('%Y-%m-%d')
+            except AttributeError:
+                fecha_str = str(fecha_obj)
+        else:
+            fecha_str = "S/F"
+
+        context = {
+            'pedido': pedido_wrapp,  # <--- AQUÍ USAS EL WRAPPER SEGURO
+            'items': items,
+            'cliente_nombre': pedido.cliente_nombre,
+            'cliente_email': pedido.cliente_email,
+            'cliente_telefono': pedido.cliente_telefono,
+            'cliente_direccion': pedido.cliente_direccion,
+            'cliente_ciudad': pedido.cliente_ciudad,
+            'cliente_nit': pedido.cliente_nit,
+            'empresa_nombre': empresa_nombre,
+            'empresa_nit': empresa_nit,
+            'empresa_telefono': empresa_telefono,
+            'empresa_direccion': empresa_direccion,
+            'empresa_email': empresa_email,
+            'color_primario': color_primario,
+            'color_secundario': color_secundario,
+            'fecha_str': fecha_str,
+            'estado': pedido_wrapp.estado,  # <--- Estado sincronizado
+        }
+        # Inyectamos exactamente los mismos totales
+        context.update(totales)
+
         template = get_template('pedido_pdf.html')
         html = template.render(context)
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="pedido_{pedido.numero_orden}.pdf"'
         
-        # 🎯 CAMBIO CLAVE: Agregamos el parámetro link_callback aquí abajo
         pdf = pisa.CreatePDF(html, dest=response, link_callback=link_callback)
         
         if pdf.err:
             return HttpResponse(f"Error generando PDF: {pdf.err}", status=500)
         return response
+
     except Exception as e:
-        # Añadido un print para depurar rápido en la consola de Render si algo más falla
         print(f"💥 ERROR EN GENERACIÓN PDF: {str(e)}")
         traceback.print_exc()
         return HttpResponse(f"Error interno: {str(e)}", status=500)

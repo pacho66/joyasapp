@@ -140,6 +140,33 @@ class PedidoWrapper:
         self.costo_envio = totales.get('envio', Decimal('0.00'))
         self.total = totales.get('total_final', Decimal('0.00'))
 
+    @property
+    def estado(self):
+        """Motor unificado de estados para coherencia total entre privado y público"""
+        if self._pedido.estado in ['pagado', 'cancelado', 'enviado', 'entregado']:
+            return self._pedido.estado
+        if getattr(self._pedido, 'tipo_pago', 'contado') == 'credito':
+            saldo = getattr(self._pedido, 'saldo_pendiente', None)
+            if self.total <= 0 or (saldo is not None and saldo <= 0):
+                return 'pagado'
+            if self._pedido.fecha_limite and self._pedido.fecha_limite < timezone.now().date():
+                return 'vencido'
+            return 'pendiente'
+        return self._pedido.estado or 'pendiente'
+
+    def get_estado_display(self):
+        estados_dict = {
+            'pendiente': 'Pendiente',
+            'pagado': 'Pagado',
+            'vencido': 'Vencido',
+            'cancelado': 'Cancelado',
+            'enviado': 'Enviado',
+            'entregado': 'Entregado',
+            'procesando': 'Procesando'
+        }
+        est = self.estado
+        return estados_dict.get(est, self._pedido.get_estado_display() if hasattr(self._pedido, 'get_estado_display') else est.title())
+
     def __getattr__(self, name):
         return getattr(self._pedido, name)
 
@@ -249,6 +276,7 @@ def detalle_pedido(request, pedido_id):
         print(f"💥 ERROR CRÍTICO EN DETALLE DE PEDIDO #{pedido_id}: {str(e)}")
         traceback.print_exc()
         return HttpResponse(f"Error al cargar el detalle del pedido: {str(e)}", status=500)
+    
 @login_required
 @transaction.atomic
 def confirmar_pago(request, pedido_id):
