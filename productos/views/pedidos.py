@@ -339,7 +339,8 @@ def generar_factura(request, pedido_id):
             p.setFont("Helvetica", 9)
             p.drawString(390, y - 18, f"N° {pedido.numero_orden}")
 
-            fecha = pedido.fecha_creacion.strftime('%Y-%m-%d') if pedido.fecha_creacion else ''
+            fecha_obj = getattr(pedido, 'fecha', None) or getattr(pedido, 'created_at', None) or getattr(pedido, 'fecha_registro', None)
+            fecha = fecha_obj.strftime('%Y-%m-%d') if fecha_obj else ''
             p.drawString(390, y - 33, f"Fecha: {fecha}")
 
             if getattr(pedido, 'tipo_pago', 'contado') == 'credito':
