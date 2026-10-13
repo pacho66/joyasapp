@@ -126,6 +126,23 @@ def lista_pedidos(request):
 
     return render(request, 'lista_pedidos.html', {'pedidos': pedidos})
 
+class PedidoWrapper:
+    def __init__(self, pedido, totales):
+        self._pedido = pedido
+        self.subtotal_antes_de_descuento = totales.get('subtotal', Decimal('0.00'))
+        self.subtotal_neto = totales.get('subtotal_neto', totales.get('subtotal', Decimal('0.00')))
+        self.descuento_total = totales.get('descuento_total', Decimal('0.00'))
+        self.porcentaje_descuento = totales.get('porcentaje_descuento', Decimal('0.00'))
+        self.aplica_iva = bool(totales.get('iva_total', 0) > 0)
+        self.iva = totales.get('iva_total', Decimal('0.00'))
+        self.es_retenedor = bool(totales.get('retefuente_total', 0) > 0)
+        self.retefuente = totales.get('retefuente_total', Decimal('0.00'))
+        self.costo_envio = totales.get('envio', Decimal('0.00'))
+        self.total = totales.get('total_final', Decimal('0.00'))
+
+    def __getattr__(self, name):
+        return getattr(self._pedido, name)
+
 @login_required
 def detalle_pedido(request, pedido_id):
     try:
@@ -213,8 +230,11 @@ def detalle_pedido(request, pedido_id):
         abonos = pedido.abonos.all().order_by('-fecha') if hasattr(pedido, 'abonos') else []
         total_abonado = sum(a.monto for a in abonos) if abonos else 0
 
+        pedido_wrapp = PedidoWrapper(pedido, totales)
+
+
         context = {
-            'pedido': pedido,
+            'pedido': pedido_wrapp,
             'items': items,
             'cliente': getattr(pedido, 'cliente', None),
             'link_pdf': link_pdf,
