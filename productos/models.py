@@ -296,6 +296,12 @@ class Producto(models.Model):
             self.slug = slug
         super().save(*args, **kwargs)
 
+        # Si NO tiene variantes, aseguramos que el stock principal mande. 
+        # Si TIENE variantes, el stock principal puede ser la suma de ellas opcionalmente.
+        if self.variantes.exists():
+            total_var = self.variantes.aggregate(total=Sum('stock'))['total'] or 0
+            if self.stock != total_var:
+                Producto.objects.filter(pk=self.pk).update(stock=total_var)
 
 class ProductoImagen(models.Model):
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='imagenes')
