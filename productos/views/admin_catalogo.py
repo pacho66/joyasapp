@@ -159,7 +159,7 @@ def guardar_producto_view(request, pk=None):
     return render(request, f'{"editar_producto" if pk else "crear_producto"}.html', {
         'producto': producto,
         'valores': valores_iniciales,
-        'categorias': Categoria.objects.all()
+        'categorias': Categoria.objects.filter(usuario=request.user)
     })
 
 @login_required
