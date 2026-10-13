@@ -172,6 +172,7 @@ def detalle_pedido(request, pedido_id):
             subtotal_base = sum(Decimal(str(item.subtotal or 0)) for item in items)
             totales = {
                 'subtotal': subtotal_base,
+                'subtotal_neto': subtotal_base,
                 'iva_total': Decimal(str(getattr(pedido, 'iva', 0) or 0)),
                 'descuento_total': Decimal(str(getattr(pedido, 'descuento_total', 0) or 0)),
                 'porcentaje_descuento': Decimal(str(getattr(pedido, 'porcentaje_descuento', 0) or 0)),
@@ -179,6 +180,18 @@ def detalle_pedido(request, pedido_id):
                 'envio': Decimal(str(getattr(pedido, 'costo_envio', 0) or 0)),
                 'total_final': Decimal(str(getattr(pedido, 'total', 0) or subtotal_base))
             }
+
+        # 🛡️ INYECCIÓN DINÁMICA AL OBJETO PEDIDO PARA QUE LAS PLANTILLAS NUNCA MUESTREN 0
+        pedido.subtotal_antes_de_descuento = totales.get('subtotal', Decimal('0.00'))
+        pedido.subtotal_neto = totales.get('subtotal_neto', totales.get('subtotal', Decimal('0.00')))
+        pedido.descuento_total = totales.get('descuento_total', Decimal('0.00'))
+        pedido.porcentaje_descuento = totales.get('porcentaje_descuento', Decimal('0.00'))
+        pedido.aplica_iva = bool(totales.get('iva_total', 0) > 0)
+        pedido.iva = totales.get('iva_total', Decimal('0.00'))
+        pedido.es_retenedor = bool(totales.get('retefuente_total', 0) > 0)
+        pedido.retefuente = totales.get('retefuente_total', Decimal('0.00'))
+        pedido.costo_envio = totales.get('envio', Decimal('0.00'))
+        pedido.total = totales.get('total_final', Decimal('0.00'))
 
         link_pdf = request.build_absolute_uri(reverse('pedido_pdf', args=[pedido.id]))
         link_publico = request.build_absolute_uri(reverse('confirmar_pago_publico', args=[pedido.token_publico]))
@@ -255,16 +268,35 @@ def generar_factura(request, pedido_id):
         try:
             totales = calcular_totales_pedido(pedido, perfil, items)
         except Exception:
-            subtotal_base = sum(Decimal(str(item.subtotal or 0)) for item in items)
+            # 🛡️ Fallback inteligente: calcula desde precio y cantidad si el subtotal está en 0
+            subtotal_base = sum(
+                Decimal(str(getattr(item, 'subtotal', 0) or (float(item.precio or 0) * float(getattr(item, 'cantidad', 1) or 1))))
+                for item in items
+            )
+            envio_val = Decimal(str(getattr(pedido, 'costo_envio', 0) or 0))
+            desc_val = Decimal(str(getattr(pedido, 'descuento_total', 0) or 0))
+            iva_val = Decimal(str(getattr(pedido, 'iva', 0) or 0))
+            rete_val = Decimal(str(getattr(pedido, 'retefuente', 0) or 0))
+
+            total_calculado = subtotal_base - desc_val + iva_val - rete_val + envio_val
+            if total_calculado <= 0:
+                total_calculado = subtotal_base + envio_val
+
             totales = {
                 'subtotal': subtotal_base,
-                'iva_total': Decimal(str(getattr(pedido, 'iva', 0) or 0)),
-                'descuento_total': Decimal(str(getattr(pedido, 'descuento_total', 0) or 0)),
+                'subtotal_neto': subtotal_base - desc_val,
+                'iva_total': iva_val,
+                'descuento_total': desc_val,
                 'porcentaje_descuento': Decimal(str(getattr(pedido, 'porcentaje_descuento', 0) or 0)),
-                'retefuente_total': Decimal(str(getattr(pedido, 'retefuente', 0) or 0)),
-                'envio': Decimal(str(getattr(pedido, 'costo_envio', 0) or 0)),
-                'total_final': Decimal(str(getattr(pedido, 'total', 0) or subtotal_base))
+                'retefuente_total': rete_val,
+                'envio': envio_val,
+                'total_final': total_calculado
             }
+
+            # 💾 Corrige el pedido en la base de datos si estaba en 0 para que no vuelva a fallar
+            if not pedido.total or pedido.total <= 0:
+                pedido.total = total_calculado
+                pedido.save(update_fields=['total'])
         
         subtotal_general = totales['subtotal']
         iva_total = totales['iva_total']
