@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 def mis_productos(request):
 
     productos = Producto.objects.filter(
-        usuario=request.user
+        usuario=request.user,activo=True
     ).order_by('-id')
 
     return render(
@@ -56,7 +56,7 @@ def mis_productos(request):
 
 @login_required
 def inventario(request):
-    productos_base = Producto.objects.filter(usuario=request.user).prefetch_related('variantes').order_by('nombre')
+    productos_base = Producto.objects.filter(usuario=request.user,activo=True).prefetch_related('variantes').order_by('nombre')
 
     # 🔍 SISTEMA DE BÚSQUEDA
     q = request.GET.get('q', '').strip()
@@ -164,13 +164,15 @@ def guardar_producto_view(request, pk=None):
 
 @login_required
 def eliminar_producto(request, id):
-
-    producto = Producto.objects.get(
-        id=id,
-        usuario=request.user
-    )
-
-    producto.delete()
+    # Uso seguro de get_object_or_404 para evitar el 500 si no existe
+    producto = get_object_or_404(Producto, id=id, usuario=request.user)
+    
+    # Borrado lógico (Soft Delete) para proteger el historial de pedidos y PDFs
+    producto.activo = False
+    producto.save()
+    
+    # Opcional: Desactivar también sus variantes
+    producto.variantes.update(activo=False)
 
     return redirect('mis_productos')
 
