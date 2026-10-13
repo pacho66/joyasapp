@@ -95,7 +95,7 @@ def inventario(request):
 
 @login_required
 def lista_productos(request):
-    productos = Producto.objects.filter(usuario=request.user)
+    productos = Producto.objects.filter(usuario=request.user).prefetch_related('variantes')
     categorias = Categoria.objects.filter(usuario=request.user)
     return render(request, 'lista_productos.html', {
         'productos': productos,
