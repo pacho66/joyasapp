@@ -195,7 +195,10 @@ def detalle_pedido(request, pedido_id):
 
         link_pdf = request.build_absolute_uri(reverse('pedido_pdf', args=[pedido.id]))
         link_publico = request.build_absolute_uri(reverse('confirmar_pago_publico', args=[pedido.token_publico]))
-        whatsapp_url = generar_link_whatsapp(request, pedido) if 'generar_link_whatsapp' in globals() else '#'
+        try:
+            whatsapp_url = generar_link_whatsapp(request, pedido) if 'generar_link_whatsapp' in globals() else '#'
+        except Exception:
+            whatsapp_url = '#'
 
         hoy = timezone.now().date()
         estado_credito = None
