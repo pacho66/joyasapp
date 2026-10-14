@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.db import transaction
 from .models import Perfil, Cliente, Pedido  # Agrupados en una sola línea limpia
 from .crm_services import registrar_venta_en_crm 
-from .siigo_services import enviar_factura_a_siigo 
+from .siigo_service import enviar_factura_a_siigo 
 
 # =======================================================================
 # ⚙️ SEÑAL 1: Creación automática del Perfil SaaS (Existente)
