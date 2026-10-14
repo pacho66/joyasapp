@@ -18,12 +18,31 @@ from decimal import Decimal
 # 🔥 1. FUNCIÓN MASIVA (AQUÍ VA)
 # =====================================
 def enviar_whatsapp_masivo(modeladmin, request, queryset):
+    html = """
+    <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto;">
+        <h2>📲 Enlaces de WhatsApp Masivo</h2>
+        <p>Haz clic en los enlaces para abrir los chats con tus clientes:</p>
+        <ul style="line-height: 1.8;">
+    """
+    
     for cliente in queryset:
-        mensaje = f"Hola {cliente.nombre} 😊 tenemos novedades 💎"
-        link = f"https://wa.me/57{cliente.telefono}?text={quote(mensaje)}"
-        print(link)
+        telefono = getattr(cliente, 'telefono', '')
+        if telefono:
+            mensaje = f"Hola {cliente.nombre} 😊 tenemos novedades 💎"
+            link = f"https://wa.me/57{telefono}?text={quote(mensaje)}"
+            html += f'<li><b>{cliente.nombre}</b> ({telefono}) — <a href="{link}" target="_blank" style="color: #25d366; font-weight: bold;">Abrir WhatsApp 💬</a></li>'
+        else:
+            html += f'<li><b>{cliente.nombre}</b> — <i style="color: red;">Sin teléfono registrado</i></li>'
+            
+    html += """
+        </ul>
+        <br>
+        <a href="./" style="background: #007bff; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px;">← Volver al listado de clientes</a>
+    </div>
+    """
+    return HttpResponse(html)
 
-enviar_whatsapp_masivo.short_description = "Enviar WhatsApp masivo"
+enviar_whatsapp_masivo.short_description = "Enviar WhatsApp masivo (Generar enlaces)"
 
 @admin.register(Perfil)
 class PerfilAdmin(admin.ModelAdmin):
