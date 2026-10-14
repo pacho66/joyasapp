@@ -232,6 +232,26 @@ class ConfiguracionNegocioForm(forms.Form):
         })
     )
 
+    # 🧾 CREDENCIALES DE API SIIGO
+    siigo_username = forms.EmailField(
+        required=False,
+        label='Usuario / Correo API Siigo',
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'correo.api@tuempresa.com'
+        })
+    )
+
+    siigo_access_key = forms.CharField(
+        max_length=255,
+        required=False,
+        label='Access Key de Siigo',
+        widget=forms.PasswordInput(render_value=True, attrs={
+            'class': 'form-control',
+            'placeholder': 'Tu llave de acceso de la API'
+        })
+    )
+
     # 🎁 CAMPAÑAS Y DESCUENTOS EN PROMO (NUEVOS CAMPOS)
     aplicar_descuentos = forms.BooleanField(
         required=False,

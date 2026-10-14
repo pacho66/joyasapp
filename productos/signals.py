@@ -4,7 +4,8 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.db import transaction
 from .models import Perfil, Cliente, Pedido  # Agrupados en una sola línea limpia
-from .crm_services import registrar_venta_en_crm  
+from .crm_services import registrar_venta_en_crm 
+from .siigo_services import enviar_factura_a_siigo 
 
 # =======================================================================
 # ⚙️ SEÑAL 1: Creación automática del Perfil SaaS (Existente)
@@ -34,18 +35,17 @@ def capturar_estado_anterior(sender, instance, **kwargs):
         instance._estado_anterior = None
 
 # =======================================================================
-# 📦 SEÑAL 3: Control de Inventario por transiciones de estado (Nueva)
+# 📦 SEÑAL 3: Control de Inventario y Facturación en Siigo (Modificada)
 # =======================================================================
 @receiver(post_save, sender=Pedido)
-def procesar_cambio_stock(sender, instance, created, **kwargs):
-    """Descuenta stock al confirmarse el pago; devuelve stock si se cancela"""
+def procesar_cambio_stock_y_facturacion(sender, instance, created, **kwargs):
+    """Descuenta stock y genera factura en Siigo al confirmarse el pago"""
     estado_anterior = getattr(instance, '_estado_anterior', None)
     nuevo_estado = instance.estado
 
     # CASO A: El pedido pasa a estar pagado/confirmado
     if nuevo_estado == 'pagado' and estado_anterior != 'pagado':
         with transaction.atomic():
-            # Recuerda verificar si la relación en tu modelo se llama 'detalles' o 'items'
             for item in instance.detalles.all(): 
                 producto = item.producto
                 variante = getattr(item, 'variante', None) 
@@ -56,6 +56,14 @@ def procesar_cambio_stock(sender, instance, created, **kwargs):
                 else:
                     producto.stock = max(0, producto.stock - item.cantidad)
                     producto.save()
+
+        # Disparar la factura en Siigo (fuera de la transacción de stock por seguridad de red)
+        try:
+            enviar_factura_a_siigo(instance)
+        except Exception as e:
+            # Si Siigo falla, el stock ya se descontó correctamente en la BD, 
+            # pero puedes registrar el error en los logs de Render para revisarlo.
+            print(f"⚠️ Error al sincronizar la factura #{instance.id} con Siigo: {e}")
 
     # CASO B: El pedido ya estaba pagado y lo revirtieron (a cancelado o pendiente)
     elif estado_anterior == 'pagado' and nuevo_estado != 'pagado':
@@ -70,7 +78,6 @@ def procesar_cambio_stock(sender, instance, created, **kwargs):
                 else:
                     producto.stock += item.cantidad
                     producto.save()
-
 # =======================================================================
 # 🤖 SEÑAL 4: Disparador Automático del CRM Post-Venta (Existente)
 # =======================================================================
