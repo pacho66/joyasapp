@@ -127,7 +127,7 @@ def iniciar_sesion(request):
 @login_required
 def cerrar_sesion(request):
     logout(request)
-    return redirect('iniciar_seccion')
+    return redirect('login')
 
 def renovar_plan(perfil):
     """Lógica centralizada para extender la vigencia del plan 30 días."""
