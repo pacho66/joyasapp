@@ -199,6 +199,8 @@ class Producto(models.Model):
     precio_por_gramo_semimayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     precio_por_gramo_mayor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
+    activo = models.BooleanField(default=True)
+
     # =======================================================================
     # 📊 MOTORES DE CÁLCULO DINÁMICO
     # =======================================================================
