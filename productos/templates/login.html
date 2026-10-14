@@ -15,10 +15,11 @@
     <style>
         body {
             background: linear-gradient(135deg, #1e1e2f, #2c3e50);
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 20px 0;
         }
 
         .login-box {
@@ -38,7 +39,7 @@
 
         .login-title {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             font-weight: bold;
         }
 
@@ -68,13 +69,11 @@
 
 <div class="login-box">
 
-    <!-- LOGO 
-         🛡️ Si el archivo estático no se encuentra en Render, el "this.style.display='none'" 
-         evita que aparezca el icono de imagen rota que arruina la visual. -->
+    <!-- LOGO -->
     <img src="{% static 'img/logo.jpg' %}" class="logo" alt="Logo" onerror="this.style.display='none';">
 
     <h4 class="login-title">Bienvenido</h4>
-    <p class="text-center text-muted">Ingresa a tu tienda</p>
+    <p class="text-center text-muted mb-4">Ingresa a tu tienda</p>
 
     <!-- MENSAJES -->
     {% if messages %}
@@ -85,25 +84,45 @@
         {% endfor %}
     {% endif %}
 
-    <!-- 🌟 Agregamos action="" para forzar al navegador a limpiar el hilo de peticiones antiguas -->
     <form method="POST" action="">
         {% csrf_token %}
+        {% if request.GET.next %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+        {% endif %}
+        ...
 
         <div class="mb-3">
             <label class="form-label">Usuario</label>
             <input type="text" name="username" class="form-control form-control-lg" required autocomplete="username">
         </div>
 
-        <div class="mb-3 position-relative">
+        <div class="mb-2 position-relative">
             <label class="form-label">Contraseña</label>
             <input type="password" id="password" name="password" class="form-control form-control-lg" required autocomplete="current-password">
             <i class="bi bi-eye toggle-password" onclick="togglePassword()"></i>
+        </div>
+
+        <!-- 🔑 ENLACE RECUPERAR CONTRASEÑA -->
+        <div class="text-end mb-3">
+            <a href="{% url 'password_reset' %}" class="text-muted text-decoration-none small">
+                ¿Olvidaste tu contraseña?
+            </a>
         </div>
 
         <button type="submit" class="btn btn-dark btn-login mt-2">
             Entrar
         </button>
     </form>
+
+    <hr class="my-4">
+
+    <!-- 🛍️ ENLACE CREAR TIENDA / REGISTRO -->
+    <p class="text-center mb-0 text-muted">
+        ¿Aún no tienes una tienda? 
+        <a href="{% url 'registro' %}" class="fw-bold text-dark text-decoration-underline">
+            Crea tu cuenta aquí
+        </a>
+    </p>
 
 </div>
 

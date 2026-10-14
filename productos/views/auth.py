@@ -96,7 +96,8 @@ def registro(request):
 def iniciar_sesion(request):
 
     if request.user.is_authenticated:
-        return redirect('dashboard')
+       return redirect('dashboard')
+        
 
     if request.method == 'POST':
 
@@ -111,7 +112,8 @@ def iniciar_sesion(request):
 
         if user is not None:
             login(request, user)
-            return redirect('dashboard')
+            next_url = request.GET.get('next') or request.POST.get('next') or 'dashboard'
+            return redirect(next_url)
 
         else:
             messages.error(
@@ -125,7 +127,7 @@ def iniciar_sesion(request):
 @login_required
 def cerrar_sesion(request):
     logout(request)
-    return redirect('login')
+    return redirect('iniciar_seccion')
 
 def renovar_plan(perfil):
     """Lógica centralizada para extender la vigencia del plan 30 días."""
