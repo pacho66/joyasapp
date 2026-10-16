@@ -144,7 +144,7 @@
                     <td style="padding:15px; text-align: center; white-space: nowrap;">
                         <button class="btn-edit" data-id="{{ g.id }}" data-nombre="{{ g.nombre }}" data-monto="{{ g.monto }}" data-categoria="{{ g.categoria }}" data-observaciones="{{ g.observaciones|default:'' }}" style="background: #ffc107; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; margin-right: 4px;">✏️ Editar</button>
                         <a href="{% url 'duplicar_gasto' g.id %}" style="background: #17a2b8; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; margin-right: 4px;">📋 Duplicar</a>
-                        <a href="{% url 'eliminar_gasto' g.id %}" onclick="return confirm('¿Archivar este registro?');" style="background: #e2e8f0; color: #4a5568; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold;">📉 Archivar</a>
+                        <a href="{% url 'eliminar_gasto' g.id %}" onclick="return confirm('¿Eliminar permanentemente este registro?');" style="background: #dc3545; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold;">🗑️ Eliminar</a>
                     </td>
                 </tr>
                 {% empty %}

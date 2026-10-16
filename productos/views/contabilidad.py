@@ -83,7 +83,7 @@ def gastos(request):
 
 @login_required(login_url='/login/')
 def editar_gasto(request, id):
-    gasto = get_object_or_404(Gasto, id=id, usuario=request.user, activo=True)
+    gasto = get_object_or_404(Gasto, id=id, usuario=request.user)
     if request.method == 'POST':
         gasto.nombre = request.POST.get('nombre', gasto.nombre)
         gasto.monto = request.POST.get('monto', gasto.monto)
@@ -109,10 +109,11 @@ def duplicar_gasto(request, id):
 @login_required(login_url='/login/')
 def eliminar_gasto(request, id):
     gasto = get_object_or_404(Gasto, id=id, usuario=request.user)
-    gasto.activo = False
-    gasto.save()
-    messages.warning(request, f"Gasto '{gasto.nombre}' archivado.")
+    nombre = gasto.nombre
+    gasto.delete()  # 👈 Eliminación real y definitiva de la base de datos
+    messages.warning(request, f"Gasto '{nombre}' eliminado permanentemente.")
     return redirect('gastos')
+
 @login_required
 def registrar_abono(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
