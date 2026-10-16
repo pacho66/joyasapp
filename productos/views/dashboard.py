@@ -22,8 +22,6 @@ from ..models import (
     PedidoItem,
 )
 
-from .contabilidad import _asegurar_gastos_basicos
-
 # =========================================================================
 # 📊 BLOQUE 7: DASHBOARD ADMINISTRATIVO, CRM Y ESTADÍSTICAS
 # =========================================================================
