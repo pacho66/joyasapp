@@ -21,7 +21,6 @@ from ..forms import GastoForm
 def gastos(request):
     usuario = request.user
 
-    # 1. 📥 CREAR NUEVO GASTO (100% Dinámico)
     if request.method == 'POST':
         nombre = request.POST.get('nombre')
         monto = request.POST.get('monto')
@@ -29,22 +28,25 @@ def gastos(request):
         observaciones = request.POST.get('observaciones', '')
 
         if nombre and monto:
-            Gasto.objects.create(
-                usuario=usuario,
-                nombre=nombre,
-                monto=monto,
-                categoria=categoria,
-                observaciones=observaciones
-            )
-            messages.success(request, f"Gasto '{nombre}' registrado correctamente.")
-            return redirect('gastos')
+            try:
+                # Limpiar formato de número por si trae comas o puntos
+                monto_limpio = str(monto).replace(',', '.')
+                Gasto.objects.create(
+                    usuario=usuario,
+                    nombre=nombre,
+                    monto=monto_limpio,
+                    categoria=categoria,
+                    observaciones=observaciones
+                )
+                messages.success(request, f"Gasto '{nombre}' registrado correctamente.")
+            except Exception as e:
+                messages.error(request, f"Error al registrar el gasto: {e}")
         else:
             messages.error(request, "Por favor completa el concepto y el monto.")
+        return redirect('gastos')
 
-    # 2. 🔍 CONSULTA BASE DE GASTOS DEL CLIENTE
-    gastos_query = Gasto.objects.filter(usuario=usuario, activo=True)
+    gastos_query = Gasto.objects.filter(usuario=usuario)
 
-    # 📊 CÁLCULO DE MÉTRICAS KPI
     metricas = gastos_query.aggregate(
         total_global=Sum('monto'),
         total_fijo=Sum('monto', filter=Q(categoria='fijo')),
@@ -61,7 +63,6 @@ def gastos(request):
     porcentaje_fab = (total_fab / total_global * 100) if total_global > 0 else 0
     porcentaje_mkt = (total_mkt / total_global * 100) if total_global > 0 else 0
 
-    # 🔢 FILTROS DE BÚSQUEDA Y CATEGORÍA
     buscar = request.GET.get('buscar')
     categoria_filtrada = request.GET.get('categoria')
 
@@ -85,12 +86,17 @@ def gastos(request):
 def editar_gasto(request, id):
     gasto = get_object_or_404(Gasto, id=id, usuario=request.user)
     if request.method == 'POST':
-        gasto.nombre = request.POST.get('nombre', gasto.nombre)
-        gasto.monto = request.POST.get('monto', gasto.monto)
-        gasto.categoria = request.POST.get('categoria', gasto.categoria)
-        gasto.observaciones = request.POST.get('observaciones', gasto.observaciones)
-        gasto.save()
-        messages.success(request, f"Gasto '{gasto.nombre}' actualizado correctamente.")
+        try:
+            gasto.nombre = request.POST.get('nombre', gasto.nombre)
+            monto = request.POST.get('monto')
+            if monto:
+                gasto.monto = str(monto).replace(',', '.')
+            gasto.categoria = request.POST.get('categoria', gasto.categoria)
+            gasto.observaciones = request.POST.get('observaciones', gasto.observaciones)
+            gasto.save()
+            messages.success(request, f"Gasto '{gasto.nombre}' actualizado correctamente.")
+        except Exception as e:
+            messages.error(request, f"Error al actualizar el gasto: {e}")
     return redirect('gastos')
 
 @login_required(login_url='/login/')
