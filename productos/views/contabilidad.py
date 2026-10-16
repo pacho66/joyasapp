@@ -29,7 +29,6 @@ def gastos(request):
 
         if nombre and monto:
             try:
-                # Limpiar formato de número por si trae comas o puntos
                 monto_limpio = str(monto).replace(',', '.')
                 Gasto.objects.create(
                     usuario=usuario,
@@ -45,9 +44,10 @@ def gastos(request):
             messages.error(request, "Por favor completa el concepto y el monto.")
         return redirect('gastos')
 
-    gastos_query = Gasto.objects.filter(usuario=usuario)
+    # 1. Queryset base para calcular las métricas generales sin interferir con los filtros
+    base_query = Gasto.objects.filter(usuario=usuario)
 
-    metricas = gastos_query.aggregate(
+    metricas = base_query.aggregate(
         total_global=Sum('monto'),
         total_fijo=Sum('monto', filter=Q(categoria='fijo')),
         total_fab=Sum('monto', filter=Q(categoria='fabricacion')),
@@ -63,6 +63,8 @@ def gastos(request):
     porcentaje_fab = (total_fab / total_global * 100) if total_global > 0 else 0
     porcentaje_mkt = (total_mkt / total_global * 100) if total_global > 0 else 0
 
+    # 2. Queryset independiente para la tabla (búsqueda y filtros de categoría)
+    gastos_query = base_query
     buscar = request.GET.get('buscar')
     categoria_filtrada = request.GET.get('categoria')
 
