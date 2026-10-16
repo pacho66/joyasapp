@@ -214,8 +214,8 @@
         boton.addEventListener("click", function() {
             titulo.innerText = "✏️ Modificar Registro Contable";
             const id = this.getAttribute("data-id");
-            // Se utiliza la URL dinámica para editar
-            formulario.setAttribute("action", /gastos/editar/${id}/); 
+            // 👇 AQUÍ ESTÁ LA CORRECCIÓN CON BACKTICKS
+            formulario.setAttribute("action", /lista-gastos/editar/${id}/);
             document.getElementById("id_nombre").value = this.getAttribute("data-nombre");
             document.getElementById("id_monto").value = this.getAttribute("data-monto");
             document.getElementById("id_categoria").value = this.getAttribute("data-categoria");
