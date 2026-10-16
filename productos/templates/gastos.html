@@ -194,7 +194,6 @@
         </form>
     </div>
 </div>
-
 <script>
     const modal = document.getElementById("modalGasto");
     const formulario = document.getElementById("formGastoModal");
@@ -210,21 +209,23 @@
         modal.style.display = "flex";
     }
 
-    document.querySelectorAll(".btn-edit").forEach(boton => {
-        boton.addEventListener("click", function() {
+    // ✅ Usamos .closest() para capturar el botón sin importar si haces clic en el texto o icono
+    document.addEventListener("click", function(e) {
+        const boton = e.target.closest(".btn-edit");
+        if (boton) {
             titulo.innerText = "✏️ Modificar Registro Contable";
-            const id = this.getAttribute("data-id");
-            // 👇 AQUÍ ESTÁ LA CORRECCIÓN CON BACKTICKS
+            const id = boton.getAttribute("data-id");
             formulario.setAttribute("action", /lista-gastos/editar/${id}/);
-            document.getElementById("id_nombre").value = this.getAttribute("data-nombre");
-            document.getElementById("id_monto").value = this.getAttribute("data-monto");
-            document.getElementById("id_categoria").value = this.getAttribute("data-categoria");
-            document.getElementById("id_observaciones").value = this.getAttribute("data-observaciones");
+            document.getElementById("id_nombre").value = boton.getAttribute("data-nombre");
+            document.getElementById("id_monto").value = boton.getAttribute("data-monto");
+            document.getElementById("id_categoria").value = boton.getAttribute("data-categoria");
+            document.getElementById("id_observaciones").value = boton.getAttribute("data-observaciones");
             modal.style.display = "flex";
-        });
+        }
     });
 
     function cerrarModal() { modal.style.display = "none"; }
     window.onclick = function(e) { if (e.target == modal) cerrarModal(); }
 </script>
+
 {% endblock %}
