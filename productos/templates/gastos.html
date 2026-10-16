@@ -204,7 +204,7 @@
         titulo.innerText = "➕ Registrar Operación de Gasto";
         formulario.setAttribute("action", "{% url 'gastos' %}");
         document.getElementById("id_nombre").value = "";
-        document.getElementById("id_monto").value = "0";
+        document.getElementById("id_monto").value = "";
         document.getElementById("id_categoria").value = "fabricacion";
         document.getElementById("id_observaciones").value = "";
         modal.style.display = "flex";
@@ -214,7 +214,8 @@
         boton.addEventListener("click", function() {
             titulo.innerText = "✏️ Modificar Registro Contable";
             const id = this.getAttribute("data-id");
-            formulario.setAttribute("action", /lista-gastos/editar/${id}/);
+            // Se utiliza la URL dinámica para editar
+            formulario.setAttribute("action", /gastos/editar/${id}/); 
             document.getElementById("id_nombre").value = this.getAttribute("data-nombre");
             document.getElementById("id_monto").value = this.getAttribute("data-monto");
             document.getElementById("id_categoria").value = this.getAttribute("data-categoria");

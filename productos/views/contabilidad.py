@@ -17,54 +17,34 @@ from ..forms import GastoForm
 # 💸 BLOQUE 10: CONTABILIDAD DE GASTOS, ABONOS Y COBRANZAS (CARTERA)
 # =========================================================================
 
-def _asegurar_gastos_basicos(usuario):
-    """Inyecta la estructura de gastos base de JoyasApp protegiendo contra duplicados."""
-    tiene_categoria = hasattr(Gasto, 'categoria')
-    
-    gastos_base = [
-        {"nombre": "Compra de Oro / Insumos", "categoria": "fabricacion"},
-        {"nombre": "Compra de Plata / Insumos", "categoria": "fabricacion"},
-        {"nombre": "Piedras, Circones y Gemas", "categoria": "fabricacion"},
-        {"nombre": "Procesos de Fundición", "categoria": "fabricacion"},
-        {"nombre": "Insumos de Pulido y Soldadura", "categoria": "fabricacion"},
-        {"nombre": "Ligas, Químicos y Ácidos", "categoria": "fabricacion"},
-        {"nombre": "Cajas y Empaques de Lujo", "categoria": "fabricacion"},
-        {"nombre": "Arriendo Taller/Oficina", "categoria": "fijo"},
-        {"nombre": "Servicios Públicos (Luz/Internet)", "categoria": "fijo"},
-        {"nombre": "Publicidad y Marketing", "categoria": "marketing"},
-        {"nombre": "Transporte y Envíos", "categoria": "logistica"},
-        {"nombre": "Comisiones Bancarias y Pasarelas", "categoria": "financiero"},
-        {"nombre": "Papelería y Administración", "categoria": "administrativo"},
-    ]
-    
-    for g in gastos_base:
-        defaults = {"monto": 0.0}
-        if tiene_categoria:
-            defaults["categoria"] = g["categoria"]
-            
-        Gasto.objects.get_or_create(usuario=usuario, nombre=g["nombre"], defaults=defaults)
-
 @login_required(login_url='/login/')
-def gastos(request): # 🎯 Nombre unificado para cumplir con urls.py y Render
+def gastos(request):
     usuario = request.user
-    _asegurar_gastos_basicos(usuario)
 
-    # 1. 📥 PROCESAR CREACIÓN DE GASTO (Rescatado de la vista vieja)
+    # 1. 📥 CREAR NUEVO GASTO (100% Dinámico)
     if request.method == 'POST':
-        form = GastoForm(request.POST)
-        if form.is_valid():
-            gasto = form.save(commit=False)
-            gasto.usuario = usuario
-            gasto.save()
-            messages.success(request, f"Gasto '{gasto.nombre}' registrado correctamente.")
-            return redirect('gastos')
-    else:
-        form = GastoForm()
+        nombre = request.POST.get('nombre')
+        monto = request.POST.get('monto')
+        categoria = request.POST.get('categoria', 'fabricacion')
+        observaciones = request.POST.get('observaciones', '')
 
-    # 2. 🔍 FILTRO BASE Y CONSULTA (Nueva estructura de analítica)
+        if nombre and monto:
+            Gasto.objects.create(
+                usuario=usuario,
+                nombre=nombre,
+                monto=monto,
+                categoria=categoria,
+                observaciones=observaciones
+            )
+            messages.success(request, f"Gasto '{nombre}' registrado correctamente.")
+            return redirect('gastos')
+        else:
+            messages.error(request, "Por favor completa el concepto y el monto.")
+
+    # 2. 🔍 CONSULTA BASE DE GASTOS DEL CLIENTE
     gastos_query = Gasto.objects.filter(usuario=usuario, activo=True)
 
-    # 📊 CÁLCULO DE MÉTRICAS KPI CONTINUAS
+    # 📊 CÁLCULO DE MÉTRICAS KPI
     metricas = gastos_query.aggregate(
         total_global=Sum('monto'),
         total_fijo=Sum('monto', filter=Q(categoria='fijo')),
@@ -81,7 +61,7 @@ def gastos(request): # 🎯 Nombre unificado para cumplir con urls.py y Render
     porcentaje_fab = (total_fab / total_global * 100) if total_global > 0 else 0
     porcentaje_mkt = (total_mkt / total_global * 100) if total_global > 0 else 0
 
-    # 🔢 Procesar filtros de búsqueda desde la UI si existen
+    # 🔢 FILTROS DE BÚSQUEDA Y CATEGORÍA
     buscar = request.GET.get('buscar')
     categoria_filtrada = request.GET.get('categoria')
 
@@ -96,53 +76,43 @@ def gastos(request): # 🎯 Nombre unificado para cumplir con urls.py y Render
         "gastos": gastos_filtrados,
         "categoria_filtrada": categoria_filtrada,
         "total_gastos": total_global,
-        
-        # Datos para las tarjetas analíticas superiores
         "total_fijo": total_fijo, "porcentaje_fijo": porcentaje_fijo,
         "total_fab": total_fab, "porcentaje_fab": porcentaje_fab,
         "total_mkt": total_mkt, "porcentaje_mkt": porcentaje_mkt,
-        
-        "form": form,
     })
 
-# ✏️ Ajustamos los redireccionamientos de las acciones para que apunten a 'gastos'
 @login_required(login_url='/login/')
 def editar_gasto(request, id):
     gasto = get_object_or_404(Gasto, id=id, usuario=request.user, activo=True)
     if request.method == 'POST':
-        form = GastoForm(request.POST, instance=gasto)
-        if form.is_valid():
-            form.save()
-            messages.success(request, f"Gasto '{gasto.nombre}' actualizado correctamente.")
-            return redirect('gastos')
+        gasto.nombre = request.POST.get('nombre', gasto.nombre)
+        gasto.monto = request.POST.get('monto', gasto.monto)
+        gasto.categoria = request.POST.get('categoria', gasto.categoria)
+        gasto.observaciones = request.POST.get('observaciones', gasto.observaciones)
+        gasto.save()
+        messages.success(request, f"Gasto '{gasto.nombre}' actualizado correctamente.")
     return redirect('gastos')
 
 @login_required(login_url='/login/')
 def duplicar_gasto(request, id):
     gasto_original = get_object_or_404(Gasto, id=id, usuario=request.user, activo=True)
-    nombre_base = re.sub(r' \(Copia \d+\)$', '', gasto_original.nombre)
-    coincidencias = Gasto.objects.filter(usuario=request.user, nombre__startswith=nombre_base, activo=True).count()
-    
-    nuevo_nombre = f"{nombre_base} (Copia {coincidencias})"
     Gasto.objects.create(
         usuario=request.user,
-        nombre=nuevo_nombre,
+        nombre=f"{gasto_original.nombre} (Copia)",
         monto=gasto_original.monto,
         categoria=gasto_original.categoria,
         observaciones=gasto_original.observaciones
     )
-    messages.success(request, f"Duplicado como: '{nuevo_nombre}'")
+    messages.success(request, f"Gasto duplicado correctamente.")
     return redirect('gastos')
 
 @login_required(login_url='/login/')
 def eliminar_gasto(request, id):
     gasto = get_object_or_404(Gasto, id=id, usuario=request.user)
-    nombre_eliminado = gasto.nombre
     gasto.activo = False
     gasto.save()
-    messages.warning(request, f"Gasto '{nombre_eliminado}' archivado del panel.")
+    messages.warning(request, f"Gasto '{gasto.nombre}' archivado.")
     return redirect('gastos')
-
 @login_required
 def registrar_abono(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, usuario=request.user)
