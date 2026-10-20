@@ -10,6 +10,7 @@ from . import views
 from productos.views import checkout, pedidos, utilidades
 from django.contrib.auth import views as auth_views
 from .views import contabilidad
+from .views.catalogo import catalogo_tienda
 
 urlpatterns = [
 
@@ -47,6 +48,7 @@ urlpatterns = [
     
     # Ruta para editar un producto existente (recibe la clave primaria 'pk')
     path('productos/<int:pk>/editar/', views.guardar_producto_view, name='editar_producto'),
+    path('', catalogo_tienda, name='catalogo_tienda'),
     
     # ===============================
     # 🛒 CARRITO

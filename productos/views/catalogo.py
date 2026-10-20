@@ -35,6 +35,30 @@ logger = logging.getLogger(__name__)
 # 🛍️ BLOQUE 3: CATÁLOGO PÚBLICO DE PRODUCTOS (VISTA DEL CLIENTE)
 # =========================================================================
 
+def catalogo_tienda(request):
+    """
+    Vista principal que distingue entre el subdominio de una tienda activa
+    y la landing page principal del SaaS (joyasapp.com).
+    """
+    if getattr(request, 'tenant_perfil', None):
+        # 🛒 Petición desde un subdominio activo (ej: tuluna.joyasapp.com)
+        perfil = request.tenant_perfil
+        
+        # Filtramos los productos activos asociados a este perfil/tienda
+        if hasattr(perfil.user, 'productos'):
+            productos = perfil.user.productos.filter(activo=True)
+        else:
+            productos = perfil.productos.filter(activo=True) if hasattr(perfil, 'productos') else []
+
+        context = {
+            'perfil': perfil,
+            'productos': productos,
+        }
+        return render(request, 'tienda/index.html', context)
+    else:
+        # 🌐 Petición al dominio principal (joyasapp.com)
+        return render(request, 'saas/home_landing.html')
+
 def inicio(request):
     try:
         # 1. Obtener el perfil de forma segura
