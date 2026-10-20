@@ -14,15 +14,17 @@ from .views.catalogo import catalogo_tienda
 
 urlpatterns = [
 
+    # ===============================
+    # 🔓 ENRUTADOR RAÍZ / MULTI-TENANT
+    # ===============================
+    path('', catalogo.catalogo_tienda, name='inicio'),
 
     # ===============================
     # 🔓 AUTENTICACIÓN
     # ===============================
-    path('', catalogo.inicio, name='inicio'),
     path('registro/', auth.registro, name='registro'),
     path('login/', auth.iniciar_sesion, name='login'),
     path('logout/', auth.cerrar_sesion, name='logout'),
-
     # 🔑 Rutas de recuperación de contraseña
     path('password_reset/', auth_views.PasswordResetView.as_view(template_name='password_reset_form.html'), name='password_reset'),
     path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='password_reset_done.html'), name='password_reset_done'),
@@ -48,7 +50,6 @@ urlpatterns = [
     
     # Ruta para editar un producto existente (recibe la clave primaria 'pk')
     path('productos/<int:pk>/editar/', views.guardar_producto_view, name='editar_producto'),
-    path('', catalogo_tienda, name='catalogo_tienda'),
     
     # ===============================
     # 🛒 CARRITO
