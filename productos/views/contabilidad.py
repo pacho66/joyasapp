@@ -84,6 +84,36 @@ def gastos(request):
         "total_mkt": total_mkt, "porcentaje_mkt": porcentaje_mkt,
     })
 
+@login_required
+def lista_gastos(request):
+    """
+    Lista y filtra los gastos de forma aislada según el subdominio activo (SaaS multi-tenant).
+    """
+    # 1. Obtenemos el perfil/tienda activa a través del subdominio del Middleware
+    perfil_activo = getattr(request, 'tenant_perfil', None)
+    
+    # 2. Respaldo por si accede desde el dominio principal con sesión iniciada
+    if not perfil_activo and hasattr(request.user, 'perfil'):
+        perfil_activo = request.user.perfil
+
+    if not perfil_activo:
+        return redirect('home')
+
+    # 3. Como tu modelo Gasto usa 'usuario', filtramos los gastos del usuario dueño de este perfil
+    # (O si prefieres, puedes asignarle luego un ForeignKey directo al Perfil)
+    gastos = Gasto.objects.filter(usuario=perfil_activo.user).order_by('-fecha')
+    
+    # 4. Cálculo del total de gastos acumulados
+    total_gastos = sum(g.monto for g in gastos)
+
+    context = {
+        'gastos': gastos,
+        'total_gastos': total_gastos,
+        'perfil': perfil_activo,
+    }
+    
+    return render(request, 'gastos.html', context)
+
 @login_required(login_url='/login/')
 def editar_gasto(request, id):
     gasto = get_object_or_404(Gasto, id=id, usuario=request.user)

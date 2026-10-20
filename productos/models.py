@@ -34,6 +34,12 @@ PRECIOS_PLANES = {
     }
 }
 
+# Asegúrate de tener definido PRECIOS_PLANES en tu código o settings
+PRECIOS_PLANES = {
+    'basico': {'precio_mensual': Decimal('0.00')},
+    'pro': {'precio_mensual': Decimal('50000.00')},
+    'premium': {'precio_mensual': Decimal('100000.00')},
+}
 
 class Perfil(models.Model):
     PLANES = [
@@ -48,6 +54,16 @@ class Perfil(models.Model):
     )
     # EMPRESA
     nombre_tienda = models.CharField(max_length=120)
+    # 🌐 SUBDOMINIO SAAS (Agregado para arquitectura multi-tenant)
+    subdominio = models.CharField(
+        max_length=50, 
+        unique=True, 
+        blank=True, 
+        null=True, 
+        db_index=True,
+        verbose_name="Subdominio SaaS",
+        help_text="Ejemplo: 'tuluna' para tuluna.joyasapp.com"
+    )
     banner = models.ImageField(upload_to='banners/', blank=True, null=True)
     banner_texto = models.TextField(blank=True, default="")
     logo = models.ImageField(upload_to='logos/', blank=True, null=True)
@@ -115,8 +131,7 @@ class Perfil(models.Model):
         return plan_info['precio_mensual']
 
     def __str__(self):
-        return f"{self.user.username} - {self.nombre_tienda}"
-
+        return f"{self.user.username} - {self.nombre_tienda} ({self.subdominio or 'Sin subdominio'})"
 
 class ConfiguracionEmpresa(models.Model):
     class TipoEnvio(models.TextChoices):
@@ -785,16 +800,20 @@ class PedidoItem(models.Model):
         super().save(*args, **kwargs)
 
 class Gasto(models.Model):
-    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    # Relación directa con el Perfil (la tienda o tenant activo)
+    perfil = models.ForeignKey(Perfil, on_delete=models.CASCADE, related_name='gastos', verbose_name="Tienda / Perfil")
+    
+    # Opcional: Si quieres saber qué usuario exacto creó el registro
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Registrado por")
+    
     nombre = models.CharField(max_length=150)
     monto = models.DecimalField(max_digits=12, decimal_places=2)
-    categoria = models.CharField(max_length=50, default='fabricacion')  # 👈 Sin choices restrictivos
+    categoria = models.CharField(max_length=50, default='fabricacion')
     observaciones = models.TextField(null=True, blank=True)
     fecha = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.nombre} - ${self.monto}"
-    
+        return f"{self.nombre} - ${self.monto} ({self.perfil.nombre_tienda if self.perfil else 'Sin tienda'})"
 # ==========================================
 # 🛡️ ESCUDO DE SEÑALES (MÓDULO LOGÍSTICO)
 # ==========================================

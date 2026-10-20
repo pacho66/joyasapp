@@ -9,6 +9,7 @@ from .views import checkout
 from . import views
 from productos.views import checkout, pedidos, utilidades
 from django.contrib.auth import views as auth_views
+from . import contabilidad
 
 urlpatterns = [
 
@@ -113,10 +114,11 @@ urlpatterns = [
     # 💸 GASTOS
     # ===============================
     # 🏦 Rutas de control financiero unificadas
-    path('gastos/', views.gastos, name='gastos'),
-    path('lista-gastos/editar/<int:id>/', views.editar_gasto, name='editar_gasto'),
-    path('lista-gastos/duplicar/<int:id>/', views.duplicar_gasto, name='duplicar_gasto'),
-    path('lista-gastos/eliminar/<int:id>/', views.eliminar_gasto, name='eliminar_gasto'),
+    path('lista-gastos/', contabilidad.lista_gastos, name='lista_gastos'),
+    path('gastos/', contabilidad.gastos, name='gastos'),
+    path('lista-gastos/editar/<int:id>/', contabilidad.editar_gasto, name='editar_gasto'),
+    path('lista-gastos/duplicar/<int:id>/', contabilidad.duplicar_gasto, name='duplicar_gasto'),
+    path('lista-gastos/eliminar/<int:id>/', contabilidad.eliminar_gasto, name='eliminar_gasto'),
     # ===============================
     # 📲 MARKETING
     # ===============================
