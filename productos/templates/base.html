@@ -298,14 +298,18 @@ nav ul li a:hover {
 
 <body>
 <div class="header-logo">
-    {% if perfil.logo %}
-        <!-- 🌟 Cambiamos {% static ... %} por la URL real de Cloudinary -->
-        <img src="{{ perfil.logo.url }}" alt="Logo">
+    {% if perfil and perfil.subdominio %}
+        {% if perfil.logo %}
+            <img src="{{ perfil.logo.url }}" alt="Logo {{ perfil.nombre_tienda }}">
+        {% else %}
+            <img src="{% static 'img/logo_defecto.jpg' %}" alt="Logo">
+        {% endif %}
+        <div>{{ perfil.nombre_tienda }}</div>
     {% else %}
-        <!-- Opcional: Un logo por defecto si no hay nada subido -->
-        <img src="{% static 'img/logo_defecto.jpg' %}" alt="Logo">
+        <!-- Dominio Principal SaaS -->
+        <img src="{% static 'img/logo_joyasapp.png' %}" alt="JoyasApp">
+        <div>JoyasApp</div>
     {% endif %}
-    <div>{{ perfil.nombre_tienda|default:"joyasapp" }}</div>
 </div>
 
     <nav>
@@ -319,7 +323,7 @@ nav ul li a:hover {
 
                 {% if categorias_menu %}
                     {% for categoria in categorias_menu %}
-                        <li><a href="#">{{ categoria.nombre }}</a></li>
+                        <li><a href="{% url 'buscar_productos' %}?categoria={{ categoria.id }}">{{ categoria.nombre }}</a></li>
                     {% endfor %}
                 {% endif %}
 
@@ -352,7 +356,7 @@ nav ul li a:hover {
          style="min-height: 220px; gap: 12px; overflow: hidden; background-color: {{ perfil.color_principal|default:'#000000' }};">
         
         <!-- Imagen de fondo real (Sincronizada con tu modelo Perfil) -->
-        {% if perfil.banner %}
+        {% if perfil and perfil.subdominio and perfil.banner %}
             <img src="{{ perfil.banner.url }}" class="banner-img position-absolute top-0 start-0 w-100 h-100" alt="Banner Principal" style="object-fit: cover; z-index: 1; opacity: 0.4;">
         {% else %}
             <img src="{% static 'img/banner.jpg' %}" class="banner-img position-absolute top-0 start-0 w-100 h-100" alt="Banner Default" style="object-fit: cover; z-index: 1; opacity: 0.25;">
@@ -363,13 +367,21 @@ nav ul li a:hover {
             <div class="d-flex align-items-center justify-content-center mb-2">
                 <span class="fs-3 me-2">💎</span>
                 <h2 class="fw-bold mb-0 text-uppercase" style="letter-spacing: 1px; font-size: 1.6rem; text-shadow: 1px 1px 4px rgba(0,0,0,0.6); font-family: sans-serif;">
-                    {{ perfil.nombre_tienda|default:"¡Bienvenidos!" }}
+                    {% if perfil and perfil.subdominio %}
+                        {{ perfil.nombre_tienda }}
+                    {% else %}
+                        JOYASAPP
+                    {% endif %}
                 </h2>
             </div>
             
-            {% if perfil.banner_texto %}
+            {% if perfil and perfil.subdominio and perfil.banner_texto %}
                 <p class="lead mb-0" style="font-size: 1rem; line-height: 1.4; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); opacity: 0.9;">
                     {{ perfil.banner_texto }}
+                </p>
+            {% else %}
+                <p class="lead mb-0" style="font-size: 1rem; line-height: 1.4; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); opacity: 0.9;">
+                    Crea tu catálogo virtual, gestiona tus ventas y automatiza tu joyería.
                 </p>
             {% endif %}
         </div>
