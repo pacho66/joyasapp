@@ -57,7 +57,7 @@ def catalogo_tienda(request):
         return render(request, 'tienda/index.html', context)
     else:
         # 🌐 Petición al dominio principal (joyasapp.com)
-        return render(request, 'saas/home_landing.html')
+        return render(request, 'inicio.html')
 
 def inicio(request):
     try:
