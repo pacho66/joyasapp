@@ -137,6 +137,12 @@ def detalle_producto(request, id, slug):
 
     tiene_variantes = producto.variantes.exists()
 
+    # 🔄 Obtener productos relacionados del mismo usuario o categoría
+    productos_relacionados = Producto.objects.filter(
+        usuario=producto.usuario,
+        categoria=producto.categoria
+    ).exclude(id=producto.id).order_by('-id')[:4]
+
     session_key = request.session.session_key
     cantidad_en_carrito = 0
 
@@ -147,24 +153,24 @@ def detalle_producto(request, id, slug):
         ).first()
 
         if item:
-                cantidad_en_carrito = item.cantidad
+            cantidad_en_carrito = item.cantidad
 
-    # 🔥 STOCK REAL (VARIANTES)
-    tiene_stock = producto.variantes.filter(stock__gt=0).exists()
-
-    # 🔥 SI TIENE VARIANTES, EL STOCK LO MANEJAN ELLAS
-    if producto.variantes.exists():
+    # 🔥 STOCK Y DISPONIBILIDAD SEGÚN TIPO
+    if tiene_variantes:
+        tiene_stock = producto.variantes.filter(stock__gt=0).exists()
         stock_disponible = None
     else:
         stock_disponible = producto.stock - cantidad_en_carrito
+        tiene_stock = stock_disponible > 0
 
     return render(request, 'detalle_producto.html', {
         'producto': producto,
         'perfil_tienda': perfil_tienda,
         'tiene_variantes': tiene_variantes,
         'stock_disponible': stock_disponible,
-        'tiene_stock': tiene_stock
-})
+        'tiene_stock': tiene_stock,
+        'productos_relacionados': productos_relacionados,
+    })
 
 @login_required
 def productos_por_categoria(request, categoria_id):
