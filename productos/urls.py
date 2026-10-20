@@ -9,7 +9,7 @@ from .views import checkout
 from . import views
 from productos.views import checkout, pedidos, utilidades
 from django.contrib.auth import views as auth_views
-from . import contabilidad
+from .views import contabilidad
 
 urlpatterns = [
 
