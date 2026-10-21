@@ -35,6 +35,9 @@ def configurar_negocio(request):
         form = ConfiguracionNegocioForm(request.POST, request.FILES)
 
         if form.is_valid():
+            # 🌐 GUARDAR SUBDOMINIO (Limpiando espacios y pasándolo a minúsculas)
+            perfil.subdominio = form.cleaned_data.get('subdominio', '').lower().strip()
+
             # Tus mapeos básicos existentes
             perfil.nombre_tienda = form.cleaned_data['nombre_tienda']
             perfil.nit = form.cleaned_data['nit']
@@ -46,7 +49,7 @@ def configurar_negocio(request):
             perfil.mercadopago_access_token = form.cleaned_data.get('mercadopago_access_token', '').strip()
             perfil.costo_envio_estandar = form.cleaned_data.get('costo_envio_estandar') or Decimal('0.00')
 
-            # 🔥 MAREO DE LOS NUEVOS BOTONES E INPUTS FISCALES
+            # MAREO DE LOS NUEVOS BOTONES E INPUTS FISCALES
             perfil.responsable_iva = form.cleaned_data.get('responsable_iva', False)
             perfil.porcentaje_iva = form.cleaned_data.get('porcentaje_iva') or Decimal('19.00')
             perfil.mostrar_iva_discriminado = form.cleaned_data.get('mostrar_iva_discriminado', False)
@@ -76,8 +79,9 @@ def configurar_negocio(request):
             messages.success(request, "Configuración actualizada correctamente")
             return redirect('dashboard')
     else:
-        # Pasa los datos iniciales al formulario (incluye los nuevos para que se pinten al recargar)
+        # Pasa los datos iniciales al formulario (incluyendo el subdominio)
         form = ConfiguracionNegocioForm(initial={
+            'subdominio': perfil.subdominio,
             'nombre_tienda': perfil.nombre_tienda,
             'nit': perfil.nit,
             'whatsapp': perfil.whatsapp,
@@ -87,7 +91,6 @@ def configurar_negocio(request):
             'wompi_public_key': perfil.wompi_public_key,
             'mercadopago_access_token': perfil.mercadopago_access_token,
             'costo_envio_estandar': perfil.costo_envio_estandar,
-            # Iniciales de la nueva configuración
             'responsable_iva': perfil.responsable_iva,
             'porcentaje_iva': perfil.porcentaje_iva,
             'mostrar_iva_discriminado': perfil.mostrar_iva_discriminado,

@@ -109,6 +109,14 @@ textarea{
     {% csrf_token %}
 
     <div class="grupo">
+        <label>🌐 Subdominio de la tienda</label>
+        {{ form.subdominio }}
+        <small style="color: #6c757d; display: block; margin-top: 4px;">
+            Tu tienda estará disponible en: <strong>https://{{ perfil.subdominio|default:'tu-subdominio' }}.joyasapp.com</strong>
+        </small>
+    </div>
+
+    <div class="grupo">
         <label>🏪 Nombre tienda</label>
         {{ form.nombre_tienda }}
     </div>

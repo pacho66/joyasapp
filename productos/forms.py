@@ -94,6 +94,14 @@ class RegistroForm(forms.Form):
         return cleaned_data
 
 class ConfiguracionNegocioForm(forms.Form):
+    subdominio = forms.CharField(
+        max_length=50,
+        label='Subdominio de la tienda',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'ej: pgjoyas'
+        })
+    )
     nombre_tienda = forms.CharField(
         max_length=120,
         label='Nombre tienda',
