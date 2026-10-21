@@ -352,25 +352,34 @@ h2 {
 
 <!-- --- Enlaces de Redes Sociales Estilizados --- -->
 <div class="redes-modernas d-flex justify-content-center gap-3 mb-4">
-    {% if perfil.instagram %}
-    <a href="https://instagram.com/{{ perfil.instagram }}" target="_blank" class="btn-red instagram" aria-label="Instagram">
-        <i class="bi bi-instagram fs-5"></i>
-        <span class="ms-2 d-none d-sm-inline">Instagram</span>
-    </a>
-    {% endif %}
+    {% if perfil and perfil.subdominio %}
+        <!-- Redes de la Tienda Cliente -->
+        {% if perfil.instagram %}
+        <a href="https://instagram.com/{{ perfil.instagram }}" target="_blank" class="btn-red instagram" aria-label="Instagram">
+            <i class="bi bi-instagram fs-5"></i>
+            <span class="ms-2 d-none d-sm-inline">Instagram</span>
+        </a>
+        {% endif %}
 
-    {% if perfil.facebook %}
-    <a href="{{ perfil.facebook }}" target="_blank" class="btn-red facebook" aria-label="Facebook">
-        <i class="bi bi-facebook fs-5"></i>
-        <span class="ms-2 d-none d-sm-inline">Facebook</span>
-    </a>
-    {% endif %}
+        {% if perfil.facebook %}
+        <a href="{{ perfil.facebook }}" target="_blank" class="btn-red facebook" aria-label="Facebook">
+            <i class="bi bi-facebook fs-5"></i>
+            <span class="ms-2 d-none d-sm-inline">Facebook</span>
+        </a>
+        {% endif %}
 
-    {% if perfil.tiktok %}
-    <a href="https://tiktok.com/@{{ perfil.tiktok }}" target="_blank" class="btn-red tiktok" aria-label="TikTok">
-        <i class="bi bi-tiktok fs-5"></i>
-        <span class="ms-2 d-none d-sm-inline">TikTok</span>
-    </a>
+        {% if perfil.tiktok %}
+        <a href="https://tiktok.com/@{{ perfil.tiktok }}" target="_blank" class="btn-red tiktok" aria-label="TikTok">
+            <i class="bi bi-tiktok fs-5"></i>
+            <span class="ms-2 d-none d-sm-inline">TikTok</span>
+        </a>
+        {% endif %}
+    {% else %}
+        <!-- Redes Oficiales SaaS JoyasApp (opcional) -->
+        <a href="https://instagram.com/joyasapp" target="_blank" class="btn-red instagram" aria-label="Instagram">
+            <i class="bi bi-instagram fs-5"></i>
+            <span class="ms-2 d-none d-sm-inline">JoyasApp Oficial</span>
+        </a>
     {% endif %}
 </div>
 
