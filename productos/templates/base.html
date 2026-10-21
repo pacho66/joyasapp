@@ -304,12 +304,12 @@ nav ul li a:hover {
         {% else %}
             <img src="{% static 'img/logo_defecto.jpg' %}" alt="Logo" style="max-height: 50px; width: auto;">
         {% endif %}
-        <span class="fw-bold fs-4 text-white ms-2">{{ perfil.nombre_tienda }}</span>
+        <span class="fw-bold fs-4 text-white ms-2" style="color: #ffffff !important;">{{ perfil.nombre_tienda }}</span>
     {% else %}
-        <!-- Dominio Principal SaaS: Texto Blanco Enfatizado y Grande -->
-        <a href="{% url 'inicio' %}" class="text-decoration-none d-flex align-items-center gap-2">
+        <!-- Dominio Principal SaaS: Forzado con blanco puro en línea y sin subrayado -->
+        <a href="{% url 'inicio' %}" style="color: #ffffff !important; text-decoration: none !important; outline: none;" class="d-flex align-items-center gap-2">
             <img src="{% static 'img/logo_joyasapp.png' %}" alt="JoyasApp" style="max-height: 50px; width: auto;" onerror="this.style.display='none'">
-            <span class="fw-bold fs-3 text-white" style="letter-spacing: 1px; font-family: sans-serif;">JoyasApp</span>
+            <span class="fw-bold fs-3" style="color: #ffffff !important; text-shadow: 0px 0px 2px rgba(0,0,0,0.5); letter-spacing: 1px; font-family: sans-serif;">JoyasApp</span>
         </a>
     {% endif %}
 </div>
