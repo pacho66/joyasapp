@@ -33,15 +33,19 @@ DEBUG = False
 # 2. Agrega localhost y 127.0.0.1 para que el servidor local no se bloquee
 ALLOWED_HOSTS = [
     'joyasapp.onrender.com',
+    'joyasapp.com',
     'localhost',
-    '127.0.0.1', '*'
+    '127.0.0.1', 
+    '*'
 ]
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://joyasapp.onrender.com'
+    'https://joyasapp.onrender.com',
+    'https://joyasapp.com',
+    'https://*.joyasapp.com',
 ]
 
 # 3. ESTA LÍNEA ES LA QUE SALVA EL ERROR 500: Le dice a Django que confíe en el SSL de Render
@@ -190,6 +194,7 @@ EMAIL_USE_TLS = True
 
 EMAIL_HOST_USER = 'plateria.gonzalez73@gmail.com'
 EMAIL_HOST_PASSWORD = 'ndck visz rgcd dahf'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
 # ===============================
