@@ -297,19 +297,19 @@ nav ul li a:hover {
 </head>
 
 <body>
-<div class="header-logo d-flex align-items-center gap-2 p-2">
+<div class="header-logo d-flex align-items-center gap-2 p-3 bg-dark">
     {% if perfil and perfil.subdominio %}
         {% if perfil.logo %}
-            <img src="{{ perfil.logo.url }}" alt="Logo {{ perfil.nombre_tienda }}" style="max-height: 40px; width: auto; object-fit: contain;">
+            <img src="{{ perfil.logo.url }}" alt="Logo {{ perfil.nombre_tienda }}" style="max-height: 50px; width: auto; object-fit: contain;">
         {% else %}
-            <img src="{% static 'img/logo_defecto.jpg' %}" alt="Logo" style="max-height: 40px; width: auto;">
+            <img src="{% static 'img/logo_defecto.jpg' %}" alt="Logo" style="max-height: 50px; width: auto;">
         {% endif %}
-        <span class="fw-bold fs-5">{{ perfil.nombre_tienda }}</span>
+        <span class="fw-bold fs-4 text-white ms-2">{{ perfil.nombre_tienda }}</span>
     {% else %}
-        <!-- Dominio Principal SaaS (Mostramos el logo de JoyasApp si existe, sino el título de marca una sola vez) -->
-        <a href="{% url 'inicio' %}" class="text-decoration-none text-dark d-flex align-items-center gap-2">
-            <img src="{% static 'img/logo_joyasapp.png' %}" alt="JoyasApp" style="max-height: 40px; width: auto;" onerror="this.style.display='none'">
-            <span class="fw-bold fs-4" style="letter-spacing: 0.5px;">JoyasApp</span>
+        <!-- Dominio Principal SaaS: Texto Blanco Enfatizado y Grande -->
+        <a href="{% url 'inicio' %}" class="text-decoration-none d-flex align-items-center gap-2">
+            <img src="{% static 'img/logo_joyasapp.png' %}" alt="JoyasApp" style="max-height: 50px; width: auto;" onerror="this.style.display='none'">
+            <span class="fw-bold fs-3 text-white" style="letter-spacing: 1px; font-family: sans-serif;">JoyasApp</span>
         </a>
     {% endif %}
 </div>
@@ -353,20 +353,20 @@ nav ul li a:hover {
     </nav>
 
 {% if request.path == '/' %}
-    <!-- 🎨 BANNER UNIFICADO SINCRO TOTAL -->
+    <!-- 🎨 BANNER PRINCIPAL ELEGANTE Y LEGIBLE -->
     <div class="banner-container position-relative w-100 py-5 px-3 d-flex flex-column align-items-center justify-content-center text-center" 
-         style="min-height: 200px; gap: 12px; overflow: hidden; background-color: {{ perfil.color_principal|default:'#000000' }};">
+         style="min-height: 250px; gap: 12px; overflow: hidden; background: linear-gradient(135deg, #111111 0%, #2a2a2a 100%);">
         
         {% if perfil and perfil.subdominio and perfil.banner %}
-            <img src="{{ perfil.banner.url }}" class="banner-img position-absolute top-0 start-0 w-100 h-100" alt="Banner Principal" style="object-fit: cover; z-index: 1; opacity: 0.4;">
-        {% else %}
-            <img src="{% static 'img/banner.jpg' %}" class="banner-img position-absolute top-0 start-0 w-100 h-100" alt="Banner Default" style="object-fit: cover; z-index: 1; opacity: 0.25;">
+            <!-- Imagen real subida por la tienda -->
+            <img src="{{ perfil.banner.url }}" class="banner-img position-absolute top-0 start-0 w-100 h-100" alt="Banner Principal" style="object-fit: cover; z-index: 1; opacity: 0.45;">
         {% endif %}
 
-        <div class="banner-text position-relative" style="z-index: 2; max-width: 500px; color: white;">
+        <!-- Contenido Promocional -->
+        <div class="banner-text position-relative" style="z-index: 2; max-width: 600px; color: #ffffff;">
             <div class="d-flex align-items-center justify-content-center mb-2">
-                <span class="fs-3 me-2">💎</span>
-                <h2 class="fw-bold mb-0 text-uppercase" style="letter-spacing: 1px; font-size: 1.5rem; text-shadow: 1px 1px 4px rgba(0,0,0,0.6); font-family: sans-serif;">
+                <span class="fs-2 me-2">💎</span>
+                <h2 class="fw-bold mb-0 text-uppercase" style="letter-spacing: 2px; font-size: 2rem; text-shadow: 2px 2px 6px rgba(0,0,0,0.8); font-family: sans-serif; color: #ffffff;">
                     {% if perfil and perfil.subdominio %}
                         {{ perfil.nombre_tienda }}
                     {% else %}
@@ -376,17 +376,18 @@ nav ul li a:hover {
             </div>
             
             {% if perfil and perfil.subdominio and perfil.banner_texto %}
-                <p class="lead mb-0" style="font-size: 1rem; line-height: 1.4; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); opacity: 0.9;">
+                <p class="lead mb-0" style="font-size: 1.1rem; line-height: 1.5; text-shadow: 1px 1px 4px rgba(0,0,0,0.7); opacity: 0.95;">
                     {{ perfil.banner_texto }}
                 </p>
             {% else %}
-                <p class="lead mb-0" style="font-size: 1rem; line-height: 1.4; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); opacity: 0.9;">
+                <p class="lead mb-0" style="font-size: 1.1rem; line-height: 1.5; text-shadow: 1px 1px 4px rgba(0,0,0,0.7); opacity: 0.95;">
                     Crea tu catálogo virtual, gestiona tus ventas y automatiza tu joyería.
                 </p>
             {% endif %}
         </div>
     </div>
 {% endif %}
+
 <!-- El contenedor principal donde se inyectan tus vistas (como el formulario o el catálogo) -->
 <main class="main-content">
     {% block content %}
