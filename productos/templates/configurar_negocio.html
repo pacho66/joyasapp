@@ -62,6 +62,7 @@ textarea{
     border-radius:8px;
     border:none;
     font-weight:bold;
+    text-decoration:none;
 }
 
 .guardar{
@@ -151,6 +152,11 @@ textarea{
             value="{{ perfil.color_secundario|default:'#000000' }}">
     </div>
 
+    <!-- ==========================================
+         🖼️ IMÁGENES Y MARCA (LOGO Y BANNER)
+         ========================================== -->
+    <h3 class="sub-seccion-titulo">🖼️ Imagen de Marca</h3>
+
     <div class="grupo">
         <label>🖼️ Logo</label>
         <input type="file" name="logo" accept="image/*">
@@ -169,7 +175,6 @@ textarea{
         display:block;
         margin-bottom:10px;">
 
-        <!-- 🗑️ La nueva casilla de eliminación rápida -->
         <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
             <input type="checkbox" name="eliminar_logo" id="checkEliminarLogo" style="width: auto; cursor: pointer;">
             <label for="checkEliminarLogo" style="color: #dc3545; font-weight: bold; cursor: pointer; font-size: 14px;">
@@ -178,6 +183,41 @@ textarea{
         </div>
     </div>
     {% endif %}
+
+    <!-- 🎨 NUEVO: SECCIÓN BANNER PROMOCIONAL -->
+    <div class="grupo" style="margin-top: 20px;">
+        <label>🖼️ Banner Promocional de la Tienda</label>
+        <input type="file" name="banner" accept="image/*">
+    </div>
+
+    {% if perfil.banner %}
+    <div class="grupo">
+        <p><strong>Banner actual:</strong></p>
+        <img src="{{ perfil.banner.url }}"
+        style="
+        width:100%;
+        max-height:160px;
+        object-fit:cover;
+        border-radius:10px;
+        border:1px solid #ddd;
+        padding:5px;
+        background:white;
+        display:block;
+        margin-bottom:10px;">
+
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+            <input type="checkbox" name="eliminar_banner" id="checkEliminarBanner" style="width: auto; cursor: pointer;">
+            <label for="checkEliminarBanner" style="color: #dc3545; font-weight: bold; cursor: pointer; font-size: 14px;">
+                🗑️ Marcar para eliminar este banner
+            </label>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="grupo">
+        <label>📝 Texto sobre el Banner</label>
+        <input type="text" name="banner_texto" value="{{ perfil.banner_texto|default:'' }}" placeholder="Ej: ¡Bienvenidos a nuestra tienda en línea!">
+    </div>
     
     <!-- ==========================================
          💰 FISCAL
@@ -221,7 +261,6 @@ textarea{
          ========================================== -->
     <h3 class="sub-seccion-titulo">📄 Facturación</h3>
 
-    <!-- Prefijo y Consecutivo en la misma fila para ahorrar espacio vertical -->
     <div style="display: flex; gap: 12px; margin-bottom: 12px;">
         <div class="grupo" style="flex: 1; margin-bottom: 0;">
             <label>Prefijo</label>

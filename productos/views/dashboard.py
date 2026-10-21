@@ -21,6 +21,8 @@ from ..models import (
     Gasto,
     PedidoItem,
 )
+import logging
+
 
 # =========================================================================
 # 📊 BLOQUE 7: DASHBOARD ADMINISTRATIVO, CRM Y ESTADÍSTICAS
@@ -432,6 +434,8 @@ def ganancias(request):
     }
     return render(request, 'ganancias.html', context)
 
+logger = logging.getLogger(__name__)
+
 def modificar_banner(request):
     # 🛡️ BLINDAJE 1: Controlar de forma segura que exista el perfil del usuario
     perfil = getattr(request.user, 'perfil', None)
@@ -448,35 +452,50 @@ def modificar_banner(request):
             perfil.facebook = request.POST.get('facebook', '').strip()
             perfil.tiktok = request.POST.get('tiktok', '').strip()
             
-            # 🛡️ BLINDAJE 3: Control estricto de color (Si viene manipulado o vacío, fuerza el negro)
-            color_seleccionado = request.POST.get('estilo_color', '#000000')
-            if not color_seleccionado.startswith('#') or len(color_seleccionado) != 7:
-                perfil.color_principal = '#000000'
+            # 🛡️ BLINDAJE 3: Control estricto de colores
+            color_primario = request.POST.get('color_primario', '#28a745')
+            if color_primario.startswith('#') and len(color_primario) == 7:
+                perfil.color_primario = color_primario
             else:
-                perfil.color_principal = color_seleccionado
+                perfil.color_primario = '#28a745'
 
-            # 🛡️ BLINDAJE 4: ESCUDO ANTI-DUPLICADOS INTEGRADO Y SEGURO
-            if 'banner' in request.FILES:
+            color_secundario = request.POST.get('color_secundario', '#000000')
+            if color_secundario.startswith('#') and len(color_secundario) == 7:
+                perfil.color_secundario = color_secundario
+            else:
+                perfil.color_secundario = '#000000'
+
+            # 🛡️ BLINDAJE 4: MANEJO Y ELIMINACIÓN DEL LOGO
+            if request.POST.get('eliminar_logo') == 'on':
+                if perfil.logo:
+                    perfil.logo.delete(save=False)
+                    perfil.logo = None
+            elif 'logo' in request.FILES:
+                nuevo_logo = request.FILES['logo']
+                ext = nuevo_logo.name.split('.')[-1].lower()
+                if ext in ['jpg', 'jpeg', 'png', 'webp']:
+                    nuevo_logo.name = f"logo_{int(time.time())}.{ext}"
+                    perfil.logo = nuevo_logo
+
+            # 🛡️ BLINDAJE 5: MANEJO Y ELIMINACIÓN DEL BANNER
+            if request.POST.get('eliminar_banner') == 'on':
+                if perfil.banner:
+                    perfil.banner.delete(save=False)
+                    perfil.banner = None
+            elif 'banner' in request.FILES:
                 nueva_imagen = request.FILES['banner']
-                
-                # Comprobación de seguridad: Evitar duplicados si coincide el nombre exacto
-                if perfil.banner and nueva_imagen.name == perfil.banner.name:
-                    pass  
-                else:
-                    # Sanear la extensión y forzar un nombre único basado en timestamp para reventar caché
-                    ext = nueva_imagen.name.split('.')[-1].lower()
-                    if ext in ['jpg', 'jpeg', 'png', 'webp']:
-                        nueva_imagen.name = f"banner_{int(time.time())}.{ext}"
-                        perfil.banner = nueva_imagen
+                ext = nueva_imagen.name.split('.')[-1].lower()
+                if ext in ['jpg', 'jpeg', 'png', 'webp']:
+                    nueva_imagen.name = f"banner_{int(time.time())}.{ext}"
+                    perfil.banner = nueva_imagen
             
-            # 🛡️ BLINDAJE 5: Guardado seguro en base de datos
+            # 🛡️ BLINDAJE 6: Guardado seguro en base de datos
             perfil.save()
-            messages.success(request, "¡Centro de promociones actualizado con éxito!")
+            messages.success(request, "¡Configuración de la tienda y banner actualizada con éxito!")
             return redirect('modificar_banner')
 
         except Exception as e:
-            # 🛡️ EXCEPCIÓN TOTAL: Captura cualquier error interno y lo muestra en un mensaje de alerta de Django
-            # Evita la pantalla blanca de Error 500 y te dice exactamente qué falló en caliente
+            logger.error(f"Error guardando configuración del perfil: {str(e)}")
             messages.error(request, f"Ocurrió un error inesperado al guardar los cambios: {str(e)}")
             return redirect('modificar_banner')
 
