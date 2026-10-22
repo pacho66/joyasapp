@@ -321,7 +321,7 @@ nav ul li a:hover {
         <!-- 🛒 Carga automáticamente el menú exclusivo del catálogo público -->
         {% include 'crm/navbar_tienda.html' %}
     {% else %}
-        <!-- 🏢 Tu menú habitual de JoyasApp (con el botón de Iniciar Sesión / Panel) -->
+        <!-- 🏢 Menú del SaaS en el dominio principal -->
         <nav>
             <div class="nav-container">
                 <div class="menu-toggle" onclick="toggleMenu()">
@@ -343,16 +343,11 @@ nav ul li a:hover {
                         </a>
                     </li>
 
-                    <!-- Control condicional limpio para subdominio vs SaaS -->
-                    {% if perfil and perfil.subdominio %}
-                        <!-- En el subdominio no se muestran opciones de inicio de sesión ni panel -->
+                    {% if user.is_authenticated %}
+                        <li><a href="/dashboard/">📊 Panel</a></li>
+                        <li><a href="/logout/">🚪 Salir</a></li>
                     {% else %}
-                        {% if user.is_authenticated %}
-                            <li><a href="/dashboard/">📊 Panel</a></li>
-                            <li><a href="/logout/">🚪 Salir</a></li>
-                        {% else %}
-                            <li><a href="/login/">🔐 Iniciar sesión</a></li>
-                        {% endif %}
+                        <li><a href="/login/">🔐 Iniciar sesión</a></li>
                     {% endif %}
                 </ul>
 
