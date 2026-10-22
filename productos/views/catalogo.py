@@ -56,11 +56,15 @@ def catalogo_tienda(request):
             'perfil': perfil,
             'productos': productos,
             'categorias': categorias,
+            'es_subdominio': True,
         }
-        # Renderiza el catálogo exclusivo del cliente final (tienda/index.html o tienda/catalogo.html)
+        # Renderiza el catálogo exclusivo del cliente final
         return render(request, 'tienda/index.html', context)
     else:
-        # 🌐 Si por alguna razón llega aquí sin subdominio, redirige o carga la landing del SaaS
+        # 🌐 Petición desde el dominio principal (joyasapp.com)
+        context = {
+            'es_subdominio': False,
+        }
         return render(request, 'inicio.html', context)
     
 def inicio(request):
