@@ -306,7 +306,6 @@ nav ul li a:hover {
         {% endif %}
         <span class="fw-bold fs-4 text-white ms-2" style="color: #ffffff !important;">{{ perfil.nombre_tienda }}</span>
     {% else %}
-        <!-- Dominio Principal SaaS: Forzado con blanco puro en línea y sin subrayado -->
         <a href="{% url 'inicio' %}" style="color: #ffffff !important; text-decoration: none !important; outline: none;" class="d-flex align-items-center gap-2">
             <img src="{% static 'img/logo_joyasapp.png' %}" alt="JoyasApp" style="max-height: 50px; width: auto;" onerror="this.style.display='none'">
             <span class="fw-bold fs-3" style="color: #ffffff !important; text-shadow: 0px 0px 2px rgba(0,0,0,0.5); letter-spacing: 1px; font-family: sans-serif;">JoyasApp</span>
@@ -314,14 +313,10 @@ nav ul li a:hover {
     {% endif %}
 </div>
 
-    <!-- ======================================================== -->
-    <!-- AQUÍ REEMPLAZAS TU <nav> ANTERIOR CON ESTE BLOQUE CONDICIONAL -->
-    <!-- ======================================================== -->
+    <!-- Navegación condicional limpia y directa -->
     {% if es_subdominio %}
-        <!-- 🛒 Carga automáticamente el menú exclusivo del catálogo público -->
         {% include 'crm/navbar_tienda.html' %}
     {% else %}
-        <!-- 🏢 Menú del SaaS en el dominio principal -->
         <nav>
             <div class="nav-container">
                 <div class="menu-toggle" onclick="toggleMenu()">
@@ -360,10 +355,8 @@ nav ul li a:hover {
             </div>
         </nav>
     {% endif %}
-    <!-- ======================================================== -->
 
 {% if request.path == '/' %}
-    <!-- 🎨 BANNER PRINCIPAL ELEGANTE Y LEGIBLE -->
     <div class="banner-container position-relative w-100 py-5 px-3 d-flex flex-column align-items-center justify-content-center text-center" 
          style="min-height: 250px; gap: 12px; overflow: hidden; background: linear-gradient(135deg, #111111 0%, #2a2a2a 100%);">
         
