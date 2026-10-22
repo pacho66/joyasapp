@@ -49,7 +49,7 @@ def configurar_negocio(request):
             perfil.mercadopago_access_token = form.cleaned_data.get('mercadopago_access_token', '').strip()
             perfil.costo_envio_estandar = form.cleaned_data.get('costo_envio_estandar') or Decimal('0.00')
 
-            # MAREO DE LOS NUEVOS BOTONES E INPUTS FISCALES
+            # MAPEO DE BOTONES E INPUTS FISCALES
             perfil.responsable_iva = form.cleaned_data.get('responsable_iva', False)
             perfil.porcentaje_iva = form.cleaned_data.get('porcentaje_iva') or Decimal('19.00')
             perfil.mostrar_iva_discriminado = form.cleaned_data.get('mostrar_iva_discriminado', False)
@@ -64,14 +64,24 @@ def configurar_negocio(request):
             perfil.cobrar_envio = form.cleaned_data.get('cobrar_envio', False)
             perfil.envio_gratis_desde = form.cleaned_data.get('envio_gratis_desde') or Decimal('0.00')
 
-            # Lógica del logo y colores que ya tenías funcional
+            # 🗑️ MANEJO Y ELIMINACIÓN DEL LOGO
             eliminar_logo = request.POST.get('eliminar_logo')
             if eliminar_logo and perfil.logo:
                 perfil.logo.delete(save=False)
                 perfil.logo = None
-            if request.FILES.get('logo') and not eliminar_logo:
+            elif request.FILES.get('logo'):
                 perfil.logo = request.FILES['logo']
 
+            # 🗑️ MANEJO Y ELIMINACIÓN DEL BANNER (¡AQUÍ ESTABA EL FALTANTE!)
+            eliminar_banner = request.POST.get('eliminar_banner')
+            if eliminar_banner and perfil.banner:
+                perfil.banner.delete(save=False)
+                perfil.banner = None
+            elif request.FILES.get('banner'):
+                perfil.banner = request.FILES['banner']
+
+            # 📝 TEXTO DEL BANNER Y COLORES
+            perfil.banner_texto = request.POST.get('banner_texto', '').strip()
             perfil.color_primario = request.POST.get('color_primario', '#28a745')
             perfil.color_secundario = request.POST.get('color_secundario', '#000000')
 
