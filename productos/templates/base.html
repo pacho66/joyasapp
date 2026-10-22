@@ -314,60 +314,68 @@ nav ul li a:hover {
     {% endif %}
 </div>
 
-    <nav>
-        <div class="nav-container">
-            <div class="menu-toggle" onclick="toggleMenu()">
-                ☰ Menú
-            </div>
-
-            <ul id="menu-lista">
-                <li><a href="{% url 'inicio' %}">Inicio</a></li>
-
-                {% if categorias_menu %}
-                    {% for categoria in categorias_menu %}
-                        <li><a href="{% url 'buscar_productos' %}?categoria={{ categoria.id }}">{{ categoria.nombre }}</a></li>
-                    {% endfor %}
-                {% endif %}
-
-                <li>
-                    <a href="{% url 'ver_carrito' %}">
-                        🛒 Carrito ({{ cantidad_carrito|default:0 }})
-                    </a>
-                </li>
-
-                <!-- 🛒 SI ESTÁ EN UN SUBDOMINIO (Catálogo Comercial del Cliente) -->
-                {% if perfil and perfil.subdominio %}
-                    <!-- Aquí el cliente final ve exclusivamente su carrito y WhatsApp (sin login ni panel) -->
-                {% else %}
-                    <!-- 🏢 SI ESTÁ EN EL DOMINIO PRINCIPAL (JoyasApp SaaS) -->
-                    {% if user.is_authenticated %}
-                        <li><a href="/dashboard/">📊 Panel</a></li>
-                        <li><a href="/logout/">🚪 Salir</a></li>
-                    {% else %}
-                        <li><a href="/login/">🔐 Iniciar sesión</a></li>
-                    {% endif %}
-                {% endif %}
-            </ul>
-
-            <form action="{% url 'buscar_productos' %}" method="GET" class="buscador">
-                <div class="buscador-wrapper">
-                    <input type="text" name="q" placeholder="🔎 Buscar productos..." required>
-                    <button type="submit">Buscar</button>
+    <!-- ======================================================== -->
+    <!-- AQUÍ REEMPLAZAS TU <nav> ANTERIOR CON ESTE BLOQUE CONDICIONAL -->
+    <!-- ======================================================== -->
+    {% if es_subdominio %}
+        <!-- 🛒 Carga automáticamente el menú exclusivo del catálogo público -->
+        {% include 'crm/navbar_tienda.html' %}
+    {% else %}
+        <!-- 🏢 Tu menú habitual de JoyasApp (con el botón de Iniciar Sesión / Panel) -->
+        <nav>
+            <div class="nav-container">
+                <div class="menu-toggle" onclick="toggleMenu()">
+                    ☰ Menú
                 </div>
-            </form>
-        </div>
-    </nav>
+
+                <ul id="menu-lista">
+                    <li><a href="{% url 'inicio' %}">Inicio</a></li>
+
+                    {% if categorias_menu %}
+                        {% for categoria in categorias_menu %}
+                            <li><a href="{% url 'buscar_productos' %}?categoria={{ categoria.id }}">{{ categoria.nombre }}</a></li>
+                        {% endfor %}
+                    {% endif %}
+
+                    <li>
+                        <a href="{% url 'ver_carrito' %}">
+                            🛒 Carrito ({{ cantidad_carrito|default:0 }})
+                        </a>
+                    </li>
+
+                    <!-- Control condicional limpio para subdominio vs SaaS -->
+                    {% if perfil and perfil.subdominio %}
+                        <!-- En el subdominio no se muestran opciones de inicio de sesión ni panel -->
+                    {% else %}
+                        {% if user.is_authenticated %}
+                            <li><a href="/dashboard/">📊 Panel</a></li>
+                            <li><a href="/logout/">🚪 Salir</a></li>
+                        {% else %}
+                            <li><a href="/login/">🔐 Iniciar sesión</a></li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+
+                <form action="{% url 'buscar_productos' %}" method="GET" class="buscador">
+                    <div class="buscador-wrapper">
+                        <input type="text" name="q" placeholder="🔎 Buscar productos..." required>
+                        <button type="submit">Buscar</button>
+                    </div>
+                </form>
+            </div>
+        </nav>
+    {% endif %}
+    <!-- ======================================================== -->
+
 {% if request.path == '/' %}
     <!-- 🎨 BANNER PRINCIPAL ELEGANTE Y LEGIBLE -->
     <div class="banner-container position-relative w-100 py-5 px-3 d-flex flex-column align-items-center justify-content-center text-center" 
          style="min-height: 250px; gap: 12px; overflow: hidden; background: linear-gradient(135deg, #111111 0%, #2a2a2a 100%);">
         
         {% if perfil and perfil.subdominio and perfil.banner %}
-            <!-- Imagen real subida por la tienda -->
             <img src="{{ perfil.banner.url }}" class="banner-img position-absolute top-0 start-0 w-100 h-100" alt="Banner Principal" style="object-fit: cover; z-index: 1; opacity: 0.45;">
         {% endif %}
 
-        <!-- Contenido Promocional -->
         <div class="banner-text position-relative" style="z-index: 2; max-width: 600px; color: #ffffff;">
             <div class="d-flex align-items-center justify-content-center mb-2">
                 <span class="fs-2 me-2">💎</span>
@@ -393,13 +401,11 @@ nav ul li a:hover {
     </div>
 {% endif %}
 
-<!-- El contenedor principal donde se inyectan tus vistas (como el formulario o el catálogo) -->
 <main class="main-content">
     {% block content %}
     {% endblock %}
 </main>
 
-<!-- Botón Flotante de WhatsApp con Carrito Unificado -->
 {% if perfil.whatsapp %}
 <a href="https://wa.me/57{{ perfil.whatsapp }}" id="whatsapp-flotante" target="_blank" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background-color: #25d366; color: white; padding: 12px 20px; border-radius: 50px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
     📱 WhatsApp - <span id="whatsapp-info">{{ cantidad_carrito|default:0 }} prod. - ${{ total_carrito|default:0 }}</span>
@@ -414,38 +420,6 @@ function toggleMenu(){
 document.querySelectorAll("#menu-lista a").forEach(link => {
     link.addEventListener("click", () => {
         document.getElementById("menu-lista").classList.remove("show");
-    });
-});
-
-function toggleMenuDash(){
-    const dashMenu = document.getElementById("menu-dash-lista");
-    if(dashMenu) dashMenu.classList.toggle("show");
-}
-
-document.addEventListener("DOMContentLoaded", function() {
-    const boton = document.getElementById("whatsapp-flotante");
-    if (!boton) return;
-
-    let isDragging = false;
-    let offsetX = 0;
-    let offsetY = 0;
-
-    boton.addEventListener("touchstart", function(e) {
-        isDragging = true;
-        offsetX = e.touches[0].clientX - boton.offsetLeft;
-        offsetY = e.touches[0].clientY - boton.offsetTop;
-    });
-
-    document.addEventListener("touchmove", function(e) {
-        if (!isDragging) return;
-        boton.style.left = (e.touches[0].clientX - offsetX) + "px";
-        boton.style.top = (e.touches[0].clientY - offsetY) + "px";
-        boton.style.right = "auto";
-        boton.style.bottom = "auto";
-    });
-
-    document.addEventListener("touchend", function() {
-        isDragging = false;
     });
 });
 </script>
