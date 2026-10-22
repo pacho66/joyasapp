@@ -111,25 +111,41 @@ def inicio(request):
     
 def buscar_productos(request):
     query = request.GET.get('q', '')
+    categoria_id = request.GET.get('categoria', '')
+    
+    perfil = getattr(request, 'tenant_perfil', None)
 
+    # 🛒 Determinamos el queryset según el usuario o el subdominio activo
     if request.user.is_authenticated:
-        productos = Producto.objects.filter(usuario=request.user)
-        categorias = Categoria.objects.filter(usuario=request.user)
+        productos = Producto.objects.filter(usuario=request.user).exclude(slug='').exclude(slug__isnull=True)
+        categorias = Categoria.objects.filter(usuario=request.user).order_by('nombre')
+        if not perfil:
+            perfil = getattr(request.user, 'perfil', None)
+    elif perfil:
+        productos = Producto.objects.filter(usuario=perfil.user).exclude(slug='').exclude(slug__isnull=True)
+        categorias = Categoria.objects.filter(usuario=perfil.user).order_by('nombre')
     else:
         productos = Producto.objects.none()
-        categorias = []
+        categorias = Categoria.objects.none()
 
+    # 🔎 Filtro por texto de búsqueda
     if query:
         productos = productos.filter(
             Q(nombre__icontains=query) |
             Q(descripcion__icontains=query) |
-            Q(categoria__nombre__icontains=query)
+            Q(categoria_nombre_icontains=query)
         )
+
+    # 📂 Filtro por categoría seleccionada desde el menú
+    if categoria_id and categoria_id != 'todas':
+        productos = productos.filter(categoria_id=categoria_id)
 
     return render(request, 'lista_productos.html', {
         'productos': productos,
         'categorias': categorias,
-        'query': query
+        'query': query,
+        'perfil': perfil,
+        'es_subdominio': bool(perfil),
     })
 
 def detalle_producto(request, id, slug):
