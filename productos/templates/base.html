@@ -356,12 +356,8 @@ nav ul li a:hover {
     {% endif %}
 
 {% if request.path == '/' %}
-    <div style="position: relative; width: 100%; height: 150px !important; max-height: 150px !important; overflow: hidden !important; margin-bottom: 25px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #111111;">
+    <div style="position: relative; width: 100%; height: 160px !important; max-height: 160px !important; overflow: hidden !important; margin-bottom: 25px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; {% if perfil and perfil.subdominio and perfil.banner %}background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('{{ perfil.banner.url }}'); background-size: cover; background-position: center;{% else %}background: #111111;{% endif %}">
         
-        {% if perfil and perfil.subdominio and perfil.banner %}
-            <img src="{{ perfil.banner.url }}" style="position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; object-fit: cover !important; object-position: center !important; z-index: 1; opacity: 0.45;" alt="Banner Principal">
-        {% endif %}
-
         <div style="position: relative; z-index: 2; max-width: 600px; color: #ffffff; padding: 10px 20px;">
             <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
                 <span style="font-size: 1.5rem; margin-right: 8px;">💎</span>
