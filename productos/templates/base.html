@@ -359,12 +359,8 @@ nav ul li a:hover {
 
 {% if request.path == '/' %}
     <div class="banner-container position-relative w-100 py-5 px-3 d-flex flex-column align-items-center justify-content-center text-center" 
-         style="min-height: 250px; gap: 12px; overflow: hidden; background: linear-gradient(135deg, #111111 0%, #2a2a2a 100%);">
+         style="min-height: 250px; gap: 12px; overflow: hidden; {% if perfil and perfil.subdominio and perfil.banner %}background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('{{ perfil.banner.url }}'); background-size: cover; background-position: center;{% else %}background: linear-gradient(135deg, #111111 0%, #2a2a2a 100%);{% endif %}">
         
-        {% if perfil and perfil.subdominio and perfil.banner %}
-            <img src="{{ perfil.banner.url }}" class="banner-img position-absolute top-0 start-0 w-100 h-100" alt="Banner Principal" style="object-fit: contain; object-position: center; z-index: 1; opacity: 0.35;">
-        {% endif %}
-
         <div class="banner-text position-relative" style="z-index: 2; max-width: 600px; color: #ffffff;">
             <div class="d-flex align-items-center justify-content-center mb-2">
                 <span class="fs-2 me-2">💎</span>
