@@ -41,24 +41,28 @@ def catalogo_tienda(request):
     y la landing page principal del SaaS (joyasapp.com).
     """
     if getattr(request, 'tenant_perfil', None):
-        # 🛒 Petición desde un subdominio activo (ej: tuluna.joyasapp.com)
+        # 🛒 Petición desde un subdominio activo (ej: pgjoyas.joyasapp.com)
         perfil = request.tenant_perfil
         
-        # Filtramos los productos activos asociados a este perfil/tienda
+        # Filtramos los productos asociados a este perfil/usuario de forma segura
         if hasattr(perfil.user, 'productos'):
-            productos = perfil.user.productos.filter(activo=True)
+            productos = perfil.user.productos.all()
+            categorias = Categoria.objects.filter(usuario=perfil.user).order_by('nombre')
         else:
-            productos = perfil.productos.filter(activo=True) if hasattr(perfil, 'productos') else []
+            productos = Producto.objects.filter(usuario=perfil.user) if hasattr(perfil, 'user') else []
+            categorias = Categoria.objects.all().order_by('nombre')
 
         context = {
             'perfil': perfil,
             'productos': productos,
+            'categorias': categorias,
         }
+        # Renderiza el catálogo exclusivo del cliente final (tienda/index.html o tienda/catalogo.html)
         return render(request, 'tienda/index.html', context)
     else:
-        # 🌐 Petición al dominio principal (joyasapp.com)
-        return render(request, 'inicio.html')
-
+        # 🌐 Si por alguna razón llega aquí sin subdominio, redirige o carga la landing del SaaS
+        return render(request, 'inicio.html', context)
+    
 def inicio(request):
     try:
         # 1. Obtener el perfil de forma segura

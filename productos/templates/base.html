@@ -335,11 +335,17 @@ nav ul li a:hover {
                     </a>
                 </li>
 
-                {% if user.is_authenticated %}
-                    <li><a href="/dashboard/">📊 Panel</a></li>
-                    <li><a href="/logout/">🚪 Salir</a></li>
+                <!-- 🛒 SI ESTÁ EN UN SUBDOMINIO (Catálogo Comercial del Cliente) -->
+                {% if perfil and perfil.subdominio %}
+                    <!-- Aquí el cliente final ve exclusivamente su carrito y WhatsApp (sin login ni panel) -->
                 {% else %}
-                    <li><a href="/login/">🔐 Iniciar sesión</a></li>
+                    <!-- 🏢 SI ESTÁ EN EL DOMINIO PRINCIPAL (JoyasApp SaaS) -->
+                    {% if user.is_authenticated %}
+                        <li><a href="/dashboard/">📊 Panel</a></li>
+                        <li><a href="/logout/">🚪 Salir</a></li>
+                    {% else %}
+                        <li><a href="/login/">🔐 Iniciar sesión</a></li>
+                    {% endif %}
                 {% endif %}
             </ul>
 
@@ -351,7 +357,6 @@ nav ul li a:hover {
             </form>
         </div>
     </nav>
-
 {% if request.path == '/' %}
     <!-- 🎨 BANNER PRINCIPAL ELEGANTE Y LEGIBLE -->
     <div class="banner-container position-relative w-100 py-5 px-3 d-flex flex-column align-items-center justify-content-center text-center" 
