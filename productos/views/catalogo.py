@@ -69,38 +69,38 @@ def catalogo_tienda(request):
     
 def inicio(request):
     try:
-        # 1. Obtener el perfil de forma segura
-        perfil = None
-        if request.user.is_authenticated:
+        # 1. Obtener el perfil exclusivamente desde el middleware de subdominio
+        perfil = getattr(request, 'tenant_perfil', None)
+        if request.user.is_authenticated and not perfil:
             perfil = getattr(request.user, 'perfil', None)
-        else:
-            perfil = Perfil.objects.first()
 
-        # 2. Consultas seguras excluyendo productos sin slug para evitar roturas en los enlaces {% url %}
-        # Nota: Si tu modelo no usa el campo 'activo', Django simplemente usará el filtro del slug.
+        # 2. Consultas filtradas de forma estricta
         if request.user.is_authenticated:
             productos = Producto.objects.filter(usuario=request.user).exclude(slug='').exclude(slug__isnull=True)
             destacados = Producto.objects.filter(usuario=request.user, destacado=True).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
             categorias = Categoria.objects.filter(usuario=request.user).order_by('nombre')
+        elif perfil:
+            productos = Producto.objects.filter(usuario=perfil.user).exclude(slug='').exclude(slug__isnull=True)
+            destacados = Producto.objects.filter(usuario=perfil.user, destacado=True).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
+            categorias = Categoria.objects.filter(usuario=perfil.user).order_by('nombre')
         else:
-            productos = Producto.objects.exclude(slug='').exclude(slug__isnull=True)
-            destacados = Producto.objects.filter(destacado=True).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
-            categorias = Categoria.objects.all().order_by('nombre')
+            # 🌐 Dominio principal (joyasapp.com) sin tienda activa
+            productos = Producto.objects.none()
+            destacados = Producto.objects.none()
+            categorias = Categoria.objects.none()
 
         context = {
             'perfil': perfil,
             'productos': productos,
             'destacados': destacados,
             'categorias': categorias,
+            'es_subdominio': bool(perfil),
         }
         return render(request, 'inicio.html', context)
 
     except Exception as e:
-        # Captura el error real en los logs de Render para que sepas exactamente qué columna falló
         logger = logging.getLogger(__name__)
         logger.error(f"Error crítico en la vista inicio: {str(e)}")
-        
-        # 🛡️ FALLBACK ABSOLUTO: Se envían listas vacías para que el HTML renderice el mensaje {% empty %} sin morir
         return render(request, 'inicio.html', {
             'perfil': None, 
             'productos': [], 
@@ -108,7 +108,7 @@ def inicio(request):
             'categorias': [],
             'error': str(e)
         })
-
+    
 def buscar_productos(request):
     query = request.GET.get('q', '')
 
