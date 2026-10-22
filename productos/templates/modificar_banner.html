@@ -94,15 +94,24 @@
                         <input type="file" name="banner" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" accept="image/*">
                         
                         {% if perfil.banner %}
-                            <div class="mt-2 p-2 border rounded bg-light d-flex align-items-center gap-2" style="max-width: 250px;">
-                                <img src="{{ perfil.banner.url }}" alt="Actual" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px;">
-                                <span class="text-success small fw-bold">✓ Imagen guardada</span>
+                            <div class="mt-2 p-2 border rounded bg-light d-flex align-items-center justify-content-between" style="max-width: 320px;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <img src="{{ perfil.banner.url }}" alt="Actual" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px;">
+                                    <span class="text-success small fw-bold">✓ Guardada</span>
+                                </div>
+                                <!-- 🗑️ Checkbox de eliminación conectado al backend -->
+                                <div class="form-check m-0">
+                                    <input class="form-check-input" type="checkbox" name="eliminar_banner" id="eliminar_banner">
+                                    <label class="form-check-label text-danger small fw-bold" for="eliminar_banner" style="cursor: pointer;">
+                                        Eliminar
+                                    </label>
+                                </div>
                             </div>
                         {% else %}
-                            <div class="form-text text-muted small mt-1">Usando imagen por defecto de la tienda.</div>
+                            <div class="form-text text-muted small mt-1">Usando diseño elegante por defecto (sin banner de foto).</div>
                         {% endif %}
                     </div>
-
+                    
                     <!-- Estilo Visual (Mapeado directamente a: color_principal) -->
                     <div class="mb-4">
                         <label class="form-label small fw-bold text-uppercase text-secondary">Estilo Color Principal (Filtro Hero)</label>
