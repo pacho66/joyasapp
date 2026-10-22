@@ -6,28 +6,28 @@ def categorias_menu(request):
     # 1. Valores base iniciales
     cantidad_carrito = 0
     total_carrito = Decimal('0.00')
-    perfil = None
+    
+    # 🎯 Obtenemos el perfil directamente del middleware de subdominios
+    perfil = getattr(request, 'tenant_perfil', None)
 
-    # 2. Lógica de Categorías (CORREGIDA Y BLINDADA)
+    # 2. Lógica de Categorías limpia y segura
     if request.user.is_authenticated:
         categorias = Categoria.objects.filter(usuario=request.user)
-        if hasattr(request.user, 'perfil'):
+        if not perfil and hasattr(request.user, 'perfil'):
             perfil = request.user.perfil
     else:
-        categorias = Categoria.objects.none()
-        # 🎯 FALLBACK SEGURO: Importamos correctamente desde productos.models 
-        # para que la vista pública pinte los colores y botones del primer comercio.
-        try:
-            perfil = Perfil.objects.first()
-        except Exception:
-            perfil = None
+        if perfil:
+            categorias = Categoria.objects.filter(usuario=perfil.user).order_by('nombre')
+        else:
+            categorias = Categoria.objects.none()
+            # 🚫 Eliminado Perfil.objects.first() para evitar cruce de datos en joyasapp.com
 
-    # 3. RÉPLICA EXACTA DE TU LOGICA DE CARRITO (Sin alterar nada)
+    # 3. RÉPLICA EXACTA DE TU LOGICA DE CARRITO
     session_key = request.session.session_key
     if session_key:
         items = CarritoItem.objects.filter(session_key=session_key)
 
-        # Contador Total Global (Paso 1 de tu vista)
+        # Contador Total Global
         for item in items:
             cantidad_carrito += item.cantidad or 0
 
@@ -69,10 +69,9 @@ def categorias_menu(request):
 
                 subtotal_calculado = Decimal(cantidad) * Decimal(precio)
 
-            # Sumatoria acumulada al total general del Navbar/WhatsApp
             total_carrito += subtotal_calculado
 
-    # 4. Retorno de variables globales a la base.html
+    # 4. Retorno de variables globales
     return {
         'categorias_menu': categorias,
         'cantidad_carrito': cantidad_carrito,
