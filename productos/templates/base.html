@@ -171,8 +171,8 @@ nav ul li a:hover {
 .banner-container {
     position: relative;
     width: 100%;
-    height: 150px;          /* Altura fija perfecta para PC y celular */
-    max-height: 150px;
+    height: 160px !important;
+    max-height: 160px !important;
     overflow: hidden;
     margin-bottom: 25px;
     display: flex;
@@ -180,30 +180,29 @@ nav ul li a:hover {
     align-items: center;
     justify-content: center;
     text-align: center;
+    background: #111111;
 }
 
-/* La imagen ahora es un verdadero fondo y permite ver el color degradado de Cloudinary */
 .banner-img {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
     z-index: 1;
-    opacity: 0.6;
+    opacity: 0.45;
 }
 
-/* Caja de texto centrada y completamente limpia */
 .banner-text {
     position: relative;
     z-index: 2;
     max-width: 600px;
     color: white;
-    padding: 20px;
+    padding: 10px 20px;
     text-align: center;
 }
-
 /* Ajustes fluidos de las fuentes del banner */
 .banner-text h2 { 
     margin: 0 0 5px 0; 
@@ -358,13 +357,16 @@ nav ul li a:hover {
     {% endif %}
 
 {% if request.path == '/' %}
-    <div class="banner-container position-relative w-100 py-5 px-3 d-flex flex-column align-items-center justify-content-center text-center" 
-         style="min-height: 250px; gap: 12px; overflow: hidden; {% if perfil and perfil.subdominio and perfil.banner %}background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('{{ perfil.banner.url }}'); background-size: cover; background-position: center;{% else %}background: linear-gradient(135deg, #111111 0%, #2a2a2a 100%);{% endif %}">
+    <div class="banner-container position-relative w-100 px-3 d-flex flex-column align-items-center justify-content-center text-center">
         
-        <div class="banner-text position-relative" style="z-index: 2; max-width: 600px; color: #ffffff;">
-            <div class="d-flex align-items-center justify-content-center mb-2">
+        {% if perfil and perfil.subdominio and perfil.banner %}
+            <img src="{{ perfil.banner.url }}" class="banner-img" alt="Banner Principal">
+        {% endif %}
+
+        <div class="banner-text">
+            <div class="d-flex align-items-center justify-content-center mb-1">
                 <span class="fs-2 me-2">💎</span>
-                <h2 class="fw-bold mb-0 text-uppercase" style="letter-spacing: 2px; font-size: 2rem; text-shadow: 2px 2px 6px rgba(0,0,0,0.8); font-family: sans-serif; color: #ffffff;">
+                <h2 class="fw-bold mb-0 text-uppercase" style="letter-spacing: 2px; font-size: 1.8rem; text-shadow: 2px 2px 6px rgba(0,0,0,0.8); color: #ffffff;">
                     {% if perfil and perfil.subdominio %}
                         {{ perfil.nombre_tienda }}
                     {% else %}
@@ -374,11 +376,11 @@ nav ul li a:hover {
             </div>
             
             {% if perfil and perfil.subdominio and perfil.banner_texto %}
-                <p class="lead mb-0" style="font-size: 1.1rem; line-height: 1.5; text-shadow: 1px 1px 4px rgba(0,0,0,0.7); opacity: 0.95;">
+                <p class="lead mb-0" style="font-size: 1rem; line-height: 1.4; text-shadow: 1px 1px 4px rgba(0,0,0,0.7); opacity: 0.95;">
                     {{ perfil.banner_texto }}
                 </p>
             {% else %}
-                <p class="lead mb-0" style="font-size: 1.1rem; line-height: 1.5; text-shadow: 1px 1px 4px rgba(0,0,0,0.7); opacity: 0.95;">
+                <p class="lead mb-0" style="font-size: 1rem; line-height: 1.4; text-shadow: 1px 1px 4px rgba(0,0,0,0.7); opacity: 0.95;">
                     Crea tu catálogo virtual, gestiona tus ventas y automatiza tu joyería.
                 </p>
             {% endif %}
