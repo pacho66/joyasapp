@@ -69,22 +69,17 @@ def catalogo_tienda(request):
     
 def inicio(request):
     try:
-        # 1. Obtener el perfil exclusivamente desde el middleware de subdominio
+        # 1. Obtener el perfil EXCLUSIVAMENTE desde el middleware de subdominio
         perfil = getattr(request, 'tenant_perfil', None)
-        if request.user.is_authenticated and not perfil:
-            perfil = getattr(request.user, 'perfil', None)
 
-        # 2. Consultas filtradas de forma estricta
-        if request.user.is_authenticated:
-            productos = Producto.objects.filter(usuario=request.user).exclude(slug='').exclude(slug__isnull=True)
-            destacados = Producto.objects.filter(usuario=request.user, destacado=True).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
-            categorias = Categoria.objects.filter(usuario=request.user).order_by('nombre')
-        elif perfil:
+        # 2. Consultas filtradas según si hay un subdominio activo
+        if perfil:
+            # Estamos en un subdominio válido (ej: pgjoyas.joyasapp.com)
             productos = Producto.objects.filter(usuario=perfil.user).exclude(slug='').exclude(slug__isnull=True)
             destacados = Producto.objects.filter(usuario=perfil.user, destacado=True).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
             categorias = Categoria.objects.filter(usuario=perfil.user).order_by('nombre')
         else:
-            # 🌐 Dominio principal (joyasapp.com) sin tienda activa
+            # 🌐 Estamos estrictamente en el Dominio Principal (joyasapp.com)
             productos = Producto.objects.none()
             destacados = Producto.objects.none()
             categorias = Categoria.objects.none()
