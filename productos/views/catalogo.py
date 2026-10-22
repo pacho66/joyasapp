@@ -44,28 +44,28 @@ def catalogo_tienda(request):
         # 🛒 Petición desde un subdominio activo (ej: pgjoyas.joyasapp.com)
         perfil = request.tenant_perfil
         
-        # Filtramos los productos asociados a este perfil/usuario de forma segura
+        # Filtramos los productos y destacados asociados a este perfil/usuario de forma segura
         if hasattr(perfil.user, 'productos'):
             productos = perfil.user.productos.all()
+            destacados = Producto.objects.filter(usuario=perfil.user, destacado=True).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
             categorias = Categoria.objects.filter(usuario=perfil.user).order_by('nombre')
         else:
             productos = Producto.objects.filter(usuario=perfil.user) if hasattr(perfil, 'user') else []
+            destacados = Producto.objects.filter(destacado=True).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
             categorias = Categoria.objects.all().order_by('nombre')
 
         context = {
             'perfil': perfil,
             'productos': productos,
+            'destacados': destacados,
             'categorias': categorias,
             'es_subdominio': True,
         }
-        # Renderiza el catálogo exclusivo del cliente final
-        return render(request, 'tienda/index.html', context)
-    else:
-        # 🌐 Petición desde el dominio principal (joyasapp.com)
-        context = {
-            'es_subdominio': False,
-        }
+        # ✅ Apuntamos a 'inicio.html' que es la plantilla que tienes creada
         return render(request, 'inicio.html', context)
+    else:
+        # 🌐 Petición desde el dominio principal (joyasapp.com), reutiliza la vista inicio limpia
+        return inicio(request)
     
 def inicio(request):
     try:
