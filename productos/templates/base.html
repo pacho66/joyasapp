@@ -296,65 +296,52 @@ nav ul li a:hover {
 
 <body>
 
-<div class="header-logo d-flex align-items-center gap-2 p-3 bg-dark">
-    {% if perfil and perfil.subdominio %}
-        {% if perfil.logo %}
-            <img src="{{ perfil.logo.url }}" alt="Logo {{ perfil.nombre_tienda }}" style="height: 40px !important; width: auto !important; max-height: 40px !important; object-fit: contain;">
+<!-- 1. ENCABEZADO / LOGO PRINCIPAL -->
+<div class="d-flex align-items-center justify-content-between p-3 bg-dark text-white" style="background-color: #111111 !important;">
+    <div class="d-flex align-items-center gap-2">
+        {% if perfil and perfil.subdominio %}
+            {% if perfil.logo %}
+                <img src="{{ perfil.logo.url }}" alt="Logo {{ perfil.nombre_tienda }}" style="height: 40px !important; width: auto !important; max-height: 40px !important; object-fit: contain;">
+            {% else %}
+                <span style="font-size: 1.5rem;">💎</span>
+            {% endif %}
+            <span class="fw-bold fs-4 text-white ms-2" style="color: #ffffff !important;">{{ perfil.nombre_tienda }}</span>
         {% else %}
-            <img src="{% static 'img/logo_defecto.jpg' %}" alt="Logo" style="height: 40px !important; width: auto !important; max-height: 40px !important;">
+            <a href="{% url 'inicio' %}" style="color: #ffffff !important; text-decoration: none !important; outline: none;" class="d-flex align-items-center gap-2">
+                <img src="{% static 'img/logo_joyasapp.png' %}" alt="JoyasApp" style="height: 40px !important; width: auto !important; max-height: 40px !important;" onerror="this.style.display='none'">
+                <span class="fw-bold fs-3" style="color: #ffffff !important; text-shadow: 0px 0px 2px rgba(0,0,0,0.5); letter-spacing: 1px; font-family: sans-serif;">JoyasApp</span>
+            </a>
         {% endif %}
-        <span class="fw-bold fs-4 text-white ms-2" style="color: #ffffff !important;">{{ perfil.nombre_tienda }}</span>
-    {% else %}
-        <a href="{% url 'inicio' %}" style="color: #ffffff !important; text-decoration: none !important; outline: none;" class="d-flex align-items-center gap-2">
-            <img src="{% static 'img/logo_joyasapp.png' %}" alt="JoyasApp" style="height: 40px !important; width: auto !important; max-height: 40px !important;" onerror="this.style.display='none'">
-            <span class="fw-bold fs-3" style="color: #ffffff !important; text-shadow: 0px 0px 2px rgba(0,0,0,0.5); letter-spacing: 1px; font-family: sans-serif;">JoyasApp</span>
-        </a>
+    </div>
+    
+    {% if user.is_authenticated and not es_subdominio %}
+        <a href="/dashboard/" class="btn btn-sm btn-outline-light">📊 Panel</a>
     {% endif %}
 </div>
 
-    <!-- Navegación condicional limpia y directa -->
-    {% if es_subdominio %}
-        {% include 'crm/navbar_tienda.html' %}
-    {% else %}
-        <nav>
-            <div class="nav-container">
-                <div class="menu-toggle" onclick="toggleMenu()">
-                    ☰ Menú
-                </div>
+<!-- 2. BARRA DE NAVEGACIÓN UNIFICADA (Evita duplicados y amontonamiento) -->
+<nav class="bg-white border-bottom shadow-sm py-2 px-3" style="background: #ffffff; border-bottom: 1px solid #eaeaea;">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <a href="{% url 'inicio' %}" class="text-dark text-decoration-none fw-bold" style="color: #111; font-size: 14px;">🏠 Inicio</a>
+            <a href="{% url 'ver_carrito' %}" class="text-dark text-decoration-none fw-bold" style="color: #111; font-size: 14px;">🛒 Carrito ({{ cantidad_carrito|default:0 }})</a>
+            {% if perfil and perfil.whatsapp %}
+                <a href="https://wa.me/57{{ perfil.whatsapp }}" target="_blank" class="text-success text-decoration-none fw-bold" style="color: #25d366; font-size: 14px;">💬 WhatsApp</a>
+            {% endif %}
+        </div>
+        
+        <!-- Categorías dinámicas en línea -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            {% if categorias_menu %}
+                {% for categoria in categorias_menu %}
+                    <a href="{% url 'buscar_productos' %}?categoria={{ categoria.id }}" class="btn btn-sm btn-light border" style="font-size: 13px; padding: 4px 10px; border-radius: 6px;">{{ categoria.nombre }}</a>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</nav>
 
-                <ul id="menu-lista">
-                    <li><a href="{% url 'inicio' %}">Inicio</a></li>
-
-                    {% if categorias_menu %}
-                        {% for categoria in categorias_menu %}
-                            <li><a href="{% url 'buscar_productos' %}?categoria={{ categoria.id }}">{{ categoria.nombre }}</a></li>
-                        {% endfor %}
-                    {% endif %}
-
-                    <li>
-                        <a href="{% url 'ver_carrito' %}">
-                            🛒 Carrito ({{ cantidad_carrito|default:0 }})
-                        </a>
-                    </li>
-
-                    {% if user.is_authenticated %}
-                        <li><a href="/dashboard/">📊 Panel</a></li>
-                        <li><a href="/logout/">🚪 Salir</a></li>
-                    {% else %}
-                        <li><a href="/login/">🔐 Iniciar sesión</a></li>
-                    {% endif %}
-                </ul>
-
-                <form action="{% url 'buscar_productos' %}" method="GET" class="buscador">
-                    <div class="buscador-wrapper">
-                        <input type="text" name="q" placeholder="🔎 Buscar productos..." required>
-                        <button type="submit">Buscar</button>
-                    </div>
-                </form>
-            </div>
-        </nav>
-    {% endif %}
-
+<!-- 3. BANNER / HERO PROMOCIONAL (Altura estricta de 160px con fondo CSS blindado) -->
 {% if request.path == '/' %}
     <div style="position: relative; width: 100%; height: 160px !important; max-height: 160px !important; overflow: hidden !important; margin-bottom: 25px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; {% if perfil and perfil.subdominio and perfil.banner %}background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('{{ perfil.banner.url }}'); background-size: cover; background-position: center;{% else %}background: #111111;{% endif %}">
         
