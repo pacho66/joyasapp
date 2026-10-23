@@ -4,471 +4,188 @@
 {% block content %}
 
 <style>
-/* --- Configuración y Variables de Estilo --- */
-:root {
-    --color-primario: #111111;
-    --color-acento: #25D366;
-    --color-dorado: #d4af37;
-    --color-precio: #12a165;
-    --color-fondo-tarjeta: #ffffff;
-    --sombra-suave: 0 4px 15px rgba(0,0,0,0.06);
-    --sombra-hover: 0 10px 25px rgba(0,0,0,0.12);
-    --transicion: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-/* --- Banner Promocional de la Tienda --- */
-.hero-banner-tenant {
-    position: relative;
-    width: 100%;
-    min-height: 200px;
-    max-height: 260px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    background-size: cover !important;
-    background-position: center !important;
-    border-radius: 16px;
-    margin-bottom: 25px;
-    overflow: hidden;
-    box-shadow: var(--sombra-suave);
-}
-.hero-overlay {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.75) 100%);
-}
-.hero-content {
-    position: relative;
-    z-index: 2;
-    color: #fff;
-    padding: 20px;
-}
-
-/* --- Categorías Rápidas (Scroll Horizontal) --- */
-.categorias-scroll {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    padding-bottom: 15px;
-    margin-bottom: 25px;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-}
-.categorias-scroll::-webkit-scrollbar { display: none; }
-
-.btn-categoria-pill {
-    white-space: nowrap;
-    background: #f4f4f4;
-    color: #222;
-    padding: 8px 18px;
-    border-radius: 30px;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: var(--transicion);
-    border: 1px solid #e0e0e0;
-}
-.btn-categoria-pill:hover, .btn-categoria-pill.active {
-    background: #111;
-    color: #fff;
-    border-color: #111;
-}
-
-/* --- Redes Sociales Modernas --- */
-.redes-modernas {
-    display: flex !important;
-    justify-content: center !important;
-    gap: 16px !important;
-    margin-bottom: 25px !important;
-}
-
-.btn-red {
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    width: 48px !important;
-    height: 48px !important;
-    border-radius: 12px !important;
-    text-decoration: none;
-    color: #ffffff !important;
-    transition: var(--transicion);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-    border: none !important;
-}
-
-.btn-red i { font-size: 22px !important; }
-.btn-red:hover { transform: scale(1.08) translateY(-2px); }
-
-.instagram { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fd5949 45%, #d6249f 60%, #285AEB 90%) !important; }
-.facebook { background-color: #1877F2 !important; }
-.tiktok { background-color: #000000 !important; border: 1px solid #25f4ee !important; }
-
-/* --- Buscador Unificado --- */
-.buscador {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 30px;
-}
-.buscador form {
-    display: flex;
-    width: 100%;
-    max-width: 550px;
-    border: 1px solid #ddd;
+/* BENEFICIOS EN FILA RESPONSIVA */
+.box-beneficios {
+    background: #ffffff;
     border-radius: 12px;
-    overflow: hidden;
-    background: white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
-.buscador form:focus-within {
-    border-color: #111;
-    box-shadow: 0 0 0 3px rgba(0,0,0,0.08);
-}
-.buscador input {
-    flex: 1;
-    padding: 12px 18px;
-    border: none !important;
-    outline: none;
-    font-size: 15px;
-}
-.buscador button {
-    padding: 12px 22px;
-    background: #111;
-    color: white;
-    border: none !important;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-/* --- Títulos --- */
-h2 {
-    font-size: 22px;
-    margin-bottom: 18px;
-    font-weight: 800;
-    letter-spacing: -0.3px;
-    color: #111;
-}
-
-/* --- Tarjeta de Producto --- */
-.producto-card {
-    background: var(--color-fondo-tarjeta);
-    border-radius: 14px;
-    overflow: hidden;
-    box-shadow: var(--sombra-suave);
-    padding: 12px;
     border: 1px solid #eaeaea;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    transition: var(--transicion);
+    padding: 10px 5px;
+    margin-bottom: 20px;
 }
-.producto-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--sombra-hover);
-    border-color: rgba(212, 175, 55, 0.5);
-}
-
-.producto-img-wrapper {
-    position: relative;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.producto-img {
-    width: 100%;
-    aspect-ratio: 1/1;
-    object-fit: cover;
-    display: block;
-    background-color: #f8f8f8;
-    transition: transform 0.4s ease;
-}
-
-.producto-card:hover .producto-img {
-    transform: scale(1.04);
-}
-
-.producto-info {
-    padding: 12px 4px 0 4px;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-}
-
-.producto-info h4 {
-    font-size: 15px;
-    margin: 6px 0 4px 0;
-    color: #111;
+.item-beneficio {
+    text-align: center;
+    font-size: 12px;
     font-weight: 700;
-    line-height: 1.3;
+}
+.item-beneficio span {
+    display: block;
+    font-size: 10px;
+    font-weight: normal;
+    color: #6c757d;
 }
 
-/* --- Scroll Horizontal Destacados --- */
-.destacados-scroll {
-    display: flex;
-    gap: 16px;
-    overflow-x: auto;
-    padding: 5px 5px 20px 5px;
-    margin-bottom: 35px;
-    scrollbar-width: thin;
-    -webkit-overflow-scrolling: touch;
-}
-.destacados-scroll .producto-card {
-    min-width: 240px;
-    max-width: 240px;
-    flex-shrink: 0;
+/* BUSCADOR COMPACTO */
+.buscador-container {
+    max-width: 500px;
+    margin: 0 auto 25px auto;
 }
 
-/* --- Grid de Todos los Productos --- */
+/* GRID DE PRODUCTOS */
 .producto-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    margin-bottom: 50px;
+    gap: 12px;
+    margin-bottom: 40px;
 }
-@media(min-width: 768px){
+@media (min-width: 768px) {
     .producto-grid {
         grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
         gap: 20px;
     }
 }
 
-/* --- Stock --- */
-.stock-status {
+.joya-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #eaeaea;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.joya-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.joya-img {
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    background: #f8f8f8;
+}
+
+.joya-body {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.joya-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #111111;
+    margin-bottom: 4px;
+    line-height: 1.2;
+}
+
+.joya-precio {
+    font-size: 15px;
+    font-weight: 800;
+    color: #12a165;
+    margin-bottom: 8px;
+}
+
+.btn-joya {
+    background: #111111;
+    color: #ffffff;
+    text-align: center;
+    padding: 8px;
+    border-radius: 6px;
     font-size: 12px;
     font-weight: 700;
-    margin-bottom: 10px;
-    padding: 3px 8px;
-    border-radius: 6px;
-    display: inline-block;
-    align-self: flex-start;
-}
-.stock-ok { color: #198754; background: rgba(25, 135, 84, 0.08); }
-.stock-poco { color: #fd7e14; background: rgba(253, 126, 20, 0.08); }
-.stock-agotado { color: #dc3545; background: rgba(220, 53, 69, 0.08); }
-
-/* --- Botones --- */
-.acciones-producto {
+    text-decoration: none;
     margin-top: auto;
 }
-.btn-comprar {
-    display: block;
-    background: #111;
-    color: #fff;
-    text-align: center;
-    padding: 10px;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 13.5px;
-    text-decoration: none;
-    transition: var(--transicion);
-}
-.btn-comprar:hover {
-    background: var(--color-dorado);
-    color: #000;
-}
-
-/* Floating WhatsApp */
-.btn-whatsapp {
-    position: fixed;
-    right: 20px;
-    bottom: 20px;
-    width: 58px;
-    height: 58px;
-    background: var(--color-acento);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    font-size: 28px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-    z-index: 99999;
+.btn-joya:hover {
+    background: #d4af37;
+    color: #000000;
 }
 </style>
 
-<!-- 1. BANNER PROMOCIONAL DE LA TIENDA -->
-<div class="hero-banner-tenant" style="{% if perfil and perfil.banner %}background: url('{{ perfil.banner.url }}');{% else %}background: linear-gradient(135deg, #111111 0%, #2a2a2a 100%);{% endif %}">
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-        <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
-            {% if perfil and perfil.logo %}
-                <img src="{{ perfil.logo.url }}" alt="{{ perfil.nombre_tienda }}" style="height: 42px; width: auto; object-fit: contain;">
-            {% else %}
-                <span style="font-size: 1.8rem;">💎</span>
-            {% endif %}
-            <h1 class="fw-bold mb-0 text-uppercase" style="letter-spacing: 1px; font-size: 1.8rem; color: #fff;">
-                {{ perfil.nombre_tienda|default:"NUESTRA JOYERÍA" }}
-            </h1>
+<!-- 1. BENEFICIOS DE CONFIANZA -->
+<div class="box-beneficios shadow-sm">
+    <div class="row g-0">
+        <div class="col-4 border-end item-beneficio">
+            🚚 Envíos
+            <span>A toda Colombia</span>
         </div>
-        <p class="mb-0 opacity-90 mx-auto" style="max-width: 580px; font-size: 0.95rem; color: #e0e0e0;">
-            {{ perfil.banner_texto|default:"Piezas exclusivas diseñadas con elegancia y alta precisión." }}
-        </p>
-    </div>
-</div>
-
-<!-- 2. BENEFICIOS DE CONFIANZA -->
-<div class="container mb-4">
-    <div class="row g-2 bg-white p-3 rounded-4 shadow-sm border border-light text-center">
-        <div class="col-4 border-end">
-            <div class="fw-bold text-dark small">🚚 Envíos Nacionales</div>
-            <div class="text-muted" style="font-size: 11px;">A toda Colombia</div>
+        <div class="col-4 border-end item-beneficio">
+            🔒 Compra Segura
+            <span>Garantía directa</span>
         </div>
-        <div class="col-4 border-end">
-            <div class="fw-bold text-dark small">🔒 Compra Segura</div>
-            <div class="text-muted" style="font-size: 11px;">Garantía directa</div>
-        </div>
-        <div class="col-4">
-            <div class="fw-bold text-dark small">⭐ Calidad 100%</div>
-            <div class="text-muted" style="font-size: 11px;">Joyería Fina</div>
+        <div class="col-4 item-beneficio">
+            ⭐ Calidad 100%
+            <span>Joyería Fina</span>
         </div>
     </div>
 </div>
 
-<!-- 3. CATEGORÍAS RÁPIDAS (SI EXISTEN) -->
-{% if categorias %}
-<div class="categorias-scroll">
-    <a href="{% url 'inicio' %}" class="btn-categoria-pill active">✨ Todas</a>
-    {% for cat in categorias %}
-        <a href="{% url 'buscar_productos' %}?categoria={{ cat.id }}" class="btn-categoria-pill">💍 {{ cat.nombre }}</a>
-    {% endfor %}
-</div>
-{% endif %}
-
-<!-- 4. REDES SOCIALES -->
-<div class="redes-modernas">
-    {% if perfil and perfil.subdominio %}
-        {% if perfil.instagram %}
-        <a href="https://instagram.com/{{ perfil.instagram }}" target="_blank" class="btn-red instagram" aria-label="Instagram">
-            <i class="bi bi-instagram"></i>
-        </a>
-        {% endif %}
-        {% if perfil.facebook %}
-        <a href="{{ perfil.facebook }}" target="_blank" class="btn-red facebook" aria-label="Facebook">
-            <i class="bi bi-facebook"></i>
-        </a>
-        {% endif %}
-        {% if perfil.tiktok %}
-        <a href="https://tiktok.com/@{{ perfil.tiktok }}" target="_blank" class="btn-red tiktok" aria-label="TikTok">
-            <i class="bi bi-tiktok"></i>
-        </a>
-        {% endif %}
-    {% endif %}
-</div>
-
-<!-- 5. BUSCADOR -->
-<div class="buscador">
-    <form action="{% url 'buscar_productos' %}" method="GET">
-        <input type="text" name="q" placeholder="Buscar anillos, cadenas, pulseras..." aria-label="Buscar productos">
-        <button type="submit">🔍 Buscar</button>
+<!-- 2. BUSCADOR -->
+<div class="buscador-container">
+    <form action="{% url 'buscar_productos' %}" method="GET" class="d-flex gap-2">
+        <input type="text" name="q" class="form-control form-control-sm rounded-pill px-3" placeholder="Buscar joya...">
+        <button type="submit" class="btn btn-dark btn-sm rounded-pill px-3">🔍</button>
     </form>
 </div>
 
-<!-- 6. PRODUCTOS DESTACADOS -->
+<!-- 3. PRODUCTOS DESTACADOS -->
 {% if destacados %}
-<h2>⭐ Productos destacados</h2>
-<div class="destacados-scroll">
+<h6 class="fw-bold text-uppercase text-dark mb-3">⭐ Productos Destacados</h6>
+<div class="producto-grid mb-4">
     {% for producto in destacados %}
-    <div class="producto-card">
-        <div class="producto-img-wrapper">
-            {% if producto.imagen_principal %}
-                <img src="{{ producto.imagen_principal.url }}" class="producto-img" alt="{{ producto.nombre }}">
-            {% elif producto.imagenes.all %}
-                <img src="{{ producto.imagenes.all.0.imagen.url }}" class="producto-img" alt="{{ producto.nombre }}">
-            {% else %}
-                <img src="/static/images/no-image.png" class="producto-img" alt="Sin foto">
-            {% endif %}
-        </div>
+    <div class="joya-card">
+        {% if producto.imagen_principal %}
+            <img src="{{ producto.imagen_principal.url }}" class="joya-img" alt="{{ producto.nombre }}">
+        {% else %}
+            <div class="joya-img d-flex align-items-center justify-content-center text-muted">💎</div>
+        {% endif %}
 
-        <div class="producto-info">
-            <h4>{{ producto.nombre }}</h4>
-            
-            <p class="precio" style="font-size: 17px; font-weight: 800; color: #12a165; margin-bottom: 8px;">
+        <div class="joya-body">
+            <div class="joya-title text-truncate">{{ producto.nombre }}</div>
+            <div class="joya-precio">
                 {% if producto.tipo_venta == 'gramo' %}
                     ${{ producto.precio_calculado_detal|floatformat:"0" }}
-                    <span style="font-size: 11px; opacity: 0.8; display: block; color: #666; font-weight: normal;">
-                        ${{ producto.precio_por_gramo_detal|floatformat:"0" }}/g • Peso: {{ producto.peso_producto }}g
-                    </span>
-                {% elif producto.precio_detal %}
-                    ${{ producto.precio_detal|floatformat:"0" }}
                 {% else %}
-                    <span style="color: #999; font-size: 13px;">Consultar precio</span>
+                    ${{ producto.precio_detal|floatformat:"0" }}
                 {% endif %}
-            </p>
-
-            {% if producto.stock > 10 %}
-                <p class="stock-status stock-ok">✅ Disponible</p>
-            {% elif producto.stock > 0 %}
-                <p class="stock-status stock-poco">🔥 Últimas {{ producto.stock }} unid.</p>
-            {% else %}
-                <p class="stock-status stock-agotado">❌ Agotado</p>
-            {% endif %}
-
-            <div class="acciones-producto">
-                <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-comprar">
-                    💎 Ver Joya
-                </a>
             </div>
+            <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-joya">Ver Joya</a>
         </div>
     </div>
     {% endfor %}
 </div>
 {% endif %}
 
-<!-- 7. TODOS LOS PRODUCTOS -->
-<h2 id="productos">💎 Colección Completa</h2>
+<!-- 4. CATÁLOGO COMPLETO -->
+<h6 class="fw-bold text-uppercase text-dark mb-3">💎 Catálogo Completo</h6>
 <div class="producto-grid">
     {% for producto in productos %}
-    <div class="producto-card">
-        <div class="producto-img-wrapper">
-            {% if producto.imagen_principal %}
-                <img src="{{ producto.imagen_principal.url }}" class="producto-img" alt="{{ producto.nombre }}">
-            {% elif producto.imagenes.all %}
-                <img src="{{ producto.imagenes.all.0.imagen.url }}" class="producto-img" alt="{{ producto.nombre }}">
-            {% else %}
-                <img src="/static/images/no-image.png" class="producto-img" alt="Sin foto">
-            {% endif %}
-        </div>
+    <div class="joya-card">
+        {% if producto.imagen_principal %}
+            <img src="{{ producto.imagen_principal.url }}" class="joya-img" alt="{{ producto.nombre }}">
+        {% else %}
+            <div class="joya-img d-flex align-items-center justify-content-center text-muted">💎</div>
+        {% endif %}
 
-        <div class="producto-info">
-            <h4>{{ producto.nombre }}</h4>
-    
-            <p class="precio" style="font-size: 17px; font-weight: 800; color: #12a165; margin-bottom: 8px;">
+        <div class="joya-body">
+            <div class="joya-title text-truncate">{{ producto.nombre }}</div>
+            <div class="joya-precio">
                 {% if producto.tipo_venta == 'gramo' %}
                     ${{ producto.precio_calculado_detal|floatformat:"0" }}
-                    <span style="font-size: 11px; opacity: 0.8; display: block; color: #666; font-weight: normal;">
-                        ${{ producto.precio_por_gramo_detal|floatformat:"0" }}/g • Peso: {{ producto.peso_producto }}g
-                    </span>
-                {% elif producto.precio_detal %}
-                    ${{ producto.precio_detal|floatformat:"0" }}
                 {% else %}
-                    <span style="color: #999; font-size: 13px;">Consultar precio</span>
+                    ${{ producto.precio_detal|floatformat:"0" }}
                 {% endif %}
-            </p>
-    
-            {% if producto.stock > 10 %}
-                <p class="stock-status stock-ok">✅ Disponible</p>
-            {% elif producto.stock > 0 %}
-                <p class="stock-status stock-poco">🔥 Últimas {{ producto.stock }} unid.</p>
-            {% else %}
-                <p class="stock-status stock-agotado">❌ Agotado</p>
-            {% endif %}
-
-            <div class="acciones-producto">
-                <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-comprar">
-                    💎 Ver Joya
-                </a>
             </div>
+            <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-joya">Ver Joya</a>
         </div>
     </div>
     {% empty %}
-    <p style="grid-column: 1/-1; text-align: center; color: #666; padding: 40px 0;">No hay productos disponibles en este momento.</p>
+    <div class="text-center py-5 text-muted col-span-2">
+        <p>No hay joyas disponibles en este momento.</p>
+    </div>
     {% endfor %}
 </div>
-
-<!-- 8. WHATSAPP FLOTANTE -->
-{% if perfil and perfil.whatsapp %}
-<a href="https://wa.me/57{{ perfil.whatsapp }}" target="_blank" class="btn-whatsapp" aria-label="Contacto por WhatsApp">💬</a>
-{% endif %}
 
 {% endblock %}
