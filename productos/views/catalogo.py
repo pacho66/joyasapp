@@ -69,38 +69,37 @@ def catalogo_tienda(request):
     
 def inicio(request):
     try:
-        # 1. Obtener el perfil EXCLUSIVAMENTE desde el middleware de subdominio
+        # 1. Obtener el perfil exclusivamente desde el middleware de subdominio
         perfil = getattr(request, 'tenant_perfil', None)
 
-        # 2. Consultas filtradas según si hay un subdominio activo
+        # 2. Si estamos en un subdominio válido (ej: pgjoyas.joyasapp.com)
         if perfil:
-            # Estamos en un subdominio válido (ej: pgjoyas.joyasapp.com)
             productos = Producto.objects.filter(usuario=perfil.user).exclude(slug='').exclude(slug__isnull=True)
             destacados = Producto.objects.filter(usuario=perfil.user, destacado=True).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
             categorias = Categoria.objects.filter(usuario=perfil.user).order_by('nombre')
-        else:
-            # 🌐 Estamos estrictamente en el Dominio Principal (joyasapp.com)
-            productos = Producto.objects.none()
-            destacados = Producto.objects.none()
-            categorias = Categoria.objects.none()
 
-        context = {
-            'perfil': perfil,
-            'productos': productos,
-            'destacados': destacados,
-            'categorias': categorias,
-            'es_subdominio': bool(perfil),
-        }
-        return render(request, 'inicio.html', context)
+            context = {
+                'perfil': perfil,
+                'productos': productos,
+                'destacados': destacados,
+                'categorias': categorias,
+                'es_subdominio': True,
+            }
+            # Carga la tienda del cliente/inquilino
+            return render(request, 'inicio.html', context) # o 'tienda_cliente.html' según el nombre que uses
+
+        # 3. 🌐 Si estamos en el Dominio Principal (joyasapp.com)
+        # Renderiza la landing comercial de venta del SaaS
+        return render(request, 'landing_saas.html', {
+            'es_subdominio': False
+        })
 
     except Exception as e:
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger(_name_)
         logger.error(f"Error crítico en la vista inicio: {str(e)}")
-        return render(request, 'inicio.html', {
-            'perfil': None, 
-            'productos': [], 
-            'destacados': [], 
-            'categorias': [],
+        # Ante algún error en el dominio principal, mostramos la landing saas limpia
+        return render(request, 'landing_saas.html', {
+            'es_subdominio': False,
             'error': str(e)
         })
     
