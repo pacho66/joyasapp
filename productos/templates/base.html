@@ -10,79 +10,63 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-<style>
-:root {
-    --color-oscuro: #111111;
-    --color-whatsapp: #25D366;
-    --color-borde: #eaeaea;
-}
-
-body {
-    margin: 0;
-    padding: 0;
-    font-family: system-ui, -apple-system, sans-serif;
-    background-color: #f8f9fa;
-    color: #333;
-}
-
-/* NAVBAR SUPERIOR MODERNO */
-.navbar-custom {
-    background-color: #0b0b0b !important;
-    border-bottom: 1px solid #222;
-}
-
-/* BANNER DE TIENDA UNIFICADO */
-.tenant-banner-hero {
-    width: 100%;
-    min-height: 180px;
-    max-height: 200px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    position: relative;
-}
-
-/* MENÚ NAVEGACIÓN Y CATEGORÍAS */
-.nav-subbar {
-    background: #ffffff;
-    border-bottom: 1px solid var(--color-borde);
-}
-
-.main-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 15px;
-}
-
-/* BOTÓN FLOTANTE WHATSAPP */
-.btn-wa-flotante {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: #25D366;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 50px;
-    font-size: 14px;
-    font-weight: bold;
-    text-decoration: none;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.25);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    z-index: 9999;
-}
-</style>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .navbar-custom {
+            background-color: #0b0b0b !important;
+            border-bottom: 1px solid #222;
+        }
+        .tenant-banner-hero {
+            width: 100%;
+            min-height: 180px;
+            max-height: 200px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+        }
+        .nav-subbar {
+            background: #ffffff;
+            border-bottom: 1px solid #eaeaea;
+        }
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        .btn-wa-flotante {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #25D366;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: bold;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 9999;
+        }
+    </style>
 </head>
-
 <body>
 
-<!-- 1. BARRA SUPERIOR DE MARCA -->
+<!-- BARRA SUPERIOR DE MARCA -->
 <nav class="navbar navbar-custom py-2 px-3 sticky-top">
-    <div class="container-fluid max-width-1200 d-flex align-items-center justify-content-between">
+    <div class="container-fluid d-flex align-items-center justify-content-between">
         <a href="{% url 'inicio' %}" class="d-flex align-items-center gap-2 text-decoration-none">
             {% if perfil and perfil.logo %}
                 <img src="{{ perfil.logo.url }}" alt="Logo {{ perfil.nombre_tienda }}" style="height: 32px; width: auto; object-fit: contain;">
@@ -100,7 +84,7 @@ body {
     </div>
 </nav>
 
-<!-- 2. BANNER PRINCIPAL DE LA TIENDA (ÚNICO) -->
+<!-- BANNER PRINCIPAL DE LA TIENDA (ÚNICO) -->
 {% if perfil %}
     <div class="tenant-banner-hero" style="{% if perfil.banner %}background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.75)), url('{{ perfil.banner.url }}'); background-size: cover; background-position: center;{% else %}background: linear-gradient(135deg, #111111 0%, #2a2a2a 100%);{% endif %}">
         <div class="px-3" style="position: relative; z-index: 2; color: #ffffff;">
@@ -114,10 +98,9 @@ body {
     </div>
 {% endif %}
 
-<!-- 3. MENÚ DE NAVEGACIÓN Y DESPLEGABLE FUNCIONAL -->
+<!-- SUB-BARRA DE NAVEGACIÓN Y MENÚ DESPLEGABLE -->
 <div class="nav-subbar py-2 px-3 shadow-sm">
     <div class="container d-flex align-items-center justify-content-between flex-wrap gap-2">
-        
         <div class="d-flex align-items-center gap-3">
             <a href="{% url 'inicio' %}" class="text-dark text-decoration-none fw-bold small">🏠 Inicio</a>
             <a href="{% url 'ver_carrito' %}" class="text-dark text-decoration-none fw-bold small">
@@ -143,7 +126,6 @@ body {
             </ul>
         </div>
         {% endif %}
-
     </div>
 </div>
 
@@ -158,7 +140,7 @@ body {
 </a>
 {% endif %}
 
-<!-- JS DE BOOTSTRAP PARA HACER FUNCIONAR EL MENÚ DESPLEGABLE -->
+<!-- JS DE BOOTSTRAP PARA EL MENÚ DESPLEGABLE -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
