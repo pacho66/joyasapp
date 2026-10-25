@@ -1,305 +1,230 @@
-{% extends "base.html" %}
 {% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JoyasApp — El SaaS todo en uno para joyerías modernas</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-{% block content %}
-<!-- ==========================================
-     JOYASAPP - SALA PRINCIPAL SAAS COMPLETA
-     Aesthetic: Premium SaaS (Charcoal, Gold, White)
-     ========================================== -->
+    <style>
+        :root {
+            --ja-gold: #d4af37;
+            --ja-gold-dark: #b89326;
+            --ja-gold-light: #f4e5a9;
+            --ja-dark: #111111;
+            --ja-dark-card: #1a1a1a;
+            --ja-gray-bg: #f8f9fa;
+            --ja-gray-border: #e2e8f0;
+        }
 
-<style>
-    :root {
-        --ja-gold: #d4af37;
-        --ja-gold-dark: #b89326;
-        --ja-gold-light: #f4e5a9;
-        --ja-dark: #111111;
-        --ja-dark-card: #1a1a1a;
-        --ja-gray-bg: #f8f9fa;
-        --ja-gray-border: #e2e8f0;
-    }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #ffffff;
+            color: var(--ja-dark);
+        }
 
-    body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background-color: #ffffff;
-        color: var(--ja-dark);
-    }
+        .text-gold { color: var(--ja-gold) !important; }
+        .bg-dark-custom { background-color: var(--ja-dark) !important; }
+        .bg-gray-custom { background-color: var(--ja-gray-bg) !important; }
 
-    .text-gold { color: var(--ja-gold) !important; }
-    .bg-dark-custom { background-color: var(--ja-dark) !important; }
-    .bg-gray-custom { background-color: var(--ja-gray-bg) !important; }
+        .btn-gold {
+            background: linear-gradient(135deg, var(--ja-gold) 0%, var(--ja-gold-dark) 100%);
+            color: #ffffff !important;
+            font-weight: 700;
+            border: none;
+            box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3);
+            transition: all 0.3s ease;
+        }
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(212, 175, 55, 0.45);
+            color: #ffffff !important;
+        }
 
-    .btn-gold {
-        background: linear-gradient(135deg, var(--ja-gold) 0%, var(--ja-gold-dark) 100%);
-        color: #ffffff !important;
-        font-weight: 700;
-        border: none;
-        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3);
-        transition: all 0.3s ease;
-    }
-    .btn-gold:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 25px rgba(212, 175, 55, 0.45);
-        color: #ffffff !important;
-    }
+        /* BARRA SUPERIOR DE ACCESO Y NAVEGACIÓN */
+        .saas-header-bar {
+            background: var(--ja-dark);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
 
-    /* BARRA SUPERIOR DE ACCESO Y NAVEGACIÓN */
-    .saas-header-bar {
-        background: var(--ja-dark);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 12px 0;
-    }
+        /* HERO SECTION */
+        .hero-section {
+            background: radial-gradient(circle at top right, rgba(212, 175, 55, 0.08) 0%, rgba(255, 255, 255, 1) 65%);
+            padding-top: 3.5rem;
+            padding-bottom: 4rem;
+            overflow: hidden;
+        }
 
-    /* HERO SECTION */
-    .hero-section {
-        background: radial-gradient(circle at top right, rgba(212, 175, 55, 0.08) 0%, rgba(255, 255, 255, 1) 65%);
-        padding-top: 3.5rem;
-        padding-bottom: 4rem;
-        overflow: hidden;
-    }
+        .hero-title {
+            font-size: clamp(2.2rem, 5vw, 3.8rem);
+            font-weight: 900;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+        }
 
-    .hero-title {
-        font-size: clamp(2.2rem, 5vw, 3.8rem);
-        font-weight: 900;
-        line-height: 1.1;
-        letter-spacing: -0.02em;
-    }
+        /* BUSCADOR / ACCESO A SUBDOMINIOS */
+        .subdomain-access-box {
+            background: #ffffff;
+            border: 2px solid var(--ja-gold);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.15);
+        }
 
-    /* BUSCADOR / ACCESO A SUBDOMINIOS */
-    .subdomain-access-box {
-        background: #ffffff;
-        border: 2px solid var(--ja-gold);
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 10px 30px rgba(212, 175, 55, 0.15);
-    }
+        /* PILARES DE BENEFICIO */
+        .pillar-box {
+            text-align: center;
+            padding: 20px 10px;
+            border-radius: 12px;
+            background: #ffffff;
+            border: 1px solid var(--ja-gray-border);
+            transition: all 0.3s ease;
+        }
+        .pillar-box:hover {
+            border-color: var(--ja-gold);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        }
+        .pillar-icon {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 12px;
+            background: rgba(212, 175, 55, 0.12);
+            color: var(--ja-gold-dark);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
 
-    /* MOCKUP TELÉFONO */
-    .phone-mockup {
-        width: 100%;
-        max-width: 340px;
-        margin: 0 auto;
-        background: #000000;
-        border-radius: 40px;
-        padding: 12px;
-        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1);
-        position: relative;
-    }
+        /* CARDS NEGRAS MÓDULOS */
+        .feature-card-dark {
+            background: var(--ja-dark-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 18px;
+            padding: 28px 22px;
+            height: 100%;
+            color: #ffffff;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+        .feature-card-dark:hover {
+            transform: translateY(-5px);
+            border-color: var(--ja-gold);
+        }
+        .feature-icon-badge {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--ja-gold);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 16px;
+        }
 
-    .phone-mockup::before {
-        content: '';
-        position: absolute;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 100px;
-        height: 18px;
-        background: #000000;
-        border-bottom-left-radius: 12px;
-        border-bottom-right-radius: 12px;
-        z-index: 10;
-    }
+        .color-swatch {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: inline-block;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
 
-    .phone-screen {
-        background: #111111;
-        border-radius: 30px;
-        padding: 24px 14px 16px 14px;
-        color: #ffffff;
-        font-size: 12px;
-    }
+        .size-badge {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #ddd;
+        }
 
-    .mock-app-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-bottom: 12px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        margin-bottom: 14px;
-    }
+        /* HISTORIA SECTION */
+        .story-section {
+            background: #ffffff;
+            padding: 4.5rem 0;
+        }
 
-    .mock-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
-        margin-bottom: 16px;
-    }
+        .story-img-container {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
 
-    .mock-grid-item {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 10px;
-        padding: 10px 4px;
-        text-align: center;
-        font-size: 10px;
-        color: #d1d5db;
-    }
+        .story-img-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
 
-    .mock-grid-item i {
-        font-size: 16px;
-        display: block;
-        margin-bottom: 4px;
-        color: var(--ja-gold);
-    }
+        .check-list-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
 
-    .mock-cart-card {
-        background: #1e1e1e;
-        border: 1px solid rgba(212, 175, 55, 0.3);
-        border-radius: 14px;
-        padding: 12px;
-    }
+        .check-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--ja-gold-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
 
-    .mock-product-thumb {
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
-        background: #2a2a2a;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-    }
+        /* PLANES SUBMENÚ */
+        .plan-nav-pills .nav-link {
+            color: var(--ja-dark);
+            font-weight: 700;
+            border-radius: 30px;
+            padding: 10px 24px;
+            border: 1px solid var(--ja-gray-border);
+            background: #fff;
+        }
+        .plan-nav-pills .nav-link.active {
+            background: var(--ja-gold);
+            color: #000;
+            border-color: var(--ja-gold);
+        }
 
-    /* PILARES DE BENEFICIO */
-    .pillar-box {
-        text-align: center;
-        padding: 20px 10px;
-        border-radius: 12px;
-        background: #ffffff;
-        border: 1px solid var(--ja-gray-border);
-        transition: all 0.3s ease;
-    }
-    .pillar-box:hover {
-        border-color: var(--ja-gold);
-        transform: translateY(-4px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-    }
-    .pillar-icon {
-        width: 50px;
-        height: 50px;
-        margin: 0 auto 12px;
-        background: rgba(212, 175, 55, 0.12);
-        color: var(--ja-gold-dark);
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 22px;
-    }
-
-    /* CARDS NEGRAS MÓDULOS */
-    .feature-card-dark {
-        background: var(--ja-dark-card);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 18px;
-        padding: 28px 22px;
-        height: 100%;
-        color: #ffffff;
-        position: relative;
-        overflow: hidden;
-        transition: transform 0.3s ease, border-color 0.3s ease;
-    }
-    .feature-card-dark:hover {
-        transform: translateY(-5px);
-        border-color: var(--ja-gold);
-    }
-    .feature-icon-badge {
-        width: 44px;
-        height: 44px;
-        border-radius: 10px;
-        background: rgba(212, 175, 55, 0.15);
-        color: var(--ja-gold);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-        margin-bottom: 16px;
-    }
-
-    .color-swatch {
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        display: inline-block;
-        border: 1px solid rgba(255,255,255,0.3);
-    }
-
-    .size-badge {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 6px;
-        padding: 2px 8px;
-        font-size: 11px;
-        font-weight: 600;
-        color: #ddd;
-    }
-
-    /* HISTORIA SECTION */
-    .story-section {
-        background: #ffffff;
-        padding: 4.5rem 0;
-    }
-
-    .story-img-container {
-        position: relative;
-        border-radius: 20px;
-        overflow: hidden;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-    }
-
-    .story-img-container img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-    }
-
-    .check-list-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        margin-bottom: 14px;
-    }
-
-    .check-icon {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: rgba(212, 175, 55, 0.15);
-        color: var(--ja-gold-dark);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        flex-shrink: 0;
-        margin-top: 2px;
-    }
-
-    /* PLANES SUBMENÚ */
-    .plan-nav-pills .nav-link {
-        color: var(--ja-dark);
-        font-weight: 700;
-        border-radius: 30px;
-        padding: 10px 24px;
-        border: 1px solid var(--ja-gray-border);
-        background: #fff;
-    }
-    .plan-nav-pills .nav-link.active {
-        background: var(--ja-gold);
-        color: #000;
-        border-color: var(--ja-gold);
-    }
-
-    .card-plan-box {
-        background: #ffffff;
-        border: 2px solid var(--ja-gray-border);
-        border-radius: 20px;
-        padding: 30px;
-        transition: all 0.3s ease;
-    }
-    .card-plan-box.featured {
-        border-color: var(--ja-gold);
-        box-shadow: 0 15px 35px rgba(212, 175, 55, 0.15);
-    }
-</style>
+        .card-plan-box {
+            background: #ffffff;
+            border: 2px solid var(--ja-gray-border);
+            border-radius: 20px;
+            padding: 30px;
+            transition: all 0.3s ease;
+        }
+        .card-plan-box.featured {
+            border-color: var(--ja-gold);
+            box-shadow: 0 15px 35px rgba(212, 175, 55, 0.15);
+        }
+    </style>
+</head>
+<body>
 
 <!-- BARRA DE ACCESO RÁPIDO (LOGIN / REGISTRO / PANEL) -->
 <header class="saas-header-bar">
@@ -311,7 +236,7 @@
 
         <div class="d-flex align-items-center gap-2">
             {% if user.is_authenticated %}
-                <a href="/dashboard/" class="btn btn-gold btn-sm px-3 fw-bold">
+                <a href="{% url 'dashboard' %}" class="btn btn-gold btn-sm px-3 fw-bold">
                     📊 Mi Dashboard
                 </a>
             {% else %}
@@ -326,28 +251,28 @@
     </div>
 </header>
 
-<!-- 1. HERO PRINCIPAL -->
+<!-- 1. HERO PRINCIPAL CON BANNER PROFESIONAL -->
 <section class="hero-section">
     <div class="container">
         <div class="row align-items-center gy-5">
-            <div class="col-lg-7">
+            <div class="col-lg-6">
                 <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill bg-gray-custom border mb-3">
                     <span class="badge bg-dark text-gold px-2 py-1" style="font-size:10px;">SaaS PREMIUM</span>
                     <span class="text-muted fw-semibold" style="font-size: 13px;">Software Especializado para Joyerías</span>
                 </div>
                 
                 <h1 class="hero-title text-dark mb-3">
-                    SOFTWARE QUE <br>
-                    <span class="text-gold">VENDE CONTIGO</span>
+                    El SaaS todo en uno <br>
+                    <span class="text-gold">para joyerías modernas</span>
                 </h1>
                 
-                <p class="lead text-secondary mb-4 style-description" style="max-width: 540px; font-size: 1.15rem;">
-                    Gestiona tu joyería, conquista más clientes y haz crecer tu negocio de forma simple, automatizada y rentable.
+                <p class="lead text-secondary mb-4" style="max-width: 540px; font-size: 1.15rem;">
+                    Administra, vende, factura y haz crecer tu joyería desde cualquier lugar.
                 </p>
 
                 <!-- BUSCADOR / ACCESO A SUBDOMINIO DE TIENDA -->
-                <div class="subdomain-access-box mb-4 style-subdomain-box">
-                    <label class="fw-bold text-dark mb-2 style-subdomain-label" style="font-size: 13px;">
+                <div class="subdomain-access-box mb-4">
+                    <label class="fw-bold text-dark mb-2" style="font-size: 13px;">
                         🔍 ¿Ya tienes una tienda? Ingresa a tu subdominio:
                     </label>
                     <div class="input-group">
@@ -375,62 +300,11 @@
                 </p>
             </div>
 
-            <!-- Columna Mockup Móvil Saneado -->
-            <div class="col-lg-5 text-center">
-                <div class="phone-mockup">
-                    <div class="phone-screen">
-                        <div class="mock-app-header">
-                            <div class="d-flex align-items-center gap-1">
-                                <i class="bi bi-gem text-gold fs-6"></i>
-                                <strong style="font-size: 13px; letter-spacing: 0.5px;">JoyasApp</strong>
-                            </div>
-                            <i class="bi bi-list fs-5 text-muted"></i>
-                        </div>
-
-                        <div class="mock-grid">
-                            <div class="mock-grid-item">
-                                <i class="bi bi-journal-bookmark"></i>
-                                <span>Catálogo</span>
-                            </div>
-                            <div class="mock-grid-item">
-                                <i class="bi bi-cart-check"></i>
-                                <span>Ventas</span>
-                            </div>
-                            <div class="mock-grid-item">
-                                <i class="bi bi-people"></i>
-                                <span>Clientes</span>
-                            </div>
-                            <div class="mock-grid-item">
-                                <i class="bi bi-box-seam"></i>
-                                <span>Inventario</span>
-                            </div>
-                            <div class="mock-grid-item">
-                                <i class="bi bi-layers"></i>
-                                <span>Variantes</span>
-                            </div>
-                            <div class="mock-grid-item">
-                                <i class="bi bi-bag"></i>
-                                <span>Pedidos</span>
-                            </div>
-                        </div>
-
-                        <div class="mock-cart-card text-start">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="fw-bold text-gold" style="font-size: 11px;">Carrito Inteligente</span>
-                                <span class="badge bg-success" style="font-size: 9px;">Listo para enviar</span>
-                            </div>
-                            <div class="d-flex align-items-center gap-2 mb-2">
-                                <div class="mock-product-thumb">💍</div>
-                                <div class="mock-product-thumb">📿</div>
-                                <div class="mock-product-thumb">👑</div>
-                                <div class="mock-product-thumb text-muted" style="border: 1px dashed #555;">+</div>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary">
-                                <span class="text-muted" style="font-size: 10px;">Cálculo dinámico por gramo</span>
-                                <span class="badge btn-gold px-2 py-1" style="font-size: 10px;">Pedido vía WhatsApp</span>
-                            </div>
-                        </div>
-                    </div>
+            <!-- Columna Banner / Mockup Profesional -->
+            <div class="col-lg-6 text-center">
+                <div class="story-img-container shadow-lg border border-warning border-opacity-25">
+                    <!-- Aquí colocamos el banner profesional con laptop, móvil y panel de control -->
+                    <img src="{% static 'images/banner_joyasapp.jpg' %}" alt="JoyasApp Panel de Control" class="img-fluid rounded-4 w-100" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=80';">
                 </div>
             </div>
         </div>
@@ -440,33 +314,33 @@
 <!-- 2. BARRA DE 4 PILARES -->
 <section class="py-4 bg-gray-custom border-top border-bottom">
     <div class="container">
-        <div class="row g-3">
+        <div class="row g-3 text-center">
+            <div class="col-6 col-md-3">
+                <div class="pillar-box">
+                    <div class="pillar-icon"><i class="bi bi-bar-chart-fill"></i></div>
+                    <h6 class="fw-bold mb-1">MÁS CONTROL</h6>
+                    <p class="text-muted mb-0 small">Inventario y reportes claros</p>
+                </div>
+            </div>
             <div class="col-6 col-md-3">
                 <div class="pillar-box">
                     <div class="pillar-icon"><i class="bi bi-cart-plus-fill"></i></div>
-                    <h6 class="fw-bold mb-1">VENDE MÁS</h6>
+                    <h6 class="fw-bold mb-1">MÁS VENTAS</h6>
                     <p class="text-muted mb-0 small">Catálogo digital rápido</p>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="pillar-box">
-                    <div class="pillar-icon"><i class="bi bi-graph-up-arrow"></i></div>
-                    <h6 class="fw-bold mb-1">CONTROLA TU NEGOCIO</h6>
-                    <p class="text-muted mb-0 small">Inventario en tiempo real</p>
+                    <div class="pillar-icon"><i class="bi bi-shield-check"></i></div>
+                    <h6 class="fw-bold mb-1">MENOS ERRORES</h6>
+                    <p class="text-muted mb-0 small">Facturación y trazabilidad</p>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="pillar-box">
-                    <div class="pillar-icon"><i class="bi bi-tags-fill"></i></div>
-                    <h6 class="fw-bold mb-1">ORGANIZA MEJOR</h6>
-                    <p class="text-muted mb-0 small">Variantes, gramos y tallas</p>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="pillar-box">
-                    <div class="pillar-icon"><i class="bi bi-shield-lock-fill"></i></div>
-                    <h6 class="fw-bold mb-1">CRECE SIN LÍMITES</h6>
-                    <p class="text-muted mb-0 small">SaaS robusto y seguro</p>
+                    <div class="pillar-icon"><i class="bi bi-cash-stack"></i></div>
+                    <h6 class="fw-bold mb-1">MÁS GANANCIAS</h6>
+                    <p class="text-muted mb-0 small">Optimiza tu rentabilidad</p>
                 </div>
             </div>
         </div>
@@ -477,7 +351,7 @@
 <section class="py-5 bg-dark-custom text-white">
     <div class="container py-3">
         <div class="text-center mb-5">
-            <span class="text-gold fw-bold text-uppercase tracking-wider" style="font-size: 12px; letter-spacing: 1.5px;">Potencia tu Operación</span>
+            <span class="text-gold fw-bold text-uppercase" style="font-size: 12px; letter-spacing: 1.5px;">Potencia tu Operación</span>
             <h2 class="fw-extrabold mt-1 text-white">Herramientas diseñadas para la alta joyería</h2>
         </div>
 
@@ -508,11 +382,11 @@
                     <div class="feature-icon-badge"><i class="bi bi-cart3"></i></div>
                     <h4 class="fw-bold mb-2">CARRITO INTELIGENTE</h4>
                     <p class="text-muted small mb-4">
-                        Agrega por unidad o por gramos, aplica precios automáticos de escala y ofrece la mejor experiencia de compra.
+                        Agrega por unidad o por gramos, aplica precios automáticos y ofrece la mejor experiencia de compra directa por WhatsApp.
                     </p>
                     <div class="d-flex align-items-center justify-content-between pt-3 border-top border-secondary small">
                         <span class="text-gold"><i class="bi bi-check2-circle me-1"></i>Venta por gramo</span>
-                        <span class="text-gold"><i class="bi bi-check2-circle me-1"></i>Escalas (6+ y 12+)</span>
+                        <span class="text-gold"><i class="bi bi-check2-circle me-1"></i>Pedidos rápidos</span>
                     </div>
                 </div>
             </div>
@@ -526,7 +400,7 @@
                     </p>
                     <div class="bg-dark p-2 rounded-3 border border-secondary d-flex align-items-center justify-content-between mt-auto">
                         <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-star-fill text-gold style-star" style="font-size: 12px;"></i>
+                            <i class="bi bi-star-fill text-gold" style="font-size: 12px;"></i>
                             <span style="font-size: 11px;" class="fw-bold text-white">Cliente VIP</span>
                         </div>
                         <span style="font-size: 10px;" class="text-muted">Último contacto: Hoy</span>
@@ -548,13 +422,13 @@
             </div>
             
             <div class="col-lg-7 ps-lg-5">
-                <span class="text-gold fw-bold text-uppercase tracking-wider" style="font-size: 12px; letter-spacing: 1px;">NUESTRA HISTORIA</span>
+                <span class="text-gold fw-bold text-uppercase" style="font-size: 12px; letter-spacing: 1px;">NUESTRA HISTORIA</span>
                 <h2 class="fw-extrabold text-dark mb-3">DE JOYERO A JOYERO</h2>
                 
-                <p class="text-secondary mb-3 style-story-text" style="line-height: 1.7;">
+                <p class="text-secondary mb-3" style="line-height: 1.7;">
                     Durante más de 30 años recorrí Colombia vendiendo joyas, escuchando joyeros y entendiendo sus verdaderos desafíos en el día a día comercial y operativo.
                 </p>
-                <p class="text-secondary mb-4 style-story-text" style="line-height: 1.7;">
+                <p class="text-secondary mb-4" style="line-height: 1.7;">
                     De esa experiencia nació <strong>JoyasApp</strong>, una plataforma creada por un joyero, para joyeros. No es solo un software; es la herramienta que siempre necesitó tu joyería para vender más, organizarse mejor y crecer sin límites.
                 </p>
 
@@ -596,7 +470,7 @@
     </div>
 </section>
 
-<!-- 5. PLANES Y SERVICIOS CON SUBMENÚ -->
+<!-- 5. PLANES Y SERVICIOS CON PRECIOS UNIFICADOS -->
 <section id="planes-seccion" class="py-5 bg-gray-custom border-top">
     <div class="container py-3">
         <div class="text-center mb-4">
@@ -626,6 +500,7 @@
             
             <div class="tab-pane fade show active" id="tab-todos" role="tabpanel">
                 <div class="row g-4 justify-content-center">
+                    
                     <!-- PLAN BÁSICO -->
                     <div class="col-lg-4 col-md-6">
                         <div class="card-plan-box h-100 d-flex flex-column">
@@ -643,8 +518,7 @@
                                 <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Gestión de clientes</li>
                                 <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Pedidos por WhatsApp</li>
                                 <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Control básico de inventario</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Reportes básicos de ventas</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>1 usuario incluido</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>1 usuario administrador incluido</li>
                                 <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte por WhatsApp</li>
                             </ul>
 
@@ -659,7 +533,7 @@
                         <div class="card-plan-box featured h-100 d-flex flex-column">
                             <span class="badge bg-dark text-gold align-self-start mb-2 px-3 py-1 fw-bold">MÁS RECOMENDADO</span>
                             <h3 class="fw-bold text-dark mb-1">SEMI</h3>
-                            <p class="text-muted small">Más herramientas, más control</p>
+                            <p class="text-muted small">Control avanzado y Siigo</p>
                             
                             <div class="my-3">
                                 <span class="h1 fw-bold text-dark">$89.900</span>
@@ -668,12 +542,10 @@
 
                             <ul class="list-unstyled text-secondary small my-3 flex-grow-1">
                                 <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i><strong>Todo lo del plan Básico</strong></li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Inventario avanzado (variantes, colores, gramos)</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Escalas de precios (retal, semi y mayorista)</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Inventario avanzado por gramos y variantes</li>
                                 <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i><strong>Facturación electrónica con Siigo</strong></li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i><strong>Integración con pasarelas (Wompi, Mercado Pago)</strong></li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Hasta 3 usuarios</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Personalización de tienda básica</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Pasarelas de pago (Wompi, Mercado Pago)</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Hasta 3 usuarios habilitados</li>
                             </ul>
 
                             <a href="{% url 'registro' %}?plan=semi" class="btn btn-gold w-100 fw-bold py-2 rounded-3 mt-auto">
@@ -696,12 +568,10 @@
 
                             <ul class="list-unstyled text-secondary small my-3 flex-grow-1">
                                 <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Todo lo del plan Semi</strong></li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Tienda online profesional</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Dominio propio y marca personalizada</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Automatización de WhatsApp</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>CRM completo y embudo de ventas</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Subdominio personalizado exclusivo</strong></li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>CRM completo y automatizaciones de WhatsApp</li>
                                 <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Usuarios ilimitados</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte prioritario 24/7 y backups</li>
+                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte prioritario 24/7</li>
                             </ul>
 
                             <a href="{% url 'registro' %}?plan=premium" class="btn btn-dark w-100 fw-bold py-2 rounded-3 mt-auto">
@@ -712,39 +582,36 @@
                 </div>
             </div>
 
-            <!-- TAB PLAN BÁSICO DETALLE -->
+            <!-- TABS INDIVIDUALES -->
             <div class="tab-pane fade" id="tab-basico" role="tabpanel">
-                <div class="max-width-700 mx-auto card-plan-box p-4">
+                <div class="max-width-700 mx-auto card-plan-box p-4 text-center">
                     <h3 class="fw-bold text-dark">Plan Básico — $49.900 / mes</h3>
-                    <p class="text-secondary">Diseñado para joyeros que están comenzando su proceso de digitalización y quieren organizar su catálogo virtual de forma inmediata.</p>
+                    <p class="text-secondary">Diseñado para joyeros que están comenzando su proceso de digitalización.</p>
                     <a href="{% url 'registro' %}?plan=basico" class="btn btn-gold fw-bold mt-2">Crear mi tienda en Plan Básico</a>
                 </div>
             </div>
 
-            <!-- TAB PLAN SEMI DETALLE -->
             <div class="tab-pane fade" id="tab-semi" role="tabpanel">
-                <div class="max-width-700 mx-auto card-plan-box p-4 border-warning">
+                <div class="max-width-700 mx-auto card-plan-box p-4 border-warning text-center">
                     <h3 class="fw-bold text-dark">Plan Semi — $89.900 / mes</h3>
-                    <p class="text-secondary">Ideal para joyerías que buscan control de inventarios por gramo, múltiples escalas de precios y facturación legal automática con Siigo.</p>
+                    <p class="text-secondary">Ideal para control de inventarios por gramo e integración con Siigo.</p>
                     <a href="{% url 'registro' %}?plan=semi" class="btn btn-gold fw-bold mt-2">Crear mi tienda en Plan Semi</a>
                 </div>
             </div>
 
-            <!-- TAB PLAN PREMIUM DETALLE -->
             <div class="tab-pane fade" id="tab-premium" role="tabpanel">
-                <div class="max-width-700 mx-auto card-plan-box p-4">
+                <div class="max-width-700 mx-auto card-plan-box p-4 text-center">
                     <h3 class="fw-bold text-dark">Plan Premium — $149.900 / mes</h3>
-                    <p class="text-secondary">La máxima potencia para joyerías consolidadas que requieren dominio propio, CRM completo y soporte 24/7.</p>
+                    <p class="text-secondary">Subdominio exclusivo, CRM avanzado y soporte 24/7.</p>
                     <a href="{% url 'registro' %}?plan=premium" class="btn btn-gold fw-bold mt-2">Crear mi tienda en Plan Premium</a>
                 </div>
             </div>
 
         </div>
-
     </div>
 </section>
 
-<!-- 6. PIE DE PÁGINA (FOOTER INSTITUCIONAL Y DERECHOS DE AUTOR) -->
+<!-- 6. PIE DE PÁGINA (FOOTER INSTITUCIONAL) -->
 <footer class="bg-dark text-white pt-5 pb-4 border-top border-secondary">
     <div class="container">
         <div class="row g-4 mb-4">
@@ -776,7 +643,7 @@
                     <li class="mb-2">✓ Facturación Electrónica Siigo</li>
                     <li class="mb-2">✓ Wompi Pasarela de Pagos</li>
                     <li class="mb-2">✓ Mercado Pago</li>
-                    <li class="mb-2">✓ Redes Sociales (Instagram, Facebook, TikTok)</li>
+                    <li class="mb-2">✓ Redes Sociales</li>
                 </ul>
             </div>
 
@@ -803,6 +670,9 @@
     </div>
 </footer>
 
+<!-- Bootstrap JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
 function irASubdominio() {
     let input = document.getElementById("input-subdominio").value.trim().toLowerCase();
@@ -810,9 +680,9 @@ function irASubdominio() {
         alert("Por favor ingresa el nombre de tu joyería o subdominio.");
         return;
     }
-    // Redirige al subdominio correspondiente
     window.location.href = "https://" + input + ".joyasapp.com";
 }
 </script>
 
-{% endblock %}
+</body>
+</html>

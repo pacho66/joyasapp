@@ -22,6 +22,7 @@ urlpatterns = [
     # ===============================
     # 🔓 AUTENTICACIÓN
     # ===============================
+    path('', views.index_saas, name='home'),
     path('registro/', auth.registro, name='registro'),
     path('login/', auth.iniciar_sesion, name='login'),
     path('logout/', auth.cerrar_sesion, name='logout'),

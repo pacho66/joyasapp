@@ -19,32 +19,28 @@ from django.utils.text import slugify
 PRECIOS_PLANES = {
     'basico': {
         'nombre': 'Básico',
-        'precio_mensual': Decimal('50000.00'),  # COP
-        'descripcion': 'Ideal para tiendas que están iniciando.'
+        'precio_mensual': Decimal('49900.00'),  # COP
+        'descripcion': 'Todo lo esencial para comenzar.',
+        'link_pago': 'https://checkout.wompi.co/l/TU_LINK_BASICO'
     },
-    'pro': {
-        'nombre': 'Pro',
-        'precio_mensual': Decimal('120000.00'),
-        'descripcion': 'Para joyerías en crecimiento con pasarelas activas.'
+    'semi': {
+        'nombre': 'Semi',
+        'precio_mensual': Decimal('89900.00'),  # COP
+        'descripcion': 'Control avanzado y facturación Siigo.',
+        'link_pago': 'https://checkout.wompi.co/l/TU_LINK_SEMI'
     },
     'premium': {
         'nombre': 'Premium',
-        'precio_mensual': Decimal('250000.00'),
-        'descripcion': 'Todo ilimitado + Facturación Electrónica e integración Siigo.'
+        'precio_mensual': Decimal('149900.00'),  # COP
+        'descripcion': 'Subdominio personalizado exclusivo + CRM completo, automatizaciones de WhatsApp y soporte prioritario 24/7.',
+        'link_pago': 'https://checkout.wompi.co/l/TU_LINK_PREMIUM'
     }
-}
-
-# Asegúrate de tener definido PRECIOS_PLANES en tu código o settings
-PRECIOS_PLANES = {
-    'basico': {'precio_mensual': Decimal('0.00')},
-    'pro': {'precio_mensual': Decimal('50000.00')},
-    'premium': {'precio_mensual': Decimal('100000.00')},
 }
 
 class Perfil(models.Model):
     PLANES = [
         ('basico', 'Básico'),
-        ('pro', 'Pro'),
+        ('semi', 'Semi'),
         ('premium', 'Premium'),
     ]
     user = models.OneToOneField(
@@ -132,7 +128,6 @@ class Perfil(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.nombre_tienda} ({self.subdominio or 'Sin subdominio'})"
-
 class ConfiguracionEmpresa(models.Model):
     class TipoEnvio(models.TextChoices):
         RECOGIDA = 'recogida', 'Recogida en tienda (Sin costo)'

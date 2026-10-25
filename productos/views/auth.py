@@ -10,7 +10,7 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 
 from ..forms import RegistroForm
-from ..models import Perfil
+from ..models import Perfil,Producto
 
 # =========================================================================
 # 🔑 BLOQUE 2: AUTENTICACIÓN, CUENTAS Y PLANES SAAS
@@ -19,32 +19,61 @@ from ..models import Perfil
 # Precios planes (Estructura de datos o constante que uses)
 
 # =========================================================================
-# ⚙️ CENTRO DE CONTROL DE TARIFAS DEL SAAS (Ubicación segura y limpia)
+# ⚙️ CENTRO DE CONTROL DE TARIFAS DEL SAAS
 # =========================================================================
 PRECIOS_PLANES = {
     'basico': {
         'nombre': 'Básico',
-        'precio_mensual': Decimal('50000.00'),  # COP
-        'descripcion': 'Ideal para tiendas que están iniciando.'
+        'precio_mensual': Decimal('49900.00'),  # COP
+        'descripcion': 'Todo lo esencial para comenzar.',
+        'link_pago': 'https://checkout.wompi.co/l/TU_LINK_BASICO'
     },
-    'pro': {
-        'nombre': 'Pro',
-        'precio_mensual': Decimal('120000.00'),
-        'descripcion': 'Para joyerías en crecimiento con pasarelas activas.'
+    'semi': {
+        'nombre': 'Semi',
+        'precio_mensual': Decimal('89900.00'),  # COP
+        'descripcion': 'Control avanzado y facturación Siigo.',
+        'link_pago': 'https://checkout.wompi.co/l/TU_LINK_SEMI'
     },
     'premium': {
         'nombre': 'Premium',
-        'precio_mensual': Decimal('250000.00'),
-        'descripcion': 'Todo ilimitado + Facturación Electrónica e integración Siigo.'
+        'precio_mensual': Decimal('149900.00'),  # COP
+        'descripcion': 'Subdominio personalizado exclusivo + CRM completo, automatizaciones de WhatsApp y soporte prioritario 24/7.',
+        'link_pago': 'https://checkout.wompi.co/l/TU_LINK_PREMIUM'
     }
 }
+
+def index_saas(request):
+    # 1. Obtener el dominio/host desde el que entra el cliente
+    host = request.get_host().split(':')[0].lower()
+    
+    # 2. Dominios que pertenecen a la sala principal del SaaS
+    dominios_saas = ['joyasapp.com', 'www.joyasapp.com', '127.0.0.1', 'localhost']
+    
+    # 3. SI VIENE DE UN SUBDOMINIO (ejemplo: pgjoyas.joyasapp.com)
+    if host not in dominios_saas and '.joyasapp.com' in host:
+        subdominio_actual = host.split('.')[0]
+        
+        # Buscamos la tienda asignada a ese subdominio
+        perfil_tienda = Perfil.objects.filter(subdominio=subdominio_actual, activa=True).first()
+        
+        if perfil_tienda:
+            # Renderiza la tienda del cliente con sus productos
+            productos = Producto.objects.filter(usuario=perfil_tienda.user, activo=True)
+            return render(request, 'index.html', {
+                'perfil': perfil_tienda,
+                'productos': productos
+            })
+    
+    # 4. SI VIENE DE LA RAÍZ PURA (joyasapp.com)
+    # Muestra únicamente la sala principal del SaaS (Landing Page limpia)
+    return render(request, 'landing_saas.html')
+
 
 def registro(request):
     if request.method == 'POST':
         form = RegistroForm(request.POST)
 
         if form.is_valid():
-
             email = form.cleaned_data['email']
             username = form.cleaned_data['username']
             password = form.cleaned_data['password']
@@ -69,7 +98,6 @@ def registro(request):
                 })
 
             with transaction.atomic():
-
                 user = User.objects.create_user(
                     username=username,
                     email=email,
@@ -94,13 +122,10 @@ def registro(request):
     return render(request, 'registro.html', {'form': form})
     
 def iniciar_sesion(request):
-
     if request.user.is_authenticated:
        return redirect('dashboard')
         
-
     if request.method == 'POST':
-
         username = request.POST.get('username')
         password = request.POST.get('password')
 
@@ -114,14 +139,13 @@ def iniciar_sesion(request):
             login(request, user)
             next_url = request.GET.get('next') or request.POST.get('next') or 'dashboard'
             return redirect(next_url)
-
         else:
             messages.error(
                 request,
                 'Usuario o contraseña incorrectos'
             )
+            
     perfil = Perfil.objects.filter(activa=True).first()       
-
     return render(request, 'login.html', {'perfil': perfil})
 
 @login_required
@@ -133,10 +157,8 @@ def renovar_plan(perfil):
     """Lógica centralizada para extender la vigencia del plan 30 días."""
     hoy = timezone.localdate()
 
-    # Si el plan sigue vigente, sumamos días al vencimiento actual (acumulativo)
     if perfil.plan_vence and perfil.plan_vence > hoy:
         perfil.plan_vence = perfil.plan_vence + timedelta(days=30)
-    # Si ya venció, los 30 días arrancan desde hoy
     else:
         perfil.plan_vence = hoy + timedelta(days=30)
 
