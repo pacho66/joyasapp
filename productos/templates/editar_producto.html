@@ -50,6 +50,7 @@
                 <input type="number" id="stock" name="stock" value="{{ producto.stock|default:'0' }}">
             </div>
         </fieldset>
+
         <fieldset class="grid-4-col">
             <legend>Costos y Precios (Unidad / Global)</legend>
 
@@ -230,6 +231,7 @@
         </a>
     </form>
 </div>
+
 <style>
     /* 1. Protección global para que los márgenes no desborden la pantalla del celular */
     *, *::before, *::after {
@@ -250,7 +252,7 @@
         padding: 15px 20px; 
         margin-bottom: 20px; 
         background-color: #f9f9f9; 
-        min-width: 0; /* Evita que el contenedor se estire en pantallas pequeñas */
+        min-width: 0;
     }
     
     .custom-form legend { 
@@ -272,7 +274,6 @@
         color: #444; 
     }
     
-    /* 2. Forzar a que todos los elementos de entrada se queden dentro de su espacio */
     .form-group input[type="text"], 
     .form-group input[type="number"], 
     .form-group select, 
@@ -290,7 +291,6 @@
         box-sizing: border-box; 
     }
     
-    /* Diseño de columnas para computadores */
     .grid-2-col { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     .grid-3-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
     .grid-4-col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
@@ -337,12 +337,10 @@
     }
     .btn-volver:hover { background: #5a6268; }
 
-    /* Centrar la galería original en celulares sin romper sus estilos en línea */
     .media-section div[style*="display:flex"] {
         justify-content: center;
     }
 
-    /* 3. REGLAS ADAPTATIVAS EXCLUSIVAS PARA CELULARES */
     @media (max-width: 600px) {
         .form-container {
             padding: 10px;
@@ -352,19 +350,16 @@
             padding: 10px 12px;
             margin-bottom: 15px;
         }
-        /* Convertir las grillas de precios y gramos en una sola columna vertical */
         .grid-2-col, .grid-3-col, .grid-4-col { 
             grid-template-columns: 1fr !important; 
             gap: 12px;
         }
-        /* Ajustar tamaño de imágenes de la galería en pantallas muy pequeñas */
         .media-section div[style*="display:flex"] img {
             width: 95px !important;
             height: 95px !important;
         }
     }
 
-    /* Estilos para el Constructor de Tarjetas Inteligentes */
     .variante-card {
         background: #ffffff;
         border: 1px solid #e0e0e0;
@@ -373,12 +368,12 @@
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .variante-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #f0f0f0;
     }
     .badge-sku {
         background: #e2e8f0;
@@ -389,8 +384,8 @@
         font-weight: bold;
     }
     .badge-status {
-    font-size: 11px;
-    font-weight: bold;
+        font-size: 11px;
+        font-weight: bold;
     }
     .badge-utilidad {
         padding: 2px 6px;
@@ -398,7 +393,6 @@
         font-size: 11px;
         font-weight: bold;
     }
-    
     .btn-action-card {
         background: none;
         border: none;
@@ -406,10 +400,8 @@
         font-size: 14px;
         padding: 2px 5px;
     }
-    
 </style>
 
-<!-- ================= SCRIPT LIMPIO DE VARIANTES ================= -->
 <script>
     let contadorVariantes = 0;
 
@@ -437,7 +429,6 @@
         div.className = 'variante-card';
         div.id = idUnico;
 
-        // Concatenación segura paso a paso para evitar el bloque rojo en VS Code
         let htmlContenido = '';
         htmlContenido += '<div class="variante-header">';
         htmlContenido += '    <div>';
