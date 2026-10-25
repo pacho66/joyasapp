@@ -112,10 +112,10 @@
                         {% endif %}
                     </div>
                     
-                    <!-- Estilo Visual (Mapeado directamente a: color_principal) -->
+                    <!-- Estilo Visual (Corregido para coincidir con el backend) -->
                     <div class="mb-4">
                         <label class="form-label small fw-bold text-uppercase text-secondary">Estilo Color Principal (Filtro Hero)</label>
-                        <select id="input_color" name="estilo_color" class="form-select p-2" style="border-radius: 10px; font-size: 0.9rem;">
+                        <select id="input_color" name="color_principal" class="form-select p-2" style="border-radius: 10px; font-size: 0.9rem;">
                             <option value="#000000" {% if perfil.color_principal == "#000000" %}selected{% endif %}>⚫ Negro Elegante</option>
                             <option value="#b38938" {% if perfil.color_principal == "#b38938" %}selected{% endif %}>🟡 Dorado Premium</option>
                             <option value="#2b5876" {% if perfil.color_principal == "#2b5876" %}selected{% endif %}>🔵 Azul Corporativo</option>
