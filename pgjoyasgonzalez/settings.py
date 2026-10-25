@@ -85,8 +85,7 @@ STORAGES = {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage", 
-        # O usa "whitenoise.storage.CompressedManifestStaticFilesStorage" si prefieres el versionado por hash
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 #DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
