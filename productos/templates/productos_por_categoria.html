@@ -1,122 +1,109 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
-<h2 style="margin-bottom:20px;">Productos en categoría: {{ categoria.nombre }}</h2>
-
-<!-- Estilos específicos para productos -->
-<style>
-.product-card {
-    border: 1px solid #ddd;
-    padding: 15px;
-    width: 250px;
-    border-radius: 12px;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    background: #fff;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    margin-bottom: 20px;
-}
-
-.product-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-}
-
-.product-card h3 {
-    margin: 8px 0 4px 0;
-    font-size: 18px;
-    color: #333;
-}
-
-.product-card p {
-    margin: 3px 0;
-    font-size: 14px;
-    color: #555;
-}
-
-.zoom-container {
-    position: relative;
-    overflow: hidden;
-}
-
-.zoom-container img {
-    transition: transform 0.2s ease;
-}
-
-.zoom-container:hover img {
-    transform: scale(1.2);
-}
-</style>
-
-<div style="display:flex; flex-wrap:wrap; gap:20px;">
-    
-
-{% for producto in productos %}
-
-
-<div class="product-card">
-
-    <!-- Carrusel principal -->
-    <div class="zoom-container">
-        {% if producto.imagen_principal %}
-        <img id="carousel-main-{{ producto.id }}" src="{{ producto.imagen_principal.url }}" width="220" style="border-radius:6px; margin-bottom:8px;">
-        {% endif %}
-
-        <!-- Flechas -->
-        <button onclick="prevImage({{ producto.id }})" 
-                style="position:absolute; top:45%; left:0; background:rgba(0,0,0,0.3); color:white; border:none; border-radius:50%; width:25px; height:25px; cursor:pointer;">&#8249;</button>
-        <button onclick="nextImage({{ producto.id }})" 
-                style="position:absolute; top:45%; right:0; background:rgba(0,0,0,0.3); color:white; border:none; border-radius:50%; width:25px; height:25px; cursor:pointer;">&#8250;</button>
+<div class="container py-4">
+    <!-- Encabezado de la Categoría -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <div>
+            <span class="badge bg-dark text-gold mb-1">Catálogo Especializado</span>
+            <h2 class="fw-bold text-dark mb-0">Productos en categoría: {{ categoria.nombre }}</h2>
+        </div>
+        <a href="javascript:history.back()" class="btn btn-outline-dark btn-sm fw-semibold rounded-pill px-3">
+            ⬅️ Volver
+        </a>
     </div>
 
-    <!-- Miniaturas -->
-    <div id="thumbs-{{ producto.id }}" style="display:flex; justify-content:center; gap:5px; margin-bottom:10px;">
-        {% for img in producto.imagenes.all %}
-        <img src="{{ img.imagen.url }}" width="50"
-            style="border-radius:4px; cursor:pointer;"
-            onclick="setImage({{ producto.id }}, this.src)">
+    <!-- Estilos específicos para el carrusel y zoom -->
+    <style>
+    .zoom-container {
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+    }
+    .zoom-container img {
+        transition: transform 0.2s ease;
+    }
+    .zoom-container:hover img {
+        transform: scale(1.2);
+    }
+    </style>
+
+    <!-- Cuadrícula (Grid) responsiva -->
+    <div class="row g-4">
+        {% for producto in productos %}
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden bg-white p-3">
+
+                <!-- Carrusel principal y zoom -->
+                <div class="zoom-container bg-light text-center position-relative mb-3" style="height: 220px;">
+                    {% if producto.imagen_principal %}
+                    <img id="carousel-main-{{ producto.id }}" src="{{ producto.imagen_principal.url }}" class="w-100 h-100 object-fit-cover rounded-3">
+                    {% endif %}
+
+                    <!-- Flechas de navegación -->
+                    <button onclick="prevImage({{ producto.id }})" 
+                            class="position-absolute top-50 start-0 translate-middle-y btn btn-dark btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center ms-1 shadow" 
+                            style="width: 28px; height: 28px; background: rgba(0,0,0,0.5); border: none;">&#8249;</button>
+                    <button onclick="nextImage({{ producto.id }})" 
+                            class="position-absolute top-50 end-0 translate-middle-y btn btn-dark btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center me-1 shadow" 
+                            style="width: 28px; height: 28px; background: rgba(0,0,0,0.5); border: none;">&#8250;</button>
+                </div>
+
+                <!-- Miniaturas -->
+                <div id="thumbs-{{ producto.id }}" class="d-flex justify-content-center gap-1 mb-3 overflow-auto py-1">
+                    {% for img in producto.imagenes.all %}
+                    <img src="{{ img.imagen.url }}" width="45" height="45"
+                        class="rounded-2 border object-fit-cover"
+                        style="cursor: pointer;"
+                        onclick="setImage({{ producto.id }}, this.src)">
+                    {% endfor %}
+                </div>
+
+                <!-- Nombre y referencias -->
+                <div class="card-body p-0 d-flex flex-column">
+                    <h5 class="fw-bold text-dark fs-6 text-truncate mb-1">{{ producto.nombre }}</h5>
+                    <p class="text-muted small mb-2"><strong>Ref:</strong> {{ producto.referencia }}</p>
+                    
+                    <div class="mb-3">
+                        <div class="text-secondary small">Detal: <span class="fw-bold text-dark">${{ producto.precio_detal }}</span></div>
+                        <div class="text-secondary small">Mayor: <span class="fw-bold text-success">${{ producto.precio_mayor }}</span></div>
+                    </div>
+
+                    <!-- Botones de acción unificados -->
+                    <div class="mt-auto d-flex flex-column gap-2">
+                        <a href="{% url 'detalle_producto' producto.id producto.slug %}"
+                           class="btn btn-outline-dark btn-sm fw-bold rounded-3 py-2">
+                           Ver detalle 💎
+                        </a>
+
+                        <a href="https://wa.me/573215280610?text=Hola%20quiero%20información%20del%20producto%20{{ producto.nombre }}"
+                           target="_blank"
+                           class="btn btn-sm fw-bold rounded-3 text-white py-2"
+                           style="background: #25D366;">
+                           Comprar por WhatsApp 💬
+                        </a>
+
+                        <a href="{% url 'agregar_al_carrito' producto.id %}" 
+                           class="btn btn-sm fw-bold rounded-3 text-white py-2"
+                           style="background: #d4af37;">
+                           Agregar al carrito 🛒
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <div class="fs-1 mb-3">💍</div>
+            <h4 class="fw-bold text-dark">No hay productos en esta categoría.</h4>
+            <p class="text-secondary small">Explora otras secciones para descubrir piezas exclusivas.</p>
+        </div>
         {% endfor %}
     </div>
-
-    <!-- Nombre y precios -->
-    <h3>{{ producto.nombre }}</h3>
-    <p><strong>Ref:</strong> {{ producto.referencia }}</p>
-    <p><strong>Precio Detal:</strong> ${{ producto.precio_detal }}</p>
-    <p><strong>Precio Mayor:</strong> ${{ producto.precio_mayor }}</p>
-
-    <!-- Botones -->
-    <a href="{% url 'detalle_producto' producto.id producto.slug %}"
-       style="display:inline-block; margin:5px 0; padding:8px 14px; background:#007BFF; color:white; border-radius:6px; text-decoration:none; font-weight:bold;"
-       onmouseover="this.style.background='#0056b3';" onmouseout="this.style.background='#007BFF';">
-       Ver detalle
-    </a>
-
-    <br>
-
-    <a href="https://wa.me/573215280610?text=Hola%20quiero%20información%20del%20producto%20{{ producto.nombre }}"
-       target="_blank"
-       style="display:inline-block; margin-top:5px; background:#25D366;color:white;padding:8px 14px;border-radius:6px;text-decoration:none;font-weight:bold;"
-       onmouseover="this.style.background='#1ebe57';" onmouseout="this.style.background='#25D366';">
-       Comprar por WhatsApp
-    </a>
-
-    <br>
-
-    <a href="{% url 'agregar_al_carrito' producto.id %}" 
-       style="display:inline-block; margin-top:5px; background:#FFA500; color:white; padding:8px 14px; border-radius:6px; text-decoration:none; font-weight:bold;"
-       onmouseover="this.style.background='#e69500';" onmouseout="this.style.background='#FFA500';">
-       Agregar al carrito
-    </a>
-
-</div>
-{% empty %}
-<p>No hay productos en esta categoría.</p>
-{% endfor %}
-
 </div>
 
-<!-- JavaScript carrusel y miniaturas -->
+<!-- JavaScript original de carrusel y zoom (intacto) -->
 <script>
 const currentImageIndex = {};
 
@@ -127,7 +114,7 @@ function setImage(productoId, url){
 
 function getImageIndex(productoId, url){
     const imgs = document.querySelectorAll('#thumbs-' + productoId + ' img');
-    for(let i=0;i<imgs.length;i++){
+    for(let i=0; i<imgs.length; i++){
         if(imgs[i].src.endsWith(url.split('/').pop())) return i;
     }
     return 0;
@@ -152,21 +139,13 @@ function prevImage(productoId){
 }
 
 document.querySelectorAll('.zoom-container').forEach(container => {
-
     const img = container.querySelector('img');
-
     container.addEventListener('mousemove', function(e){
-
         const rect = container.getBoundingClientRect();
-
         const x = (e.clientX - rect.left) / rect.width * 100;
         const y = (e.clientY - rect.top) / rect.height * 100;
-
         img.style.transformOrigin = x + "% " + y + "%";
-
     });
-
 });
 </script>
-
 {% endblock %}
