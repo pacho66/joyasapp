@@ -247,18 +247,51 @@ td {
         </div>
     </section>
 
-    <!-- 2. BOTONES DE ACCIÓN RÁPIDA -->
-    <div class="botones-panel bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-2 items-center mb-6">
-        <a href="{% url 'panel_crm' %}" class="btn btn-morado text-xs md:text-sm">🎯 CRM</a>
-        <a href="{% url 'modificar_banner' %}" class="btn btn-gris text-xs md:text-sm">🖼️ Banner</a>
-        <a href="{% url 'estadisticas' %}" class="btn btn-azul text-xs md:text-sm">📈 Estadísticas</a>
-        <a href="{% url 'ganancias' %}" class="btn btn-verde text-xs md:text-sm">💰 Ganancias</a>
-        <a href="{% url 'inventario' %}" class="btn btn-naranja text-xs md:text-sm">📦 Inventario</a>
-        <a href="{% url 'gastos' %}?categoria=fabricacion" class="btn text-xs md:text-sm font-bold text-white shadow-sm" style="background-color: #d97706; border-radius: 12px; padding: 8px 16px;">🛠️ Fabricación</a>
-        <a href="{% url 'crear_producto' %}" class="btn btn-verde text-xs md:text-sm">➕ Producto</a>
-        <a href="{% url 'exportar_excel_dashboard' %}" class="btn text-xs md:text-sm font-bold text-white shadow-sm" style="background-color: #059669; border-radius: 12px; padding: 8px 16px;">📥 Excel Contable</a>
-    </div>
+    <!-- 2. TARJETAS EN CUADRÍCULA DE ACCIÓN RÁPIDA -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px;">
+    
+        <a href="{% url 'panel_crm' %}" class="card border-0 shadow-sm rounded-4 text-decoration-none p-3 text-center bg-white" style="transition: transform 0.2s;">
+            <div style="font-size: 24px; margin-bottom: 6px;">🎯</div>
+            <span style="font-size: 13px; font-weight: 700; color: #0f172a;">CRM</span>
+        </a>
 
+        <a href="{% url 'modificar_banner' %}" class="card border-0 shadow-sm rounded-4 text-decoration-none p-3 text-center bg-white">
+            <div style="font-size: 24px; margin-bottom: 6px;">🖼️</div>
+            <span style="font-size: 13px; font-weight: 700; color: #0f172a;">Banner</span>
+        </a>
+
+        <a href="{% url 'estadisticas' %}" class="card border-0 shadow-sm rounded-4 text-decoration-none p-3 text-center bg-white">
+            <div style="font-size: 24px; margin-bottom: 6px;">📈</div>
+            <span style="font-size: 13px; font-weight: 700; color: #0f172a;">Estadísticas</span>
+        </a>
+
+        <a href="{% url 'ganancias' %}" class="card border-0 shadow-sm rounded-4 text-decoration-none p-3 text-center bg-white">
+            <div style="font-size: 24px; margin-bottom: 6px;">💰</div>
+            <span style="font-size: 13px; font-weight: 700; color: #0f172a;">Ganancias</span>
+        </a>
+
+        <a href="{% url 'inventario' %}" class="card border-0 shadow-sm rounded-4 text-decoration-none p-3 text-center bg-white">
+            <div style="font-size: 24px; margin-bottom: 6px;">📦</div>
+            <span style="font-size: 13px; font-weight: 700; color: #0f172a;">Inventario</span>
+        </a>
+
+        <a href="{% url 'gastos' %}?categoria=fabricacion" class="card border-0 shadow-sm rounded-4 text-decoration-none p-3 text-center bg-white">
+            <div style="font-size: 24px; margin-bottom: 6px;">🛠️</div>
+            <span style="font-size: 13px; font-weight: 700; color: #0f172a;">Fabricación</span>
+        </a>
+
+    <!-- BOTÓN DE CONFIGURACIÓN DE NEGOCIO (INCORPORADO) -->
+    <a href="{% url 'configurar_negocio' %}" class="card border-0 shadow-sm rounded-4 text-decoration-none p-3 text-center bg-white" style="border: 2px solid #2563eb !important;">
+        <div style="font-size: 24px; margin-bottom: 6px;">⚙️</div>
+        <span style="font-size: 13px; font-weight: 700; color: #2563eb;">Configurar Negocio</span>
+    </a>
+
+    <a href="{% url 'exportar_excel_dashboard' %}" class="card border-0 shadow-sm rounded-4 text-decoration-none p-3 text-center bg-white">
+        <div style="font-size: 24px; margin-bottom: 6px;">📥</div>
+        <span style="font-size: 13px; font-weight: 700; color: #059669;">Excel Contable</span>
+    </a>
+
+</div>
     <!-- 3. SUBMENÚ DE PESTAÑAS (ORGANIZA EL CONTENIDO EN VISTAS LIMPIAS) -->
     <div class="dashboard-subnav">
         <button class="subnav-btn active" onclick="switchTab(event, 'tab-resumen')">📊 Resumen y Finanzas</button>
