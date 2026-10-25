@@ -287,10 +287,13 @@
                 </p>
             </div>
 
-            <!-- Columna Derecha: Imagen del Banner (Apunta a la carpeta img) -->
+            <!-- Columna Derecha: Imagen del Banner con tamaño controlado -->
             <div class="col-lg-6 text-center">
                 <div class="shadow-lg rounded-4 overflow-hidden border border-warning border-opacity-25 bg-white p-2">
-                    <img src="{% static 'img/banner_joyasapp.jpg' %}" alt="JoyasApp Catálogo en Laptop y Móvil" class="img-fluid w-100 rounded-3">
+                    <img src="{% static 'img/banner_joyasapp.jpg' %}" 
+                         alt="JoyasApp Catálogo en Laptop y Móvil" 
+                         class="img-fluid rounded-3" 
+                         style="max-height: 420px; width: 100%; object-fit: cover;">
                 </div>
             </div>
         </div>
