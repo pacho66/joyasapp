@@ -10,7 +10,7 @@
 
         <fieldset>
             <legend>Información General</legend>
-            
+    
             <div class="form-group">
                 <label for="nombre">Nombre del Producto</label>
                 <input type="text" id="nombre" name="nombre" value="{{ producto.nombre }}" required>
@@ -32,7 +32,6 @@
                 </select>
             </div>
 
-            <!-- 🏷️ CAMPO DE ETIQUETAS INTEGRADO -->
             <div class="form-group">
                 <label for="etiquetas">Etiquetas</label>
                 <input type="text" id="etiquetas" name="etiquetas" value="{{ producto.etiquetas|default:'' }}" placeholder="Ej: Oro, Regalo, Nuevo">
@@ -45,13 +44,12 @@
                     <option value="gramo" {% if producto.tipo_venta == 'gramo' %}selected{% endif %}>Por gramos</option>
                 </select>
             </div>
-            
+    
             <div class="form-group">
                 <label for="stock">Stock Total</label>
                 <input type="number" id="stock" name="stock" value="{{ producto.stock|default:'0' }}">
             </div>
         </fieldset>
-        
         <fieldset class="grid-4-col">
             <legend>Costos y Precios (Unidad / Global)</legend>
 
