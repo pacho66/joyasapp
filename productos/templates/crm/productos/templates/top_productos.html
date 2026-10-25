@@ -1,0 +1,15 @@
+<h1>🔥 Productos más vendidos</h1>
+
+<table border="1">
+    <tr>
+        <th>Producto</th>
+        <th>Vendidos</th>
+    </tr>
+
+    {% for p in top %}
+    <tr>
+        <td>{{ p.producto__nombre }}</td>
+        <td>{{ p.total_vendido }}</td>
+    </tr>
+    {% endfor %}
+</table>

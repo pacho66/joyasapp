@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div style="max-width:500px;margin:auto;padding:20px;">
+
+<h2>📂 Nueva Categoría</h2>
+
+<form method="POST">
+{% csrf_token %}
+
+<input
+type="text"
+name="nombre"
+placeholder="Nombre categoría"
+required
+style="width:100%;padding:12px;margin-bottom:15px;">
+
+<button
+type="submit"
+style="width:100%;padding:12px;background:#25D366;color:white;border:none;border-radius:8px;">
+Guardar
+</button>
+
+</form>
+
+</div>
+
+{% endblock %}

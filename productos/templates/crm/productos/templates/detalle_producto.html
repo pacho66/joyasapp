@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+{% load moneda %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <!-- BOTÓN VOLVER -->
+    <div class="mb-3">
+        <a href="{% url 'inicio' %}" class="btn btn-outline-dark btn-sm fw-bold">
+            ⬅️ Volver al catálogo
+        </a>
+    </div>
+
+    <h1>{{ producto.nombre }}</h1>
+
+    <p id="stock-general" style="font-weight:bold;"></p>
+
+    <p><strong>Categoría:</strong> {{ producto.categoria.nombre }}</p>
+
+    <h3>Galería</h3>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+
+    <div class="carousel-container">
+        <div class="swiper mySwiper">
+            <div class="swiper-wrapper">
+                {% if producto.imagen_principal %}
+                <div class="swiper-slide">
+                    <img src="{{ producto.imagen_principal.url }}" alt="{{ producto.nombre }}">
+                </div>
+                {% endif %}
+
+                {% for foto in producto.imagenes.all %}
+                    {% if foto.imagen.url != producto.imagen_principal.url %}
+                    <div class="swiper-slide">
+                        <img src="{{ foto.imagen.url }}" alt="{{ producto.nombre }}">
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <div class="swiper-pagination"></div>
+            <div class="swiper-button-next"></div>
+            <div class="swiper-button-prev"></div>
+        </div>
+    </div>
+
+    {% if producto.video %}
+    <div style="margin:20px 0; text-align:center;">
+      <video 
+        width="100%" 
+        style="max-width:500px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,.15);" 
+        controls 
+        preload="metadata"
+      >
+        <source src="{{ producto.video.url }}" type="video/mp4">
+        Tu navegador no soporta video.
+      </video>
+    </div>
+    {% endif %}
+
+    <p class="mt-3">{{ producto.descripcion }}</p>
+
+    {% if producto.certificado %}
+    <h3>Certificado de garantía</h3>
+    <p style="color:#444;">
+    Uso exclusivo para joyas en <strong>oro 18K, diamantes y esmeraldas</strong>.
+    </p>
+    <a href="{{ producto.certificado.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">Ver certificado</a>
+    {% endif %}
+
+    <h3 class="mt-4">Productos relacionados</h3>
+    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+    {% for p in productos_relacionados %}
+    <div style="width:150px; text-align:center;">
+    <a href="{% url 'detalle_producto' p.id p.slug %}" class="text-decoration-none text-dark">
+    {% if p.imagen_principal %}
+    <img src="{{ p.imagen_principal.url }}" width="120" style="object-fit: contain; height: 120px; border-radius: 6px;">
+    {% endif %}
+    <p style="margin: 5px 0 2px 0; font-size: 14px; font-weight: 500;">{{ p.nombre }}</p>
+    <p style="font-weight: bold; color: #111;">$ {{ p.precio_detal|moneda }}</p>
+
+    {% if p.stock_total > 10 %}
+    <p style="color:green;font-weight:bold; font-size: 12px;">✅ Disponible</p>
+    {% elif p.stock_total > 3 %}
+    <p style="color:orange;font-weight:bold; font-size: 12px;">⚠️ Quedan {{ p.stock_total }} un.</p>
+    {% elif p.stock_total > 0 %}
+    <p style="color:red;font-weight:bold; font-size: 12px;">🔥 Solo quedan {{ p.stock_total }} un.</p>
+    {% else %}
+    <p style="color:red;font-weight:bold; font-size: 12px;">❌ Agotado</p>
+    {% endif %}
+    </a>
+    </div>
+    {% endfor %}
+    </div>
+
+    <!-- 💎 SECCIÓN DE PRECIOS DE ESCALA INFORMATIVOS -->
+    <h3 class="mt-4">Precios de Escala</h3>
+    {% if producto.tipo_venta == "gramo" %}
+        <p><strong>Precio Detal:</strong> $ {{ producto.precio_total_detal_dinamico|default_if_none:0|moneda }} <small style="color:#666; font-weight:normal;">(${{ producto.precio_por_gramo_detal|moneda }}/g)</small></p>
+        <p style="color:#0a7;">Semi-mayorista (6g+): <strong>$ {{ producto.precio_total_semimayor_dinamico|default_if_none:0|moneda }}</strong> <small style="color:#666; font-weight:normal;">(${{ producto.precio_por_gramo_semimayor|moneda }}/g)</small></p>
+        <p style="color:#0a7;">Mayorista (12g+): <strong>$ {{ producto.precio_total_mayor_dinamico|default_if_none:0|moneda }}</strong> <small style="color:#666; font-weight:normal;">(${{ producto.precio_por_gramo_mayor|moneda }}/g)</small></p>
+    {% else %}
+        <p>Detal: <strong>$ {{ producto.precio_detal|default:0|moneda }}</strong></p>
+        <p style="color:#0a7;">Semi-mayorista (6+ un.): <strong>$ {{ producto.precio_semimayor|default:0|moneda }}</strong></p>
+        <p style="color:#0a7;">Mayorista (12+ un.): <strong>$ {{ producto.precio_mayor|default:0|moneda }}</strong></p>
+    {% endif %}
+
+    <!-- FORMULARIO DE COMPRA / CARRITO -->
+    <form method="POST" action="{% url 'agregar_al_carrito' producto.id %}" class="mt-4 max-width-500">
+        {% csrf_token %}
+
+        <div style="margin-bottom: 15px;">
+            <label><strong>Cantidad:</strong></label>
+            <div style="display:flex; align-items:center; gap:10px; margin-top: 5px;">
+                <button type="button" onclick="cambiarCantidad(-1)" style="padding:10px 18px; font-size:18px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer; user-select: none;">➖</button>
+                <input 
+                    type="number"
+                    id="cantidad"
+                    name="cantidad"
+                    value="1"
+                    min="1"
+                    step="1"
+                    oninput="validarCantidad();"
+                    style="width:70px; text-align:center; padding:10px; font-size:16px; font-weight:bold; border: 1px solid #ccc; border-radius: 6px;"
+                >
+                <button type="button" onclick="cambiarCantidad(1)" style="padding:10px 18px; font-size:18px; border: 1px solid #ccc; background: #eee; border-radius: 6px; cursor: pointer; user-select: none;">➕</button>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label><strong>Color / Variante:</strong></label>
+            <select id="color" name="color" required style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
+              <option value="">Seleccione color</option>
+              {% for variante in producto.variantes.all|dictsort:"color" %}
+                {% ifchanged variante.color %}
+                  <option value="{{ variante.color }}">{{ variante.color }}</option>
+                {% endifchanged %}
+              {% endfor %}
+            </select>
+        </div>
+
+        <div id="contenedor-talla" style="margin-bottom: 15px;">
+            <label id="label-talla"><strong>Talla:</strong></label>
+            <select id="talla" name="talla" style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
+              <option value="">Seleccione un color primero</option>
+            </select>
+        </div>
+
+        <p id="stock-info" style="font-weight:bold; margin-top:5px; font-size:14px; min-height:20px;"></p>
+
+        {% if producto.tipo_venta == "gramo" %}
+            <p><strong>Peso por unidad:</strong> {{ producto.peso_producto|default:0 }} g</p>
+            <p><strong>Total gramos:</strong> <span id="total-gramos">{{ producto.peso_producto|default:0 }}</span> g</p>
+        {% endif %}
+
+        <p><strong>Subtotal:</strong> $ <span id="subtotal">0</span></p>
+        <p id="detalle-calculo" style="font-size:14px;color:#555;"></p>
+        <p id="mensaje-mayorista" style="color:green;font-weight:bold;"></p>
+
+        <input type="hidden" id="whatsapp-numero" value="{{ perfil_tienda.whatsapp }}">
+
+        {% if tiene_stock or stock_disponible > 0 %}
+            <button type="submit" id="btn-carrito" style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;width:100%;">
+                🛒 Agregar al carrito
+            </button>
+        {% else %}
+            <button type="submit" id="btn-carrito" style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;width:100%;opacity:0.5;" disabled>
+                🛒 Agregar al carrito
+            </button>
+            <p id="mensaje-agotado-backend" style="color:red;font-weight:bold;padding:12px 0;margin:0;">❌ Producto agotado temporalmente</p>
+        {% endif %}
+
+    </form>
+
+    <div class="mt-3">
+        <button onclick="comprarWhatsApp()"
+        style="
+        background:#25D366;
+        color:white;
+        padding:14px 26px;
+        border:none;
+        border-radius:8px;
+        font-size:16px;
+        font-weight:bold;
+        box-shadow:0 4px 12px rgba(0,0,0,.2);
+        cursor:pointer;
+        transition:.2s;
+        width: 100%;
+        max-width: 500px;
+        ">
+        📲 Comprar por WhatsApp
+        </button>
+    </div>
+
+</div>
+
+<script id="variantes-data" type="application/json">
+[
+{% for v in producto.variantes.all %}
+{
+    "color": "{{ v.color|default_if_none:''|escapejs }}",
+    "talla": "{{ v.talla|default_if_none:''|escapejs }}",
+    "stock": {{ v.stock|default:0 }}
+}{% if not forloop.last %},{% endif %}
+{% endfor %}
+]
+</script>
+
+<script>
+const variantesDataElem = document.getElementById("variantes-data");
+const variantes = variantesDataElem ? JSON.parse(variantesDataElem.textContent) : [];
+
+function actualizarStockDisponible() {
+    if (!variantes || variantes.length === 0) return;
+
+    let color = document.getElementById("color")?.value || "";
+    let talla = document.getElementById("talla")?.value || "";
+
+    let variante = variantes.find(v => v.color === color && v.talla === talla);
+    let inputCantidad = document.getElementById("cantidad");
+    let boton = document.getElementById("btn-carrito");
+    let stockInfo = document.getElementById("stock-info");
+
+    if (variante) {
+        if (inputCantidad) {
+            inputCantidad.max = variante.stock;
+            if (parseInt(inputCantidad.value) > variante.stock) {
+                inputCantidad.value = variante.stock;
+            }
+        }
+        if (stockInfo) {
+            stockInfo.innerHTML = variante.stock > 0 ? "✅ Disponibles: " + variante.stock : "❌ Agotado";
+        }
+        if (boton) {
+            boton.disabled = variante.stock <= 0;
+            boton.style.opacity = variante.stock > 0 ? "1" : "0.5";
+        }
+    } else {
+        let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
+        if (stockInfo) {
+            stockInfo.innerHTML = (hayTallas && color && !talla) ? "Por favor, seleccione una talla" : "Seleccione una combinación válida";
+        }
+        if (boton) {
+            boton.disabled = true;
+            boton.style.opacity = "0.5";
+        }
+    }
+}
+
+function actualizarStockGeneral() {
+    if (!variantes || variantes.length === 0) return;
+    let totalStock = variantes.reduce((total, v) => total + v.stock, 0);
+    let mensaje = totalStock > 15 ? "✅ Alta disponibilidad" : (totalStock > 5 ? "⚠️ Se está vendiendo rápido (" + totalStock + ")" : (totalStock > 0 ? "🔥 ¡Últimas unidades!" : "❌ Producto agotado"));
+    let elemStockGeneral = document.getElementById("stock-general");
+    if (elemStockGeneral) elemStockGeneral.innerHTML = mensaje;
+}
+
+function comprarWhatsApp(){
+    let cantidad = document.getElementById("cantidad").value;
+    let color = document.getElementById("color")?.value || "";
+    let talla = document.getElementById("talla")?.value || "";
+    let campoWhatsapp = document.getElementById("whatsapp-numero");
+    let numero = campoWhatsapp ? campoWhatsapp.value : "";
+    let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
+
+    if (variantes.length > 0 && !color) { alert("Selecciona un color"); return; }
+    if (hayTallas && !talla) { alert("Selecciona una talla"); return; }
+    if (!numero) { alert("Error: número de WhatsApp no configurado"); return; }
+
+    let mensaje = "🛍️ Pedido desde tienda\n\n";
+    mensaje += "Producto: {{ producto.nombre }}\n";
+    mensaje += "Cantidad: " + cantidad + "\n";
+    if(color) mensaje += "Color: " + color + "\n";
+    if(talla) mensaje += "Talla: " + talla + "\n";
+    mensaje += "\n\n✨ Hola, quiero comprar este producto\n📦 ¿Está disponible?\n💰 ¿Cuál sería el total con envío?";
+
+    let url = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensaje);
+    window.open(url, "_blank");
+}
+
+// =================================================================
+// 💎 CONFIGURACIÓN DE PRECIOS DINÁMICOS CON ESCALAS (Detal, Semi, Mayor)
+// =================================================================
+let tipoVenta = "{{ producto.tipo_venta }}";
+let pesoProducto = parseFloat("{{ producto.peso_producto|default_if_none:'0' }}".replace(',', '.')) || 0;
+
+// Precios estándar por pieza
+let pDetal = parseFloat("{{ producto.precio_detal|default:0 }}".replace(/\./g, '').replace(',', '.')) || 0;
+let pSemimayor = parseFloat("{{ producto.precio_semimayor|default:0 }}".replace(/\./g, '').replace(',', '.')) || 0;
+let pMayor = parseFloat("{{ producto.precio_mayor|default:0 }}".replace(/\./g, '').replace(',', '.')) || 0;
+
+// Precios por gramo
+let gDetal = parseFloat("{{ producto.precio_por_gramo_detal|default_if_none:'0' }}".replace(/\./g, '').replace(',', '.')) || 0;
+let gSemimayor = parseFloat("{{ producto.precio_por_gramo_semimayor|default_if_none:'0' }}".replace(/\./g, '').replace(',', '.')) || 0;
+let gMayor = parseFloat("{{ producto.precio_por_gramo_mayor|default_if_none:'0' }}".replace(/\./g, '').replace(',', '.')) || 0;
+
+function actualizarPrecio(){
+    let cantidad = parseInt(document.getElementById("cantidad").value) || 1;
+    let subtotal = 0;
+    let escalaAplicada = "";
+
+    if (tipoVenta === "gramo") {
+        let totalGramos = cantidad * pesoProducto;
+        let gramoActual = gDetal;
+        escalaAplicada = "Precio Detal";
+
+        if (totalGramos >= 12 && gMayor > 0) {
+            gramoActual = gMayor;
+            escalaAplicada = "¡Precio Mayorista aplicado (12g+)!";
+        } else if (totalGramos >= 6 && gSemimayor > 0) {
+            gramoActual = gSemimayor;
+            escalaAplicada = "¡Precio Semi-mayorista aplicado (6g+)!";
+        }
+
+        subtotal = totalGramos * gramoActual;
+
+        let contenedorGramos = document.getElementById("total-gramos");
+        if (contenedorGramos) contenedorGramos.innerHTML = totalGramos.toFixed(2);
+
+        document.getElementById("detalle-calculo").innerHTML = 
+            totalGramos.toFixed(2) + "g x $" + gramoActual.toLocaleString('es-CO', { maximumFractionDigits: 0 }) + "/g";
+
+    } else {
+        let unidadActual = pDetal;
+        escalaAplicada = "Precio Detal";
+
+        if (cantidad >= 12 && pMayor > 0) {
+            unidadActual = pMayor;
+            escalaAplicada = "¡Precio Mayorista aplicado (12+ un.)!";
+        } else if (cantidad >= 6 && pSemimayor > 0) {
+            unidadActual = pSemimayor;
+            escalaAplicada = "¡Precio Semi-mayorista aplicado (6+ un.)!";
+        }
+
+        subtotal = cantidad * unidadActual;
+
+        document.getElementById("detalle-calculo").innerHTML = 
+            cantidad + " unidades x $" + unidadActual.toLocaleString('es-CO', { maximumFractionDigits: 0 });
+    }
+
+    let msgMayorista = document.getElementById("mensaje-mayorista");
+    if (msgMayorista) {
+        msgMayorista.innerHTML = escalaAplicada ? "💡 " + escalaAplicada : "";
+    }
+
+    let subtotalElem = document.getElementById("subtotal");
+    if (subtotalElem) {
+        subtotalElem.innerHTML = subtotal ? subtotal.toLocaleString('es-CO', { maximumFractionDigits: 0 }) : "0";
+    }
+}
+
+function cambiarCantidad(valor){
+    let input = document.getElementById("cantidad");
+    if (!input) return;
+    let nueva = parseInt(input.value || 1) + valor;
+    if(nueva < 1) nueva = 1;
+    if(input.max) nueva = Math.min(nueva, parseInt(input.max));
+    input.value = nueva;
+    actualizarPrecio();
+}
+
+function validarCantidad(){
+    let input = document.getElementById("cantidad");
+    if (!input) return;
+    if(parseInt(input.value) < 1 || !input.value) input.value = 1;
+    if(input.max && parseInt(input.value) > parseInt(input.max)) input.value = input.max;
+    actualizarPrecio();
+}
+
+function actualizarTallas(){
+    if (!variantes.some(v => v.talla && v.talla.trim() !== "")) return;
+    const colorSelect = document.getElementById("color");
+    const tallaSelect = document.getElementById("talla");
+    if(!colorSelect || !tallaSelect) return;
+
+    let colorSeleccionado = colorSelect.value;
+    if (!colorSeleccionado) {
+        tallaSelect.innerHTML = '<option value="">Seleccione un color primero</option>';
+        return;
+    }
+
+    let tallasDisponibles = [...new Set(variantes.filter(v => v.color === colorSeleccionado && v.stock > 0).map(v => v.talla))];
+    tallasDisponibles.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+    tallaSelect.innerHTML = '<option value="">Seleccione talla</option>';
+    if (tallasDisponibles.length === 0) {
+        let option = document.createElement("option");
+        option.text = "No disponible"; option.value = "";
+        tallaSelect.appendChild(option);
+        return;
+    }
+
+    tallasDisponibles.forEach(talla => {
+        let option = document.createElement("option");
+        option.value = talla; option.text = talla;
+        tallaSelect.appendChild(option);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    actualizarPrecio();
+    actualizarTallas();  
+    if (typeof actualizarStockDisponible === "function") actualizarStockDisponible();
+    if (typeof actualizarStockGeneral === "function") actualizarStockGeneral();
+
+    document.getElementById("color")?.addEventListener("change", function() {
+        actualizarTallas();
+        if (typeof actualizarStockDisponible === "function") actualizarStockDisponible();
+    });
+
+    document.getElementById("talla")?.addEventListener("change", function() {
+        if (typeof actualizarStockDisponible === "function") actualizarStockDisponible();
+    });
+});
+
+let productoTieneTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
+if (!productoTieneTallas) {
+    let contenedorTalla = document.getElementById("contenedor-talla");
+    if (contenedorTalla) contenedorTalla.style.display = "none";
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<script>
+new Swiper(".mySwiper", {
+    loop:false,
+    pagination:{ el:".swiper-pagination", clickable:true },
+    navigation:{ nextEl:".swiper-button-next", prevEl:".swiper-button-prev" },
+    grabCursor:true,
+});
+</script>
+
+<style>
+.carousel-container { width:100%; max-width:500px; margin:auto; }
+.swiper { width:100%; height:420px; border-radius:14px; overflow:hidden; background:#fff; }
+.swiper-slide img { width:100%; height:100%; object-fit:contain; }
+@media(max-width:768px){ .swiper { height:320px; } }
+</style>
+
+{% endblock %}

@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+.wrap{
+    max-width:1200px;
+    margin:auto;
+    padding:25px;
+    font-family:Arial,sans-serif;
+}
+
+.titulo{
+    font-size:30px;
+    margin-bottom:20px;
+    color:#111;
+}
+
+.grid{
+    display:grid;
+    /* Cambiado para soportar perfectamente 5 tarjetas en cualquier tamaño de pantalla */
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:15px;
+    margin-bottom:25px;
+}
+
+.card{
+    background:#fff;
+    border-radius:14px;
+    padding:18px;
+    box-shadow:0 4px 14px rgba(0,0,0,.08);
+}
+
+.card h4{
+    margin:0;
+    color:#666;
+    font-size:14px;
+}
+
+.card h2{
+    margin:10px 0 0;
+    font-size:28px;
+    color:#111;
+}
+
+.verde{border-left:5px solid #28a745;}
+.azul{border-left:5px solid #007bff;}
+.naranja{border-left:5px solid #ff9800;}
+.morado{border-left:5px solid #6f42c1;}
+
+/* 💰 Nueva tarjeta premium para tus ganancias reales */
+.esmeralda{
+    border-left:5px solid #10b981;
+    background: #f0fdf4; /* Un toque verde muy sutil de fondo */
+}
+
+.tabla{
+    background:#fff;
+    border-radius:14px;
+    padding:18px;
+    box-shadow:0 4px 14px rgba(0,0,0,.08);
+}
+
+/* 📱 SOLUCIÓN RESPONSIVE PARA EL CELULAR */
+.tabla-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Deslizamiento suave en iOS */
+    margin-bottom: 15px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    /* Evita que las columnas se aplasten en pantallas pequeñas */
+    min-width: 550px; 
+}
+
+th,td{
+    padding:12px;
+    border-bottom:1px solid #eee;
+    text-align:left;
+    font-size:14px;
+}
+
+th{
+    background:#f8f8f8;
+}
+
+.estado-ok{
+    color:#28a745;
+    font-weight:bold;
+}
+
+.estado-pendiente{
+    color:#ff9800;
+    font-weight:bold;
+}
+
+.btn{
+    display:inline-block;
+    margin-top:20px;
+    background:#111;
+    color:#fff;
+    padding:10px 15px;
+    border-radius:8px;
+    text-decoration:none;
+}
+
+@media(max-width:768px){
+    .wrap{padding:15px;}
+    .titulo{font-size:24px;}
+    .card h2{font-size:22px;}
+}
+</style>
+
+<div class="wrap">
+
+<h1 class="titulo">💰 Ganancias PRO</h1>
+
+<!-- MÉTRICAS -->
+<div class="grid">
+
+    <div class="card verde">
+        <h4>Ventas Hoy</h4>
+        <h2>${{ ventas_hoy|floatformat:0 }}</h2>
+    </div>
+
+    <div class="card azul">
+        <h4>Ventas Mes</h4>
+        <h2>${{ ventas_mes|floatformat:0 }}</h2>
+    </div>
+
+    <!-- 🚀 NUEVA TARJETA DE UTILIDAD (GANANCIA NETAS) -->
+    <div class="card esmeralda">
+        <h4 style="color: #047857; font-weight: bold;">💰 Ganancia Real (Mes)</h4>
+        <h2 style="color: #065f46;">${{ ganancia_mes|floatformat:0 }}</h2>
+    </div>
+
+    <div class="card naranja">
+        <h4>Total General</h4>
+        <h2>${{ ventas_total|floatformat:0 }}</h2>
+    </div>
+
+    <div class="card morado">
+        <h4>Ticket Promedio</h4>
+        <h2>${{ ticket_promedio|floatformat:0 }}</h2>
+    </div>
+
+</div>
+
+<!-- TABLA -->
+<div class="tabla">
+
+    <h3>📦 Últimos Pedidos</h3>
+
+    <!-- Aplicamos el contenedor responsivo para blindar la tabla en el móvil -->
+    <div class="tabla-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Orden</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pedido in pedidos %}
+                <tr>
+                    <td>{{ pedido.numero_orden }}</td>
+                    <td>${{ pedido.total|floatformat:0 }}</td>
+                    <td>
+                        {% if pedido.estado == 'Pagado' %}
+                        <span class="estado-ok">Pagado</span>
+                        {% else %}
+                        <span class="estado-pendiente">{{ pedido.estado }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ pedido.fecha|date:"d/m/Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; color: #888; padding: 30px;">
+                        No hay pedidos registrados en este momento.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <a href="{% url 'dashboard' %}" class="btn">⬅️ Volver al Dashboard</a>
+
+</div>
+
+</div>
+
+{% endblock %}

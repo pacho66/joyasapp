@@ -1,0 +1,60 @@
+{% load moneda %}
+
+<!-- 🔥 CATEGORÍAS -->
+<div>
+    {% for categoria in categorias %}
+        <a href="/categoria/{{ categoria.id }}/">
+            <button style="
+                padding:8px 14px;
+                border-radius:20px;
+                border:none;
+                background:#f0f0f0;
+                cursor:pointer;
+            ">
+                {{ categoria.nombre }}
+            </button>
+        </a>
+    {% endfor %}
+</div>
+
+<h2>Resultados para: "{{ query }}"</h2>
+
+{% if productos %}
+
+    {% for producto in productos %}
+    <div style="margin-bottom:40px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
+
+        <h2>{{ producto.nombre }}</h2>
+
+        {% if producto.imagen_principal %}
+            <img src="{{ producto.imagen_principal.url }}" width="200">
+        {% endif %}
+
+        <p>{{ producto.descripcion }}</p>
+
+        {% if producto.tipo_venta == "gramo" %}
+            <p><strong>Precio:</strong> {{ producto.precio_calculado_detal|default:0|moneda }}</p>
+        {% else %}
+            <p><strong>Precio:</strong> {{ producto.precio_detal|default:0|moneda }}</p>
+        {% endif %}
+
+        <!-- 📦 DISPONIBILIDAD Y STOCK UNIFICADO -->
+        <p>
+            <strong>Disponible:</strong> 
+            {% if producto.stock_total > 0 %}
+                <span style="color: #16a34a; font-weight: bold;">{{ producto.stock_total }} uds</span>
+            {% else %}
+                <span style="color: #dc2626; font-weight: bold;">❌ Agotado</span>
+            {% endif %}
+        </p>
+
+        <a href="/producto/{{ producto.id }}/{{ producto.slug }}/">
+            <button style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer;">Ver producto</button>
+        </a>
+
+    </div>
+    {% endfor %}
+
+{% else %}
+    <p>No se encontraron productos 😕</p>
+{% endif %}

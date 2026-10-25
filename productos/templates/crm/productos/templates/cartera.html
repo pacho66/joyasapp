@@ -1,0 +1,83 @@
+<h2>💰 Cartera de Clientes</h2>
+
+<div style="display:flex; gap:20px; margin-bottom:20px;">
+    <div style="background:#dc3545;color:white;padding:15px;border-radius:10px;">
+        💰 Total en mora<br>
+        <strong style="font-size: 18px;">${{ morosos_total }}</strong>
+    </div>
+
+    <div style="background:#6c757d;color:white;padding:15px;border-radius:10px;">
+        👥 Clientes morosos<br>
+        <strong style="font-size: 18px;">{{ morosos_count }}</strong>
+    </div>
+</div>
+
+<div style="overflow-x: auto; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+    <table style="width:100%; border-collapse:collapse; font-size: 14px;">
+        <thead>
+            <tr style="background:#333; color:white; text-align: left;">
+                <th style="padding: 12px 10px;">Cliente</th>
+                <th style="padding: 12px 10px;">Saldo</th>
+                <th style="padding: 12px 10px;">Vence</th>
+                <th style="padding: 12px 10px;">Estado</th>
+                <th style="padding: 12px 10px; text-align: center;">Acciones de Cobro</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in cartera %}
+            <tr style="border-bottom: 1px solid #eee; {% if c.estado == 'vencido' %}background:#ffe5e5;{% endif %}">
+                <td style="padding: 12px 10px; font-weight: 500;">{{ c.cliente.nombre }}</td>
+                <td style="padding: 12px 10px; color: #dc3545; font-weight: 600;">${{ c.saldo }}</td>
+                <td style="padding: 12px 10px;">{{ c.fecha_limite }}</td>
+                <td style="padding: 12px 10px;">
+                    {% if c.estado == 'vencido' %}
+                        <span style="color: #c5221f; font-weight: bold;">🔴 Vencido ({{ c.dias_mora }} días)</span>
+                    {% else %}
+                        <span style="color: #b06000; font-weight: bold;">🟡 Pendiente</span>
+                    {% endif %}
+                </td>
+                
+                <td style="padding:12px 10px; display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
+
+                    <!-- Cobrar este pedido -->
+                    <a href="{% url 'cobrar_pedido' c.pedido.id %}"
+                        class="btn btn-warning btn-sm">
+                        💬 Pedido
+                    </a>
+
+                    <!-- Cobrar toda la deuda del cliente -->
+                    <a href="{% url 'cobrar_moroso' c.pedido.cliente.id %}"
+                        class="btn btn-danger btn-sm">
+                        💰 Todo
+                    </a>
+
+                    <!-- Ver factura -->
+                    <a href="{{ c.link_pago }}" target="_blank"
+                        class="btn btn-info btn-sm">
+                        📄 Factura
+                    </a>
+
+                    <!-- Registrar pago -->
+                    <a href="{% url 'marcar_pagado' c.pedido.id %}"
+                        class="btn btn-success btn-sm">
+                        ✅ Pagado
+                    </a>
+
+                     <!-- WhatsApp -->
+                    <a href="{{ c.whatsapp }}" target="_blank"
+                        class="btn btn-success btn-sm">
+                        📱 WhatsApp
+                    </a>
+
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 30px; color: #777;">
+                    🎉 ¡Excelente! No tienes saldos pendientes en cartera actualmente.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

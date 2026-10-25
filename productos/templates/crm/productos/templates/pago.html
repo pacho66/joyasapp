@@ -1,0 +1,57 @@
+{% load static %}
+{% load humanize %} 
+{# Usamos un filtro fallback por si acaso 'moneda' no está registrado en el entorno local de render #}
+<h2>💳 Pago del pedido</h2>
+
+<p><b>Orden:</b> {{ pedido.numero_orden }}</p>
+<p><b>Total:</b> ${{ pedido.total|floatformat:0|intcomma }} COP</p>
+
+<hr>
+
+<h3>Opciones de pago</h3>
+
+<div style="background:#f9f9f9; padding:15px; border-radius:8px;">
+
+    <h4>1. Transferencia Directa (Nequi / Bancolombia)</h4>
+    <p><b>📱 Nequi:</b> {{ pedido.usuario.perfil.whatsapp }}</p>
+    <p><b>🏦 Transferencia:</b> Bancolombia</p>
+
+    <p style="color:#555; font-size: 14px;">
+        Después de pagar, envía el comprobante por WhatsApp para que aprobemos tu orden.
+    </p>
+
+    <a href="https://wa.me/{{ pedido.usuario.perfil.whatsapp }}?text=Hola,%20ya%20realicé%20el%20pago%20del%20pedido%20{{ pedido.numero_orden }}"
+       target="_blank"
+       style="background:#25D366; color:white; padding:10px 15px; border-radius:6px; text-decoration:none; display:inline-block; margin-top:10px; font-weight: bold;">
+        📲 Enviar comprobante por WhatsApp
+    </a>
+
+    <br><br>
+
+    <form method="POST" action="{% url 'confirmar_pago_publico' pedido.token_publico %}" style="display: inline-block;">
+        {% csrf_token %}
+        <button type="submit" 
+            style="background: green; color: white; padding: 10px 15px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold; border: none; cursor: pointer; font-size: 14px;">
+            ✅ Ya pagué (Reportar transferencia)
+        </button>
+    </form>
+    
+
+    {% if pedido.id %}
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
+            
+            <!-- Ahora le pasamos pedido.token_publico en vez de pedido.id -->
+            <a href="{% url 'pagar_wompi' pedido.token_publico %}" 
+               style="background:#121212; color:white; padding:12px 20px; border-radius:6px; text-decoration:none; display:inline-block; font-weight: bold;">
+                💳 Pagar con Wompi
+            </a>
+
+            <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}" 
+               style="background:#009EE3; color:white; padding:12px 20px; border-radius:6px; text-decoration:none; display:inline-block; font-weight: bold;">
+                🔵 Pagar con Mercado Pago
+            </a>
+
+        </div>
+    {% endif %}
+
+</div>

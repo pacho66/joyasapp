@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if perfil %}{{ perfil.nombre_tienda }}{% else %}JoyasApp{% endif %}</title>
+
+    <!-- Bootstrap 5 CSS e Iconos -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .navbar-custom {
+            background-color: #0b0b0b !important;
+            border-bottom: 1px solid #222;
+        }
+        .tenant-banner-hero {
+            width: 100%;
+            min-height: 180px;
+            max-height: 200px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+        }
+        .nav-subbar {
+            background: #ffffff;
+            border-bottom: 1px solid #eaeaea;
+        }
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        .btn-wa-flotante {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #25D366;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: bold;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+
+<!-- BARRA SUPERIOR DE MARCA -->
+<nav class="navbar navbar-custom py-2 px-3 sticky-top">
+    <div class="container-fluid d-flex align-items-center justify-content-between">
+        <a href="{% url 'inicio' %}" class="d-flex align-items-center gap-2 text-decoration-none">
+            {% if perfil and perfil.logo %}
+                <img src="{{ perfil.logo.url }}" alt="Logo {{ perfil.nombre_tienda }}" style="height: 32px; width: auto; object-fit: contain;">
+            {% else %}
+                <span class="fs-4">💎</span>
+            {% endif %}
+            <span class="fw-bold fs-5 text-white" style="letter-spacing: 0.5px;">
+                {{ perfil.nombre_tienda|default:"JoyasApp" }}
+            </span>
+        </a>
+
+        {% if user.is_authenticated and not es_subdominio %}
+            <a href="/dashboard/" class="btn btn-sm btn-outline-light" style="font-size: 12px;">📊 Panel</a>
+        {% endif %}
+    </div>
+</nav>
+
+<!-- BANNER PRINCIPAL DE LA TIENDA (ÚNICO) -->
+{% if perfil %}
+    <div class="tenant-banner-hero" style="{% if perfil.banner %}background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.75)), url('{{ perfil.banner.url }}'); background-size: cover; background-position: center;{% else %}background: linear-gradient(135deg, #111111 0%, #2a2a2a 100%);{% endif %}">
+        <div class="px-3" style="position: relative; z-index: 2; color: #ffffff;">
+            <h1 class="m-0 fw-bold fs-3 text-uppercase" style="letter-spacing: 1px; text-shadow: 2px 2px 6px rgba(0,0,0,0.8);">
+                {{ perfil.nombre_tienda }}
+            </h1>
+            <p class="m-0 mt-1 small opacity-90" style="text-shadow: 1px 1px 4px rgba(0,0,0,0.7); max-width: 500px;">
+                {{ perfil.banner_texto|default:"Piezas exclusivas y joyería fina." }}
+            </p>
+        </div>
+    </div>
+{% endif %}
+
+<!-- SUB-BARRA DE NAVEGACIÓN Y MENÚ DESPLEGABLE -->
+<div class="nav-subbar py-2 px-3 shadow-sm">
+    <div class="container d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <a href="{% url 'inicio' %}" class="text-dark text-decoration-none fw-bold small">🏠 Inicio</a>
+            <a href="{% url 'ver_carrito' %}" class="text-dark text-decoration-none fw-bold small">
+                🛒 Carrito <span class="badge bg-dark rounded-pill">{{ cantidad_carrito|default:0 }}</span>
+            </a>
+        </div>
+
+        {% if categorias_menu %}
+        <div class="dropdown">
+            <button class="btn btn-dark btn-sm dropdown-toggle fw-bold px-3 py-1 shadow-sm" type="button" id="dropdownCategorias" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 13px;">
+                💎 Categorías
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" aria-labelledby="dropdownCategorias">
+                <li><a class="dropdown-item fw-bold small" href="{% url 'buscar_productos' %}">✨ Ver todas</a></li>
+                <li><hr class="dropdown-divider"></li>
+                {% for categoria in categorias_menu %}
+                    <li>
+                        <a class="dropdown-item small" href="{% url 'buscar_productos' %}?categoria={{ categoria.id }}">
+                            💍 {{ categoria.nombre }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<main class="main-content">
+    {% block content %}
+    {% endblock %}
+</main>
+
+{% if perfil and perfil.whatsapp %}
+<a href="https://wa.me/57{{ perfil.whatsapp }}" class="btn-wa-flotante" target="_blank">
+    💬 WhatsApp ({{ cantidad_carrito|default:0 }})
+</a>
+{% endif %}
+
+<!-- JS DE BOOTSTRAP PARA EL MENÚ DESPLEGABLE -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

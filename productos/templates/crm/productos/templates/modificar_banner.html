@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<style>
+    /* 1. Forzar espaciado elegante entre los bloques de tu formulario */
+    .mb-3, .mb-4 {
+        margin-bottom: 1.8rem !important;
+    }
+    
+    /* 2. Evita que el botón flotante de WhatsApp tape el botón de "Publicar" al final */
+    body {
+        padding-bottom: 100px !important;
+    }
+
+    /* 3. Optimización exclusiva para pantallas de celular */
+    @media (max-width: 768px) {
+        /* Le da aire interno a la tarjeta blanca */
+        .card {
+            padding: 20px 15px !important;
+        }
+        
+        /* Hace que campos compartidos (como Fecha Inicio/Fin o Ícono/Título) se pongan uno abajo del otro */
+        .row.g-2 {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 15px !important;
+        }
+        
+        /* Fuerza a que los campos ocupen el ancho completo en el celular sin aplastarse */
+        .col-4, .col-8, .col-6 {
+            width: 100% !important;
+        }
+    }
+</style>
+
+<div class="container my-4" style="max-width: 1100px;">
+    <div class="row g-4">
+        
+        <!-- ==================== COLUMNA IZQUIERDA: FORMULARIO DE CONFIGURACIÓN ==================== -->
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm border-0 p-4" style="border-radius: 20px; background-color: #ffffff;">
+                <div class="mb-4">
+                    <span class="badge bg-dark text-uppercase px-3 py-2 rounded-pill small" style="letter-spacing: 1px;">Marketing Visual</span>
+                    <h2 class="fw-black text-dark mt-2 mb-1">📣 Centro de Promociones</h2>
+                    <p class="text-muted small">Configura la vitrina principal de tu joyería para el celular.</p>
+                </div>
+
+                <!-- Formulario unificado con soporte para multipart/form-data -->
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Nombre de la Tienda -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Nombre de la Tienda</label>
+                        <input type="text" id="input_titulo"name="nombre_tienda" value="{{ perfil.nombre_tienda|default:'' }}" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Ej: PG Joyas o Platería González">
+                    </div>
+
+                    <!-- 🌐 CONFIGURACIÓN DE REDES SOCIALES (CAMPOS REALES) -->
+                    <div class="card p-3 bg-light rounded-3 border mb-4">
+                        <span class="badge bg-secondary text-uppercase px-2 py-1 rounded-pill small mb-3 align-self-start" style="font-size: 0.7rem;">Enlaces Comerciales</span>
+    
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-uppercase text-secondary">Usuario de Instagram</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white" style="border-radius: 10px 0 0 10px; font-size: 0.9rem;">@</span>
+                                <input type="text" name="instagram" value="{{ perfil.instagram|default:'' }}" class="form-control p-2" style="border-radius: 0 10px 10px 0; font-size: 0.9rem;" placeholder="ej: plateriagonzalez">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-uppercase text-secondary">Enlace de Facebook (URL Completa)</label>
+                            <input type="url" name="facebook" value="{{ perfil.facebook|default:'' }}" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="https://facebook.com/tu-pagina">
+                        </div>
+
+                        <div class="mb-0">
+                            <label class="form-label small fw-bold text-uppercase text-secondary">Usuario de TikTok</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white" style="border-radius: 10px 0 0 10px; font-size: 0.9rem;">@</span>
+                                <input type="text" name="tiktok" value="{{ perfil.tiktok|default:'' }}" class="form-control p-2" style="border-radius: 0 10px 10px 0; font-size: 0.9rem;" placeholder="ej: plateriagonzalez">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mensaje Promocional -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Mensaje Corto del Banner</label>
+                        <textarea id="input_mensaje" name="banner_texto" rows="2" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Describe tu oferta o lema principal...">{{ perfil.banner_texto|default:'' }}</textarea>
+                    </div>
+
+                    <!-- Subir Imagen de Fondo (Sincronizado con el campo real: banner) -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Imagen de Fondo del Banner</label>
+                        <input type="file" name="banner" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" accept="image/*">
+                        
+                        {% if perfil.banner %}
+                            <div class="mt-2 p-2 border rounded bg-light d-flex align-items-center justify-content-between" style="max-width: 320px;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <img src="{{ perfil.banner.url }}" alt="Actual" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px;">
+                                    <span class="text-success small fw-bold">✓ Guardada</span>
+                                </div>
+                                <!-- 🗑️ Checkbox de eliminación conectado al backend -->
+                                <div class="form-check m-0">
+                                    <input class="form-check-input" type="checkbox" name="eliminar_banner" id="eliminar_banner">
+                                    <label class="form-check-label text-danger small fw-bold" for="eliminar_banner" style="cursor: pointer;">
+                                        Eliminar
+                                    </label>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="form-text text-muted small mt-1">Usando diseño elegante por defecto (sin banner de foto).</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Estilo Visual (Mapeado directamente a: color_principal) -->
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-uppercase text-secondary">Estilo Color Principal (Filtro Hero)</label>
+                        <select id="input_color" name="estilo_color" class="form-select p-2" style="border-radius: 10px; font-size: 0.9rem;">
+                            <option value="#000000" {% if perfil.color_principal == "#000000" %}selected{% endif %}>⚫ Negro Elegante</option>
+                            <option value="#b38938" {% if perfil.color_principal == "#b38938" %}selected{% endif %}>🟡 Dorado Premium</option>
+                            <option value="#2b5876" {% if perfil.color_principal == "#2b5876" %}selected{% endif %}>🔵 Azul Corporativo</option>
+                            <option value="#11998e" {% if perfil.color_principal == "#11998e" %}selected{% endif %}>🟢 Verde Esmeralda</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark w-100 py-2.5 fw-bold" style="border-radius: 12px; font-size: 1rem;">
+                        🚀 Publicar Cambios
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ==================== COLUMNA DERECHA: VISTA PREVIA EN VIVO MAQUETADA ==================== -->
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm border-0 p-4 sticky-top" style="border-radius: 20px; background-color: #ffffff; top: 20px;">
+                <div class="mb-3">
+                    <span class="badge bg-secondary text-uppercase px-3 py-1 rounded-pill small" style="font-size: 0.75rem;">Vista Previa Digital</span>
+                </div>
+                
+                <!-- Contenedor del Hero simulando el celular -->
+                <div id="preview_banner" class="p-4 text-center rounded-4 position-relative overflow-hidden text-white d-flex flex-column align-items-center justify-content-center shadow-sm" 
+                     style="min-height: 250px; background-color: {{ perfil.color_principal|default:'#000000' }}; transition: background 0.3s ease;">
+                    
+                    <!-- Imagen de fondo simulada -->
+                    {% if perfil.banner %}
+                        <img src="{{ perfil.banner.url }}" class="position-absolute top-0 start-0 w-100 h-100" alt="Fondo" style="object-fit: cover; z-index: 1; opacity: 0.4;">
+                    {% endif %}
+
+                    <!-- Contenido sobre la imagen -->
+                    <div class="position-relative" style="z-index: 2;">
+                        <span style="font-size: 2rem; display: block; margin-bottom: 5px;">💎</span>
+                        <h3 id="preview_titulo" class="fw-black text-uppercase" style="letter-spacing: 1px; font-size: 1.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.6);">
+                            {{ perfil.nombre_tienda|default:"¡Bienvenidos!" }}
+                        </h3>
+                        <p id="preview_mensaje" class="small mb-0 px-2" style="text-shadow: 1px 1px 3px rgba(0,0,0,0.6); opacity: 0.9;">
+                            {{ perfil.banner_texto|default:"Tu mensaje publicitario se verá reflejado aquí en tiempo real." }}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="form-text text-center text-muted small mt-2">Así es exactamente como lucirá el Hero principal en tu tienda pública.</div>
+            </div>
+        </div>
+
+    </div> <!-- Cierre de row g-4 -->
+</div> <!-- Cierre de container my-4 -->
+
+<!-- JAVASCRIPT SEGURO PARA EL RENDER EN VIVO -->
+<script>
+    function actualizarPreview() {
+        // Actualizar textos dinámicamente con los campos reales
+        const tituloInput = document.getElementById('input_titulo');
+        const mensajeInput = document.getElementById('input_mensaje');
+        const colorSelect = document.getElementById('input_color');
+        const banner = document.getElementById('preview_banner');
+
+        if (tituloInput) {
+            document.getElementById('preview_titulo').innerText = tituloInput.value || '¡Bienvenidos!';
+        }
+        if (mensajeInput) {
+            document.getElementById('preview_mensaje').innerText = mensajeInput.value || 'Tu mensaje publicitario se verá reflejado aquí en tiempo real.';
+        }
+        
+        // Sincronizar el color seleccionado directamente con el fondo del banner
+        if (colorSelect && banner) {
+            banner.style.backgroundColor = colorSelect.value;
+        }
+    }
+
+    // Escuchas de eventos para actualizar en tiempo real
+    document.addEventListener("DOMContentLoaded", function() {
+        const inputTitulo = document.getElementById('input_titulo');
+        const inputMensaje = document.getElementById('input_mensaje');
+        const inputColor = document.getElementById('input_color');
+
+        if (inputTitulo) inputTitulo.addEventListener('input', actualizarPreview);
+        if (inputMensaje) inputMensaje.addEventListener('input', actualizarPreview);
+        if (inputColor) inputColor.addEventListener('change', actualizarPreview);
+        
+        actualizarPreview();
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<style>
+    /* BENEFICIOS */
+    .box-beneficios {
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #eaeaea;
+        padding: 10px 5px;
+        margin-bottom: 20px;
+    }
+    .item-beneficio {
+        text-align: center;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .item-beneficio span {
+        display: block;
+        font-size: 10px;
+        font-weight: normal;
+        color: #6c757d;
+    }
+
+    /* BUSCADOR COMPACTO */
+    .buscador-container {
+        max-width: 500px;
+        margin: 0 auto 25px auto;
+    }
+
+    /* GRID DE PRODUCTOS RESPONSIVO */
+    .producto-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 40px;
+    }
+    @media (min-width: 768px) {
+        .producto-grid {
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 20px;
+        }
+    }
+
+    /* TARJETA DE JOYA PREMIUM */
+    .joya-card {
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #eaeaea;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .joya-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        border-color: #d4af37;
+    }
+
+    .joya-img-wrapper {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 1/1;
+        background: #f8f8f8;
+        overflow: hidden;
+    }
+
+    .joya-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .joya-body {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+    }
+
+    .joya-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #111111;
+        margin-bottom: 6px;
+        line-height: 1.2;
+    }
+
+    .joya-precio {
+        font-size: 16px;
+        font-weight: 800;
+        color: #12a165;
+        margin-bottom: 6px;
+        line-height: 1.2;
+    }
+
+    .badge-gramos {
+        font-size: 11px;
+        opacity: 0.85;
+        display: block;
+        color: #555;
+        font-weight: normal;
+        margin-top: 3px;
+    }
+
+    /* SEMÁFORO DE STOCK */
+    .stock-status {
+        font-size: 11px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        padding: 3px 8px;
+        border-radius: 6px;
+        display: inline-block;
+        align-self: flex-start;
+    }
+    .stock-ok { color: #198754; background: rgba(25, 135, 84, 0.08); }
+    .stock-poco { color: #fd7e14; background: rgba(253, 126, 20, 0.08); }
+    .stock-agotado { color: #dc3545; background: rgba(220, 53, 69, 0.08); }
+
+    .btn-joya {
+        background: #111111;
+        color: #ffffff;
+        text-align: center;
+        padding: 9px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        margin-top: auto;
+        transition: background 0.2s;
+    }
+    .btn-joya:hover {
+        background: #d4af37;
+        color: #000000;
+    }
+</style>
+
+<!-- BENEFICIOS -->
+<div class="box-beneficios shadow-sm">
+    <div class="row g-0">
+        <div class="col-4 border-end item-beneficio">
+            🚚 Envíos
+            <span>A toda Colombia</span>
+        </div>
+        <div class="col-4 border-end item-beneficio">
+            🔒 Compra Segura
+            <span>Garantía directa</span>
+        </div>
+        <div class="col-4 item-beneficio">
+            ⭐ Calidad 100%
+            <span>Joyería Fina</span>
+        </div>
+    </div>
+</div>
+
+<!-- BUSCADOR -->
+<div class="buscador-container">
+    <form action="{% url 'buscar_productos' %}" method="GET" class="d-flex gap-2">
+        <input type="text" name="q" class="form-control form-control-sm rounded-pill px-3" placeholder="Buscar joya..." value="{{ request.GET.q }}">
+        <button type="submit" class="btn btn-dark btn-sm rounded-pill px-3">🔍</button>
+    </form>
+</div>
+
+<!-- 1. PRODUCTOS DESTACADOS -->
+{% if destacados %}
+<h6 class="fw-bold text-uppercase text-dark mb-3">⭐ Productos Destacados</h6>
+<div class="producto-grid mb-4">
+    {% for producto in destacados %}
+    <div class="joya-card">
+        <div class="joya-img-wrapper">
+            {% if producto.imagen_principal %}
+                <img src="{{ producto.imagen_principal.url }}" class="joya-img" alt="{{ producto.nombre }}">
+            {% elif producto.imagenes.all %}
+                <img src="{{ producto.imagenes.all.0.imagen.url }}" class="joya-img" alt="{{ producto.nombre }}">
+            {% else %}
+                <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted fs-2">💎</div>
+            {% endif %}
+        </div>
+
+        <div class="joya-body">
+            <div class="joya-title text-truncate">{{ producto.nombre }}</div>
+
+            <!-- PRECIO COMPLETO CON SOPORTE PARA GRAMO Y DETAL -->
+            <div class="joya-precio">
+                {% if producto.tipo_venta == 'gramo' %}
+                    ${{ producto.precio_calculado_detal|floatformat:"0" }}
+                    <span class="badge-gramos">
+                        ${{ producto.precio_por_gramo_detal|floatformat:"0" }}/g • Peso: {{ producto.peso_producto }}g
+                    </span>
+                {% elif producto.precio_detal %}
+                    ${{ producto.precio_detal|floatformat:"0" }} <span style="font-size: 11px; color: #666; font-weight: normal;">(Detal)</span>
+                {% else %}
+                    <span style="color: #888; font-size: 13px; font-weight: normal;">Consultar precio</span>
+                {% endif %}
+            </div>
+
+            <!-- SEMÁFORO DE STOCK -->
+            {% if producto.stock > 10 %}
+                <span class="stock-status stock-ok">✅ Disponible</span>
+            {% elif producto.stock > 0 %}
+                <span class="stock-status stock-poco">🔥 Últimas {{ producto.stock }} unid.</span>
+            {% else %}
+                <span class="stock-status stock-agotado">❌ Agotado</span>
+            {% endif %}
+
+            <!-- ENLACE SEGURO CON ID Y SLUG -->
+            <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-joya">💎 Ver Joya</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- 2. CATÁLOGO COMPLETO -->
+<h6 class="fw-bold text-uppercase text-dark mb-3">💎 Catálogo Completo</h6>
+<div class="producto-grid">
+    {% for producto in productos %}
+    <div class="joya-card">
+        <div class="joya-img-wrapper">
+            {% if producto.imagen_principal %}
+                <img src="{{ producto.imagen_principal.url }}" class="joya-img" alt="{{ producto.nombre }}">
+            {% elif producto.imagenes.all %}
+                <img src="{{ producto.imagenes.all.0.imagen.url }}" class="joya-img" alt="{{ producto.nombre }}">
+            {% else %}
+                <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted fs-2">💎</div>
+            {% endif %}
+        </div>
+
+        <div class="joya-body">
+            <div class="joya-title text-truncate">{{ producto.nombre }}</div>
+
+            <!-- PRECIO COMPLETO CON SOPORTE PARA GRAMO Y DETAL -->
+            <div class="joya-precio">
+                {% if producto.tipo_venta == 'gramo' %}
+                    ${{ producto.precio_calculado_detal|floatformat:"0" }}
+                    <span class="badge-gramos">
+                        ${{ producto.precio_por_gramo_detal|floatformat:"0" }}/g • Peso: {{ producto.peso_producto }}g
+                    </span>
+                {% elif producto.precio_detal %}
+                    ${{ producto.precio_detal|floatformat:"0" }} <span style="font-size: 11px; color: #666; font-weight: normal;">(Detal)</span>
+                {% else %}
+                    <span style="color: #888; font-size: 13px; font-weight: normal;">Consultar precio</span>
+                {% endif %}
+            </div>
+
+            <!-- SEMÁFORO DE STOCK -->
+            {% if producto.stock > 10 %}
+                <span class="stock-status stock-ok">✅ Disponible</span>
+            {% elif producto.stock > 0 %}
+                <span class="stock-status stock-poco">🔥 Últimas {{ producto.stock }} unid.</span>
+            {% else %}
+                <span class="stock-status stock-agotado">❌ Agotado</span>
+            {% endif %}
+
+            <!-- ENLACE SEGURO CON ID Y SLUG -->
+            <a href="{% url 'detalle_producto' producto.id producto.slug %}" class="btn-joya">💎 Ver Joya</a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-5 text-muted col-span-2" style="grid-column: 1 / -1;">
+        <p class="mb-0">No hay joyas disponibles en este momento.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

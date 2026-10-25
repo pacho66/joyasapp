@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan vencido</title>
+
+<style>
+body{
+    font-family: Arial;
+    background:#f8f9fa;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    margin:0;
+}
+
+.card{
+    background:white;
+    padding:40px;
+    border-radius:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,.08);
+    text-align:center;
+    width:90%;
+    max-width:420px;
+}
+
+h2{
+    color:#dc3545;
+    margin-bottom:15px;
+}
+
+p{
+    color:#555;
+    margin-bottom:25px;
+
+}   
+.btn-whatsapp,
+.btn-renovar{
+    display:inline-block;
+    color:white;
+    padding:12px 25px;
+    text-decoration:none;
+    border-radius:8px;
+    font-weight:bold;
+}
+
+.btn-whatsapp{
+    background:#28a745;
+}
+
+.btn-renovar{
+    background:#007bff;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+    <h2>⚠️ Tu plan ha vencido</h2>
+
+    <p>Renueva tu suscripción para seguir usando tu tienda online.</p>
+
+    <a href="https://wa.me/573215280610?text=Hola%20quiero%20renovar%20mi%20plan"
+    target="_blank"
+    class="btn-whatsapp">
+   💬 Pagar ahora
+</a>
+
+<br><br>
+
+<a href="{% url 'renovar_manual' %}" class="btn-renovar">
+   🔄 Renovar +30 días
+</a>
+</div>
+
+</body>
+</html>

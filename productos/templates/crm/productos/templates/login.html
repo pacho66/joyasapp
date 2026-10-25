@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    {% load static %}
+
+    <meta charset="UTF-8">
+    <title>Iniciar sesión</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Iconos -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e1e2f, #2c3e50);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {opacity: 0; transform: translateY(20px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+
+        .login-title {
+            text-align: center;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .logo {
+            display: block;
+            margin: 0 auto 15px;
+            width: 120px;
+            max-height: 120px;
+            object-fit: contain;
+        }
+
+        .btn-login {
+            width: 100%;
+            font-size: 18px;
+        }
+
+        .toggle-password {
+            cursor: pointer;
+            position: absolute;
+            right: 15px;
+            top: 45px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="login-box">
+
+    <!-- LOGO -->
+    <img src="{% static 'img/logo.jpg' %}" class="logo" alt="Logo" onerror="this.style.display='none';">
+
+    <h4 class="login-title">Bienvenido</h4>
+    <p class="text-center text-muted mb-4">Ingresa a tu tienda</p>
+
+    <!-- MENSAJES -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-danger text-center">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST" action="">
+        {% csrf_token %}
+        {% if request.GET.next %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+        {% endif %}
+        ...
+
+        <div class="mb-3">
+            <label class="form-label">Usuario</label>
+            <input type="text" name="username" class="form-control form-control-lg" required autocomplete="username">
+        </div>
+
+        <div class="mb-2 position-relative">
+            <label class="form-label">Contraseña</label>
+            <input type="password" id="password" name="password" class="form-control form-control-lg" required autocomplete="current-password">
+            <i class="bi bi-eye toggle-password" onclick="togglePassword()"></i>
+        </div>
+
+        <!-- 🔑 ENLACE RECUPERAR CONTRASEÑA -->
+        <div class="text-end mb-3">
+            <a href="{% url 'password_reset' %}" class="text-muted text-decoration-none small">
+                ¿Olvidaste tu contraseña?
+            </a>
+        </div>
+
+        <button type="submit" class="btn btn-dark btn-login mt-2">
+            Entrar
+        </button>
+    </form>
+
+    <hr class="my-4">
+
+    <!-- 🛍️ ENLACE CREAR TIENDA / REGISTRO -->
+    <p class="text-center mb-0 text-muted">
+        ¿Aún no tienes una tienda? 
+        <a href="{% url 'registro' %}" class="fw-bold text-dark text-decoration-underline">
+            Crea tu cuenta aquí
+        </a>
+    </p>
+
+</div>
+
+<script>
+function togglePassword() {
+    const password = document.getElementById("password");
+    const icon = document.querySelector(".toggle-password");
+
+    if (password.type === "password") {
+        password.type = "text";
+        icon.classList.remove("bi-eye");
+        icon.classList.add("bi-eye-slash");
+    } else {
+        password.type = "password";
+        icon.classList.remove("bi-eye-slash");
+        icon.classList.add("bi-eye");
+    }
+}
+</script>
+
+</body>
+</html>

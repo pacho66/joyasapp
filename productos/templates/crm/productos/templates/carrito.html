@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+{% load moneda %}
+{% block content %}
+
+<style>
+    /* Contenedor Principal */
+    .carrito-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        color: #333;
+    }
+
+    .carrito-titulo {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #222;
+    }
+
+    /* Tabla de Productos */
+    .tabla-carrito {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 30px;
+        background: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .tabla-carrito th {
+        background: #f8f9fa;
+        color: #666;
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+        padding: 14px;
+        text-align: left;
+        border-bottom: 1px solid #eaeaea;
+    }
+
+    .tabla-carrito td {
+        padding: 16px;
+        vertical-align: middle;
+        border-bottom: 1px solid #f5f5f5;
+    }
+
+    /* Detalles del Producto */
+    .prod-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .prod-img {
+        width: 70px;
+        height: 70px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #eee;
+    }
+
+    .prod-detalles strong {
+        font-size: 15px;
+        color: #111;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .prod-meta {
+        font-size: 12px;
+        color: #666;
+        line-height: 1.4;
+    }
+
+    .tag-stock {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        margin-top: 4px;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    /* Precios y Cantidades */
+    .precio-antiguo {
+        text-decoration: line-through;
+        color: #999;
+        font-size: 12px;
+    }
+
+    .precio-actual {
+        color: #2b9348;
+        font-weight: 600;
+        font-size: 15px;
+    }
+
+    .controles-cantidad {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        background: #f1f3f5;
+        padding: 6px 12px;
+        border-radius: 20px;
+        width: fit-content;
+        margin: 0 auto;
+    }
+
+    .btn-cant {
+        text-decoration: none;
+        font-weight: bold;
+        color: #495057;
+        font-size: 16px;
+        transition: color 0.2s;
+    }
+
+    .btn-cant:hover {
+        color: #000;
+    }
+
+    .num-cant {
+        font-weight: 600;
+        font-size: 14px;
+        min-width: 20px;
+        text-align: center;
+    }
+
+    /* Bloque de Facturación Interna */
+    .panel-facturacion {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 24px;
+        margin-top: 25px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .facturacion-titulo {
+        font-size: 16px;
+        font-weight: 600;
+        color: #222;
+        margin: 0 0 18px 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #f1f3f5;
+    }
+
+    .grid-formulario {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .campo-completo {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        color: #495057;
+    }
+
+    .input-SaaS {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        margin-top: 6px;
+        font-size: 14px;
+        box-sizing: border-box;
+        transition: border-color 0.2s;
+    }
+
+    .input-SaaS:focus {
+        outline: none;
+        border-color: #6c757d;
+    }
+
+    /* Opciones Fiscales */
+    .opciones-fiscales {
+        border-top: 1px dashed #dee2e6;
+        padding-top: 16px;
+        margin-top: 16px;
+    }
+
+    .fiscales-flex {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    /* Totales y Botones */
+    .resumen-total {
+        margin-top: 20px;
+        background: #212529;
+        color: #fff;
+        padding: 16px 20px;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .resumen-total h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 500;
+    }
+
+    .btn-principal {
+        background: #25D366;
+        color: white;
+        padding: 14px;
+        border-radius: 6px;
+        border: none;
+        font-weight: 600;
+        font-size: 16px;
+        cursor: pointer;
+        margin-top: 20px;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 3px 6px rgba(37, 211, 102, 0.2);
+    }
+
+    .btn-eliminar {
+        color: #dc3545;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .btn-eliminar:hover {
+        text-decoration: underline;
+    }
+
+    /* Responsivo Móvil */
+    @media (max-width: 768px) {
+        .tabla-carrito th:nth-child(2), .tabla-carrito td:nth-child(2) { display: none; } /* Oculta precio base en móvil */
+        .grid-formulario { grid-template-columns: 1fr; }
+        .prod-info { flex-direction: column; align-items: flex-start; gap: 8px; }
+        .tabla-carrito td { padding: 10px; }
+    }
+</style>
+
+<h2>🛒 Mi carrito</h2>
+
+{% if total_articulos < 6 %}
+<div style="background:#fff3cd;padding:10px;margin-bottom:10px;border-radius:5px; color: #856404;">
+    🛒 Te faltan <b>{{ faltan_semi }}</b> piezas para activar el <b>precio Semi-Mayorista</b>.<br>
+    🛒 Y <b>{{ faltan_mayor }}</b> piezas para activar el <b>precio Mayorista</b>.
+</div>
+{% elif total_articulos < 12 %}
+<div style="background:#d1ecf1;padding:10px;margin-bottom:10px;border-radius:5px; color: #0c5460;">
+    ✨ ¡Ya tienes <b>precio Semi-Mayorista</b> activado!<br>
+    Te faltan <b>{{ faltan_mayor }}</b> piezas para alcanzar el <b>precio Mayorista</b>.
+</div>
+{% else %}
+<div style="background:#d4edda;padding:10px;margin-bottom:10px;border-radius:5px; color: #155724;">
+    🎉 ¡Espectacular! Tienes el <b>Precio Mayorista</b> totalmente activado.
+</div>
+{% endif %}
+
+{% if items %}
+
+<form method="POST" action="{% url 'comprar_whatsapp' %}" id="form-compra-carrito">  
+    {% csrf_token %}
+    
+    <table class="tabla-carrito">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Precio</th>
+                <th style="text-align: center;">Cantidad</th>
+                <th>Subtotal</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>
+                    <div class="prod-info">
+                        {% if item.variante and item.variante.imagen and item.variante.imagen.url %}
+                            <img src="{{ item.variante.imagen.url }}" class="prod-img" alt="{{ item.producto.nombre }}">
+                        {% elif item.producto and item.producto.imagen_principal and item.producto.imagen_principal.url %}
+                            <img src="{{ item.producto.imagen_principal.url }}" class="prod-img" alt="{{ item.producto.nombre }}">
+                        {% else %}
+                            <div class="prod-img" style="background: #f1f3f5; display: flex; align-items: center; justify-content: center; font-size: 22px; border-radius: 6px; border: 1px solid #eee; width: 70px; height: 70px;">💎</div>
+                        {% endif %}
+
+                        <div class="prod-detalles">
+                            <strong>{{ item.producto.nombre }}</strong>
+                            <div class="prod-meta">
+                                {% if item.variante %}
+                                    {% if item.variante.color %}<span>Color: {{ item.variante.color }}</span>{% endif %}
+                                    {% if item.variante.talla %}<span> | Talla: {{ item.variante.talla }}</span>{% endif %}
+                                {% else %}
+                                    {% if item.color %}<span>Color: {{ item.color }}</span>{% endif %}
+                                    {% if item.talla %}<span> | Talla: {{ item.talla }}</span>{% endif %}
+                                {% endif %}
+                                <span style="display: block; color: #888;">Ref: {{ item.producto.referencia }}</span>
+                            </div>
+    
+                            {% if item.producto.stock > 10 %}
+                                <span class="tag-stock" style="background: #e6f4ea; color: #137333;">✅ Disponible</span>
+                            {% elif item.producto.stock > 0 %}
+                                <span class="tag-stock" style="background: #fef7e0; color: #b06000;">⚠️ Últimas {{ item.producto.stock }} unds</span>
+                            {% else %}
+                                <span class="tag-stock" style="background: #fce8e6; color: #c5221f;">❌ Agotado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                <td>
+                    <div class="precio-antiguo">
+                        {% if item.producto.tipo_venta == "gramo" %}
+                            $ {{ item.producto.precio_calculado_detal|moneda }}
+                        {% else %}
+                            $ {{ item.producto.precio_detal|default:0|moneda }}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="precio-actual">
+                        <!-- ✨ Muestra el valor de la pieza completa según su peso -->
+                        $ {{ item.precio_unitario_articulo|moneda }}
+                    </div>
+
+                    <!-- ⚖️ Si es por gramo, le mostramos el desglose transparente de su peso -->
+                    {% if item.producto.tipo_venta == "gramo" %}
+                        <small style="color: #777; font-size: 11px; display: block; margin-top: 1px;">
+                            ({{ item.producto.peso_producto }}g x $ {{ item.precio_aplicado|moneda }}/g)
+                        </small>
+                    {% endif %}
+
+                    <small style="color: #666; font-size: 11px; display: block; margin-top: 3px;">
+                        Precio {{ item.tipo_precio }}
+                    </small>
+                </td>
+                        
+                <td>
+                    <div class="controles-cantidad">
+                        <a href="{% url 'disminuir_cantidad' item.id %}" class="btn-cant">-</a>
+                        <span class="num-cant">{{ item.cantidad }}</span>
+                        <a href="{% url 'aumentar_cantidad' item.id %}" class="btn-cant">+</a>
+                    </div>
+                </td>
+
+                <td>
+                    <span style="font-weight: 600; font-size: 15px; color: #111;">
+                        ${{ item.subtotal_calculado|moneda }}
+                    </span>
+                    {% if item.producto.tipo_venta == "gramo" %}
+                        <br><small style="color: #666; font-size: 11px;">{{ item.total_gramos|floatformat:2 }} g</small>
+                    {% endif %}
+                </td>
+
+                <td style="text-align: center;">
+                    <a href="{% url 'eliminar_del_carrito' item.id %}" class="btn-eliminar">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="resumen-total">
+        <h3>Total del Pedido:</h3>
+        <span style="font-size: 22px; font-weight: 600;">${{ total|moneda }}</span>
+    </div>
+
+    <div class="panel-facturacion">
+        <h4 class="facturacion-titulo">📋 Datos de Despacho y Facturación</h4>
+
+        <div class="grid-formulario">
+            <label class="campo-completo">
+                Nombre Completo: <span style="color:red;">*</span>
+                <input type="text" name="nombre" required placeholder="Ej: Juan Pérez" class="input-SaaS">
+            </label>
+            <label class="campo-completo">
+                Teléfono de Contacto: <span style="color:red;">*</span>
+                <input type="text" name="telefono" required placeholder="Ej: 3123456789" class="input-SaaS">
+            </label>
+        </div>
+
+        <div class="grid-formulario">
+            <label class="campo-completo">
+                Ciudad de Destino: <span style="color:red;">*</span>
+                <input type="text" name="ciudad" required placeholder="Ej: Bogotá" class="input-SaaS">
+            </label>
+            <label class="campo-completo">
+                Dirección de Entrega: <span style="color:red;">*</span>
+                <input type="text" name="direccion" required placeholder="Calle 10 # 4-50" class="input-SaaS">
+            </label>
+            <label class="campo-completo">
+                Correo Electrónico: <span style="color:red;">*</span>
+                <input type="email" name="email" required placeholder="ejemplo@correo.com" class="input-SaaS">
+            </label>
+        </div>
+
+        <!-- 🔒 BLOQUE FISCAL RESTRINGIDO: Solo identificación opcional para el cliente -->
+        <div class="opciones-fiscales" style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ced4da;">
+            <label style="font-size: 13px; color: #495057; font-weight: 500; margin: 0;">
+                Cédula o NIT (Opcional para facturación): 
+                <input type="text" name="nit" placeholder="Ej: 1017000111" class="input-SaaS" style="width: 180px; display: inline-block; margin-top: 0; padding: 6px 10px; margin-left: 8px;">
+            </label>
+        </div>
+    
+        <div style="margin-top: 25px; display: flex; flex-direction: column; gap: 12px;">
+            <button type="submit" class="btn-principal">
+                📱 Confirmar Pedido por WhatsApp
+            </button>
+
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button type="button" onclick="enviarAPagar()" style="background:#007bff; color:white; padding:11px 20px; border-radius:6px; border:none; font-weight:bold; cursor:pointer; flex: 1;">
+                    💳 Pagar ahora
+                </button>
+
+                <a href="/" style="background:#444; color:white; padding:11px 18px; border-radius:6px; text-decoration:none; font-weight: bold; font-size: 13px; display: inline-block; text-align: center;">
+                    Seguir comprando
+                </a>
+            </div>
+        </div>
+    
+    </div> </form> <a href="#" id="whatsapp-flotante" style="position: fixed; bottom: 20px; right: 20px; background: #25D366; color: white; padding: 12px 20px; border-radius: 30px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.25); z-index: 999; display: flex; align-items: center; gap: 5px; font-size: 14px;">
+    📱 WhatsApp - <span id="whatsapp-info">0 piezas - $0</span>
+</a>
+
+<script type="application/json" id="carrito-data">{{ carrito_json|safe }}</script>
+
+<script>
+// La lógica JS se mantiene idéntica para controlar los desvíos POST
+function enviarAPagar() {
+    const formulario = document.getElementById("form-compra-carrito");
+    if (formulario.reportValidity()) {
+        formulario.action = "{% url 'pagar_pedido' %}";
+        formulario.submit();
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const jsonText = document.getElementById("carrito-data").textContent;
+    if(!jsonText.trim()) return;
+
+    const carrito = JSON.parse(jsonText);
+    const boton = document.getElementById("whatsapp-flotante");
+    const info = document.getElementById("whatsapp-info");
+    const formulario = document.getElementById("form-compra-carrito");
+
+    let totalArticulosFisicos = 0;
+    let subtotalDinamico = 0;
+
+    carrito.forEach(item => {
+        totalArticulosFisicos += parseInt(item.cantidad || 0);
+        subtotalDinamico += parseFloat(item.subtotal || 0);
+    });
+
+    info.textContent = totalArticulosFisicos + " piezas - $" + subtotalDinamico.toLocaleString('es-CO', { maximumFractionDigits: 0 });
+
+    boton.addEventListener("click", function(e) {
+        e.preventDefault(); 
+        if (totalArticulosFisicos > 0) {
+            formulario.action = "{% url 'comprar_whatsapp' %}";
+            formulario.reportValidity();
+            if (formulario.checkValidity()) {
+                formulario.submit(); 
+            }
+        }
+    });
+
+    if (totalArticulosFisicos === 0) {
+        boton.style.opacity = "0.5";
+        boton.style.pointerEvents = "none";
+        boton.style.background = "#ccc";
+        info.textContent = "🛒 Carrito vacío";
+    } else {
+        boton.style.opacity = "1";
+        boton.style.pointerEvents = "auto";
+        boton.style.background = "#25D366";
+    }
+});
+</script>
+
+{% else %}
+<div style="text-align: center; padding: 50px 20px;">
+    <p style="color: #666; font-size: 16px; margin-bottom: 15px;">Tu carrito de compras está totalmente vacío.</p>
+    <a href="/" style="background:#444; color:white; padding:12px 20px; border-radius:6px; text-decoration:none; font-weight: bold; display: inline-block;">🛒 Ir al catálogo de joyas</a>
+</div>
+{% endif %}
+
+{% endblock %}

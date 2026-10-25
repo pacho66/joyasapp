@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        background: #F9FAFB;
+        margin: 0;
+        padding: 15px;
+        color: #111111;
+    }
+    .container {
+        max-width: 500px;
+        margin: 0 auto;
+        background: #FFFFFF;
+        padding: 24px;
+        box-sizing: border-box;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+    .titulo-empresa {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0 0 5px 0;
+        text-transform: uppercase;
+    }
+    .bloque-cliente {
+        background-color: #FAFAFA;
+        border: 1px solid #E5E7EB;
+        padding: 15px;
+        border-radius: 6px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+    .cliente-fila {
+        margin: 6px 0;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+    .tabla {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+    .tabla th {
+        background: #111111;
+        color: #FFFFFF;
+        font-size: 11px;
+        text-transform: uppercase;
+        padding: 12px 8px;
+        text-align: left;
+    }
+    .tabla td {
+        border-bottom: 1px solid #E5E7EB;
+        padding: 12px 8px;
+        font-size: 13px;
+    }
+    .contenedor-totales {
+        width: 100%;
+        margin-bottom: 25px;
+        text-align: right;
+    }
+    .tabla-totales {
+        width: 280px;
+        margin-left: auto;
+        border-collapse: collapse;
+    }
+    .tabla-totales td {
+        padding: 6px 8px;
+        font-size: 13px;
+    }
+    .total-box {
+        background-color: #111111;
+        color: #ffffff;
+        font-weight: bold;
+        padding: 12px 8px;
+        font-size: 14px;
+    }
+    .btn {
+        display: block;
+        width: 100%;
+        padding: 14px;
+        margin-top: 10px;
+        border-radius: 6px;
+        text-align: center;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+    .btn-pagar { background: #635BFF; color: white; }
+    .btn-mercadopago { background: #009EE3; color: white; }
+    .btn-whatsapp { background: #25D366; color: white; }
+    .qr-seccion {
+        text-align: center;
+        margin-top: 25px;
+        padding-top: 20px;
+        border-top: 1px solid #E5E7EB;
+    }
+    .qr-seccion img {
+        max-width: 130px;
+        border: 1px solid #E5E7EB;
+        padding: 4px;
+        background: #ffffff;
+    }
+    .web-footer {
+        text-align: center; 
+        font-size: 11px; 
+        color: #777777; 
+        margin-top: 35px; 
+        border-top: 1px solid #E5E7EB; 
+        padding-top: 15px;
+        line-height: 1.5;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+    <div style="margin-bottom: 20px;">
+        <!-- 🎯 LOGO DEL PERFIL SINCRONIZADO -->
+        {% if empresa_logo %}
+        <img src="{{ empresa_logo }}" style="max-height:90px; max-width:220px;">
+        <br><br>
+        {% elif logo_path %}
+        <img src="{{ logo_path }}" style="max-height:90px; max-width:220px;">
+        <br><br>
+        {% endif %}
+        
+        <h1 class="titulo-empresa">{{ empresa_nombre }}</h1>
+        <div style="font-size: 12px; color: #555555; line-height: 1.4;">
+            <strong>NIT:</strong> {{ empresa_nit }}<br>
+            <strong>Dir:</strong> {{ empresa_direccion }}<br>
+            <strong>Tel:</strong> {{ empresa_telefono }}<br>
+            <strong>Email:</strong> {{ empresa_email }}
+        </div>
+        
+        <div style="margin-top: 12px; display: inline-block; padding: 6px 12px; background: #F3F4F6; border: 1px solid #E5E7EB; font-size: 11px; font-weight: bold; border-radius: 4px;">
+            ESTADO: {{ estado|upper }}
+        </div>
+    </div>
+
+    <div class="bloque-cliente">
+        <div style="font-size: 11px; font-weight: bold; color: #6B7280; text-transform: uppercase; margin-bottom: 8px;">Datos del Cliente</div>
+        <div class="cliente-fila"><strong>Nombre:</strong> {{ cliente_nombre }}</div>
+        <div class="cliente-fila"><strong>NIT/CC:</strong> {{ cliente_nit|default:"-" }}</div>
+        <div class="cliente-fila"><strong>Celular:</strong> {{ cliente_telefono|default:"-" }}</div>
+        <div class="cliente-fila"><strong>Email:</strong> {{ cliente_email|default:"-" }}</div>
+        
+        <div class="cliente-fila">
+            <strong>Dirección:</strong> {{ cliente_direccion|default:"-" }}
+            {% if cliente_ciudad %}
+            <br>{{ cliente_ciudad }}
+            {% endif %}
+        </div>
+    </div>
+
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th style="width: 60%;">Producto</th>
+                <th style="width: 25%; text-align: center;">Cant. / Peso</th>
+                <th style="width: 15%; text-align: right;">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>
+                    <strong>{{ item.producto.nombre }}</strong>
+                    {% if item.variante %}
+                    <br>
+                    <small style="color:#555555;font-size:11px;">
+                        {% if item.variante.color %}
+                        Color: {{ item.variante.color }}
+                        {% endif %}
+                        {% if item.variante.talla %}
+                        <br>Talla: {{ item.variante.talla }}
+                        {% endif %}
+                    </small>
+                    {% endif %}
+                </td>
+                
+                <td style="text-align: center;">
+                {% if item.total_gramos and item.total_gramos > 0 %}
+                    {{ item.total_gramos|floatformat:2 }} g
+                {% else %}
+                    {{ item.cantidad }} u
+                {% endif %}
+                </td>
+                
+                <td style="text-align: right;">${{ item.subtotal|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- ========================================== -->
+    <!-- 📊 CONTENEDOR DE TOTALES (VISTA PÚBLICA)   -->
+    <!-- ========================================== -->
+    <div class="contenedor-totales">
+        <table class="tabla-totales">
+            <tr>
+                <td style="text-align: left; color: #555;">Subtotal Productos:</td>
+                <td style="text-align: right; font-weight: bold;">${{ pedido.subtotal_antes_de_descuento|floatformat:"0" }}</td>
+            </tr>
+        
+            <!-- 📉 DESCUENTO COMERCIAL -->
+            {% if pedido.descuento_total > 0 %}
+            <tr>
+                <td style="text-align: left; color: #C0392B;">Descuento ({{ pedido.porcentaje_descuento|floatformat:0 }}%):</td>
+                <td style="text-align: right; color: #C0392B;">-${{ pedido.descuento_total|floatformat:"0" }}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left; color: #555;">Subtotal Neto:</td>
+                <td style="text-align: right; font-weight: bold;">${{ pedido.subtotal_neto|floatformat:"0" }}</td>
+            </tr>
+            {% endif %}
+        
+            <!-- ⚖️ IVA DESDE EL PEDIDO -->
+            {% if pedido.aplica_iva and pedido.iva > 0 %}
+            <tr>
+                <td style="text-align: left; color: #555;">IVA:</td>
+                <td style="text-align: right;">+${{ pedido.iva|floatformat:"0" }}</td>
+            </tr>
+            {% endif %}
+        
+            <!-- 💸 RETEFUENTE DESDE EL PEDIDO -->
+            {% if pedido.es_retenedor and pedido.retefuente > 0 %}
+            <tr>
+                <td style="text-align: left; color: #C0392B;">Retefuente:</td>
+                <td style="text-align: right; color: #C0392B;">-${{ pedido.retefuente|floatformat:"0" }}</td>
+            </tr>
+            {% endif %}
+                    
+            <!-- 📦 LOGÍSTICA DE ENVÍO -->
+            <tr>
+                <td style="text-align: left; color: #555; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">Envío:</td>
+                <td style="text-align: right; border-bottom: 1px solid #E5E7EB; padding-bottom: 5px;">
+                    {% if pedido.tipo_envio == "domicilio" or pedido.tipo_envio == "transportadora" or pedido.tipo_envio == "estandar" or pedido.tipo_envio == "personalizado" %}
+                        {% if pedido.costo_envio > 0 %}
+                            +${{ pedido.costo_envio|floatformat:"0" }}
+                        {% else %}
+                            <span style="color: #28a745; font-weight: bold;">¡Gratis!</span>
+                        {% endif %}
+                    {% elif pedido.tipo_envio == "recogida" %}
+                        <span style="color: #28a745;">Recoge en tienda / Gratis</span>
+                    {% else %}
+                        <span style="color: #555;">Por acordar</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td style="text-align: left; font-weight: bold; padding-top: 8px;">TOTAL:</td>
+                <td class="total-box">${{ pedido.total|floatformat:"0" }} COP</td>
+            </tr>
+        </table>
+    </div>
+    
+    {% if estado != 'pagado' %}
+        <a href="{% url 'pagar_wompi' pedido.token_publico %}" class="btn btn-pagar">💳 Pagar con Wompi</a>
+        <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}" class="btn btn-mercadopago">🔵 Pagar con Mercado Pago</a>
+    {% endif %}
+    <a href="{{ whatsapp_url }}" class="btn btn-whatsapp" target="_blank">📲 Enviar por WhatsApp</a>
+
+    {% if qr_pago_url %}
+    <div class="qr-seccion">
+        <p style="margin: 0 0 10px 0; font-size: 12px; color: #555555;">Escanea para abrir este pedido</p>
+         <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={{ request.build_absolute_uri }}" alt="QR de Pago">
+    </div>
+    {% endif %}
+
+    <div class="web-footer">
+        <strong>Gracias por comprar en {{ empresa_nombre }}</strong><br>
+        Factura generada mediante <strong>JoyasApp®</strong><br>
+        {% if empresa_telefono and empresa_telefono != '-' %}Contacto: {{ empresa_telefono }}<br>{% endif %}
+        www.joyasapp.com
+    </div>
+
+</div>
+    
+</div>
+</body>
+</html>

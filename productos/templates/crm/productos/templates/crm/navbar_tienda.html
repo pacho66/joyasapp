@@ -1,0 +1,57 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+  <div class="container">
+    <!-- Logo o Nombre del Negocio del Cliente -->
+    <a class="navbar-brand font-weight-bold" href="#">
+      {% if perfil.logo %}
+        <img src="{{ perfil.logo.url }}" alt="{{ perfil.nombre_tienda }}" height="40">
+      {% else %}
+        {{ perfil.nombre_tienda|default:"JoyasApp Store" }}
+      {% endif %}
+    </a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuCliente">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="menuCliente">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <!-- Dropdown de Categorías -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle font-weight-bold" href="#" id="dropCat" role="button" data-bs-toggle="dropdown">
+            💎 Categorías
+          </a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="?categoria=todas">Todas las joyas</a></li>
+            {% for cat in categorias %}
+              <li><a class="dropdown-item" href="?categoria={{ cat.id }}">{{ cat.nombre }}</a></li>
+            {% empty %}
+              <li><a class="dropdown-item disabled" href="#">Sin categorías</a></li>
+            {% endfor %}
+          </ul>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="#productos">Catálogo</a>
+        </li>
+      </ul>
+
+      <!-- Botón de Carrito y WhatsApp (Sin Iniciar Sesión) -->
+      <ul class="navbar-nav ms-auto align-items-center gap-2">
+        <li class="nav-item">
+          <a class="btn btn-outline-dark position-relative" href="{% url 'ver_carrito' %}">
+            🛒 Carrito
+            <span class="badge bg-danger rounded-pill">{{ carrito_count|default:"0" }}</span>
+          </a>
+        </li>
+
+        {% if perfil.whatsapp %}
+        <li class="nav-item">
+          <a class="btn btn-success" href="https://wa.me/57{{ perfil.whatsapp }}" target="_blank">
+            💬 WhatsApp
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
