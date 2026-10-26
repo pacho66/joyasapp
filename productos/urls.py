@@ -43,6 +43,7 @@ urlpatterns = [
     path('imagen-galeria/eliminar/<int:id>/', admin_catalogo.eliminar_imagen_galeria, name='eliminar_imagen_galeria'),
     path('categoria/<int:categoria_id>/', views.productos_por_categoria, name='productos_por_categoria'),
     path('categorias/nueva/', admin_catalogo.crear_categoria, name='crear_categoria'),
+    path('categorias/eliminar/<int:categoria_id>/', views.eliminar_categoria, name='eliminar_categoria'),
     path('top-productos/', catalogo.productos_top, name='top_productos'),
     
     # Rutas unificadas para crear y editar usando el mismo controlador

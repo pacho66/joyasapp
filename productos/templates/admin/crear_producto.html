@@ -201,51 +201,64 @@ input:focus, select:focus, textarea:focus {
         width: 100%;
         text-align: center;
     }
-    }
-    /* Estilos para el Constructor de Tarjetas Inteligentes */
-    .variante-card {
-        background: #ffffff;
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        padding: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    .variante-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-        padding-bottom: 5px;
-        border-bottom: 1px solid #f0f0f0;
-    }
-    .badge-sku {
-        background: #e2e8f0;
-        color: #333;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: bold;
-    }
-    .badge-status {
-        font-size: 11px;
-        font-weight: bold;
-    }
-    .badge-utilidad {
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: bold;
-        }
-    .btn-action-card {
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 14px;
-        padding: 2px 5px;
-    }
+}
+
+/* Estilos para el Constructor de Tarjetas Inteligentes */
+.variante-card {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.variante-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.badge-sku {
+    background: #e2e8f0;
+    color: #333;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+}
+.badge-status {
+    font-size: 11px;
+    font-weight: bold;
+}
+.badge-utilidad {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+}
+.btn-action-card {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 5px;
+}
 </style>
 
 <div class="container-formulario">
+
+    <!-- ⬅️ BARRA DE NAVEGACIÓN Y RETORNO OBLIGATORIO -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+        <a href="{% url 'dashboard' %}" class="btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #f1f5f9; color: #334155; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; border: 1px solid #cbd5e1;">
+            ⬅️ Volver al Dashboard
+        </a>
+        
+        <!-- 🚪 Botón de Salida / Cerrar Sesión -->
+        <a href="{% url 'logout' %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #fef2f2; color: #dc2626; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; border: 1px solid #fecaca;">
+            🚪 Salir
+        </a>
+    </div>
 
     <div class="header-formulario">
         <h1>➕ Crear Nuevo Producto</h1>
@@ -318,62 +331,62 @@ input:focus, select:focus, textarea:focus {
 
             <div class="grid-3">
                 <div class="form-group">
-                <label for="precio_costo">Precio Costo</label>
-                <input type="number" step="any" id="precio_costo" name="precio_costo" placeholder="0" value="{{ valores.precio_costo|default:'' }}">
+                    <label for="precio_costo">Precio Costo</label>
+                    <input type="number" step="any" id="precio_costo" name="precio_costo" placeholder="0" value="{{ valores.precio_costo|default:'' }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="stock">Stock Disponible</label>
+                    <input type="number" id="stock" name="stock" placeholder="0" value="{{ valores.stock|default:'' }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="tipo_venta">Tipo de Venta</label>
+                    <select id="tipo_venta" name="tipo_venta">
+                        <option value="unidad" {% if valores.tipo_venta == 'unidad' %}selected{% endif %}>Por Unidad</option>
+                        <option value="gramo" {% if valores.tipo_venta == 'gramo' %}selected{% endif %}>Por Gramo</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="stock">Stock Disponible</label>
-                <input type="number" id="stock" name="stock" placeholder="0" value="{{ valores.stock|default:'' }}">
+            <!-- ⚖️ SECCIÓN DE GRAMOS -->
+            <div id="campos_gramos" style="margin-top:16px; display: none;">
+                <div class="grid-4 grid-gramos">
+                    <div class="form-group">
+                        <label for="peso_producto">Peso Producto (g)</label>
+                        <input type="number" step="0.01" id="peso_producto" name="peso_producto" placeholder="0.00" value="{{ valores.peso_producto|default:'' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="precio_por_gramo_detal">Precio Gramo Detal</label>
+                        <input type="number" step="any" id="precio_por_gramo_detal" name="precio_por_gramo_detal" placeholder="0" value="{{ valores.precio_por_gramo_detal|default:'' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="precio_por_gramo_semimayor">Precio Gramo Semimayor</label>
+                        <input type="number" step="any" id="precio_por_gramo_semimayor" name="precio_por_gramo_semimayor" placeholder="0" value="{{ valores.precio_por_gramo_semimayor|default:'' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="precio_por_gramo_mayor">Precio Gramo Mayor</label>
+                        <input type="number" step="any" id="precio_por_gramo_mayor" name="precio_por_gramo_mayor" placeholder="0" value="{{ valores.precio_por_gramo_mayor|default:'' }}">
+                    </div>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="tipo_venta">Tipo de Venta</label>
-                <select id="tipo_venta" name="tipo_venta">
-                    <option value="unidad" {% if valores.tipo_venta == 'unidad' %}selected{% endif %}>Por Unidad</option>
-                    <option value="gramo" {% if valores.tipo_venta == 'gramo' %}selected{% endif %}>Por Gramo</option>
-                </select>
+            <!-- 📦 SECCIÓN DE UNIDADES -->
+            <div id="campos_unidades" class="grid-3" style="margin-top:16px;">
+                <div class="form-group">
+                    <label for="precio_detal">Precio Detal</label>
+                    <input type="number" step="any" id="precio_detal" name="precio_detal" placeholder="0" value="{{ valores.precio_detal|default:'' }}">
+                </div>
+                <div class="form-group">
+                    <label for="precio_semimayor">Precio Semimayor</label>
+                    <input type="number" step="any" id="precio_semimayor" name="precio_semimayor" placeholder="0" value="{{ valores.precio_semimayor|default:'' }}">
+                </div>
+                <div class="form-group">
+                    <label for="precio_mayor">Precio Mayor</label>
+                    <input type="number" step="any" id="precio_mayor" name="precio_mayor" placeholder="0" value="{{ valores.precio_mayor|default:'' }}">
+                </div>
             </div>
         </div>
-
-        <!-- ⚖️ SECCIÓN DE GRAMOS (Se corrigió la doble clase aquí) -->
-        <div id="campos_gramos" style="margin-top:16px; display: none;">
-            <div class="grid-4 grid-gramos">
-                <div class="form-group">
-                    <label for="peso_producto">Peso Producto (g)</label>
-                    <input type="number" step="0.01" id="peso_producto" name="peso_producto" placeholder="0.00" value="{{ valores.peso_producto|default:'' }}">
-                </div>
-                <div class="form-group">
-                    <label for="precio_por_gramo_detal">Precio Gramo Detal</label>
-                    <input type="number" step="any" id="precio_por_gramo_detal" name="precio_por_gramo_detal" placeholder="0" value="{{ valores.precio_por_gramo_detal|default:'' }}">
-                </div>
-                <div class="form-group">
-                    <label for="precio_por_gramo_semimayor">Precio Gramo Semimayor</label>
-                    <input type="number" step="any" id="precio_por_gramo_semimayor" name="precio_por_gramo_semimayor" placeholder="0" value="{{ valores.precio_por_gramo_semimayor|default:'' }}">
-                </div>
-                <div class="form-group">
-                    <label for="precio_por_gramo_mayor">Precio Gramo Mayor</label>
-                    <input type="number" step="any" id="precio_por_gramo_mayor" name="precio_por_gramo_mayor" placeholder="0" value="{{ valores.precio_por_gramo_mayor|default:'' }}">
-                </div>
-            </div>
-        </div>
-
-        <!-- 📦 SECCIÓN DE UNIDADES (Opcional: Le ponemos una ID para poder ocultarla si es por gramos) -->
-        <div id="campos_unidades" class="grid-3" style="margin-top:16px;">
-            <div class="form-group">
-                <label for="precio_detal">Precio Detal</label>
-                <input type="number" step="any" id="precio_detal" name="precio_detal" placeholder="0" value="{{ valores.precio_detal|default:'' }}">
-            </div>
-            <div class="form-group">
-                <label for="precio_semimayor">Precio Semimayor</label>
-                <input type="number" step="any" id="precio_semimayor" name="precio_semimayor" placeholder="0" value="{{ valores.precio_semimayor|default:'' }}">
-            </div>
-            <div class="form-group">
-                <label for="precio_mayor">Precio Mayor</label>
-                <input type="number" step="any" id="precio_mayor" name="precio_mayor" placeholder="0" value="{{ valores.precio_mayor|default:'' }}">
-            </div>
-        </div>
-    </div>
 
         <div class="form-card">
             <h3>📁 Archivos y Certificados</h3>
@@ -444,46 +457,45 @@ input:focus, select:focus, textarea:focus {
         <div class="form-card" style="margin-bottom: 20px;">
             <h3>🎨 Constructor de Variantes Inteligente</h3>
             
-            <!-- ⚡ Generador Masivo (Estilo Shopify) -->
+            <!-- ⚡ Generador Masivo -->
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
                 <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: bold; color: #64748b;">⚡ GENERADOR EN MASA (Separa por comas)</p>
-                <div class="grid-3-col" style="gap: 10px; margin-bottom: 0;">
+                <div class="grid-3" style="gap: 10px; margin-bottom: 0;">
                     <div class="form-group" style="margin-bottom:0;">
                         <input type="text" id="gen_colores" placeholder="Ej: Oro Amarillo, Oro Blanco">
                     </div>
                     <div class="form-group" style="margin-bottom:0;">
                         <input type="text" id="gen_tallas" placeholder="Ej: 6, 7, 8">
                     </div>
-                    <button type="button" class="btn-submit" style="padding: 8px; font-size: 14px; background-color: #333;" onclick="ejecutarGeneradorMasivo()">
+                    <button type="button" class="btn btn-primary" style="padding: 10px; font-size: 14px; background-color: #333;" onclick="ejecutarGeneradorMasivo()">
                         ⚡ Combinar y Crear
                     </button>
                 </div>
             </div>
 
-            <!-- Contenedor donde se inyectan las tarjetas dinámicas -->
+            <!-- Contenedor de tarjetas dinámicas -->
             <div id="contenedor-tarjetas-variantes" style="display: flex; flex-direction: column; gap: 12px;">
-                <!-- Se generan dinámicamente con JS -->
             </div>
 
-            <button type="button" class="btn-volver" style="margin-top: 12px; background: #e2e8f0; color: #333; font-size: 14px; padding: 10px;" onclick="agregarTarjetaManual('', '', 1, '')">
+            <button type="button" class="btn btn-secondary" style="margin-top: 12px; font-size: 14px; padding: 10px;" onclick="agregarTarjetaManual('', '', 1, '')">
                 ➕ Agregar Variante Individual
             </button>
         </div>
         <!-- ================= FIN NUEVO CONSTRUCTOR DE VARIANTES ================= -->
-        
+
+        <!-- Botón de Envío Final del Producto -->
+        <div class="form-actions">
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Guardar Producto Completo</button>
+        </div>
+
     </form>
 
 </div>
 
 <script>
-    // ==========================================
-    // 1. VARIABLES GLOBALES DE CONTROL
-    // ==========================================
     let contadorVariantes = 0;
 
-    // ==========================================
-    // 2. INTERFAZ: CONMUTACIÓN DE PANELES (Unidades / Gramos)
-    // ==========================================
     function alternarCamposFormulario() {
         const tipoVentaSelect = document.getElementById("tipo_venta");
         const camposGramos = document.getElementById("campos_gramos");
@@ -496,13 +508,10 @@ input:focus, select:focus, textarea:focus {
             camposUnidades.style.display = "none"; 
         } else {
             camposGramos.style.display = "none";
-            camposUnidades.style.display = "flex"; 
+            camposUnidades.style.display = "grid"; 
         }
     }
 
-    // ==========================================
-    // 3. VARIANTES: GESTIÓN DINÁMICA DE TARJETAS
-    // ==========================================
     function previsualizarFotoVariante(input, idCard) {
         const contenedor = document.getElementById('preview_container_' + idCard);
         if (input.files && input.files[0]) {
@@ -522,7 +531,6 @@ input:focus, select:focus, textarea:focus {
 
         const tipoVenta = document.getElementById('tipo_venta')?.value || 'unidad';
 
-        // 💡 Asignación de valores por defecto inteligentes basados en el formulario global
         if (!precio) {
             if (tipoVenta === 'gramo') {
                 precio = document.getElementById('precio_por_gramo_detal')?.value || '0';
@@ -557,7 +565,6 @@ input:focus, select:focus, textarea:focus {
         htmlContenido += '</div>';
         htmlContenido += '<div style="display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap;">';
         
-        // Índice de control para el Backend de Django
         htmlContenido += '    <input type="hidden" name="v_index[]" value="' + contadorVariantes + '">';
         
         htmlContenido += '    <div style="text-align: center; width: 85px; flex-shrink: 0;">';
@@ -575,7 +582,7 @@ input:focus, select:focus, textarea:focus {
         htmlContenido += '            <input type="file" name="v_foto_' + contadorVariantes + '" accept="image/*" style="display: none;" onchange="previsualizarFotoVariante(this, \'' + idUnico + '\')">';
         htmlContenido += '        </label>';
         htmlContenido += '    </div>';
-        htmlContenido += '    <div style="flex: 1; min-width: 200px;" class="grid-4-col">';
+        htmlContenido += '    <div style="flex: 1; min-width: 200px;" class="grid-4">';
         htmlContenido += '        <div class="form-group" style="margin-bottom:0;">';
         htmlContenido += '            <label style="font-size:11px;">Color</label>';
         htmlContenido += '            <input type="text" name="v_color[]" value="' + color + '" placeholder="Oro" oninput="actualizarMetadatos(\'' + idUnico + '\')">';
@@ -639,9 +646,6 @@ input:focus, select:focus, textarea:focus {
         agregarTarjetaManual(color, talla, stock, precio, peso, codigo);
     }
 
-    // ==========================================
-    // 4. MÁQUINA DE CÁLCULOS Y METADATOS
-    // ==========================================
     function actualizarMetadatos(idCard) {
         const stockInput = document.getElementById('stock_input_' + idCard);
         const precioInput = document.getElementById('precio_input_' + idCard);
@@ -651,7 +655,6 @@ input:focus, select:focus, textarea:focus {
 
         if (!stockInput || !precioInput) return;
 
-        // Gestión visual del estado del stock
         const stockVal = parseInt(stockInput.value) || 0;
         if (stockVal > 3) {
             txtStatus.textContent = "🟢 Disponible";
@@ -664,7 +667,6 @@ input:focus, select:focus, textarea:focus {
             txtStatus.style.color = "#dc3545";
         }
 
-        // Cálculo coherente de márgenes de utilidad financieros
         const precioCostoGlobal = parseFloat(document.getElementById('precio_costo')?.value) || 0;
         const precioVentaVariante = parseFloat(precioInput.value) || 0;
         const pesoVariante = parseFloat(pesoInput?.value) || 0;
@@ -672,7 +674,6 @@ input:focus, select:focus, textarea:focus {
 
         let utilidad = 0;
         if (tipoVenta === 'gramo') {
-            // (Precio gramo venta - Costo gramo base) * Gramos reales de la pieza joya
             utilidad = (precioVentaVariante - precioCostoGlobal) * pesoVariante;
         } else {
             utilidad = precioVentaVariante - precioCostoGlobal;
@@ -687,24 +688,18 @@ input:focus, select:focus, textarea:focus {
         document.querySelectorAll('.variante-card').forEach(card => actualizarMetadatos(card.id));
     }
 
-    // ==========================================
-    // 5. ORQUESTADOR DE CARGA INICIAL
-    // ==========================================
     document.addEventListener('DOMContentLoaded', function() {
         const tipoVentaSelect = document.getElementById("tipo_venta");
 
-        // 🔄 Escuchas centralizadas de eventos estructurales
         document.getElementById('precio_costo')?.addEventListener('input', recalcularTodasLasTarjetas);
         
         tipoVentaSelect?.addEventListener("change", function() {
-            alternarCamposFormulario();    // Oculta/Muestra los paneles correctos
-            recalcularTodasLasTarjetas();  // Cambia la lógica matemática de las utilidades en vivo
+            alternarCamposFormulario();
+            recalcularTodasLasTarjetas();
         });
 
-        // ⚡ Inicializa el estado visual de los paneles según los datos de Django
         alternarCamposFormulario();
 
-        // 💎 Renderiza variantes existentes (Edición) o inyecta la primera vacía (Creación)
         {% if producto and producto.variantes.exists %}
             {% for v in producto.variantes.all %}
                 agregarTarjetaManual(

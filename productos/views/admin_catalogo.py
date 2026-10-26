@@ -111,10 +111,17 @@ def crear_categoria(request):
                 nombre=nombre,
                 usuario=request.user
             )
-        return redirect('dashboard')
+        return redirect('crear_categoria') # Te recarga la misma página para verla en la lista
 
-    return render(request, 'crear_categoria.html')
+    categorias = Categoria.objects.filter(usuario=request.user)
+    return render(request, 'admin/crear_categoria.html', {'categorias': categorias})
+
 @login_required
+def eliminar_categoria(request, categoria_id):
+    categoria = get_object_or_404(Categoria, id=categoria_id, usuario=request.user)
+    categoria.delete()
+    messages.success(request, "Categoría eliminada correctamente.")
+    return redirect('dashboard')
 
 def guardar_producto_view(request, pk=None):
     """
