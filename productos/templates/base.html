@@ -67,7 +67,8 @@
 <!-- BARRA SUPERIOR DE MARCA -->
 <nav class="navbar navbar-custom py-2 px-3 sticky-top">
     <div class="container-fluid d-flex align-items-center justify-content-between">
-        <a href="{% url 'inicio' %}" class="d-flex align-items-center gap-2 text-decoration-none">
+        <!-- Redirección dinámica: Dashboard para usuario logueado, Inicio público para clientes -->
+        <a href="{% if user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'inicio' %}{% endif %}" class="d-flex align-items-center gap-2 text-decoration-none">
             {% if perfil and perfil.logo %}
                 <img src="{{ perfil.logo.url }}" alt="Logo {{ perfil.nombre_tienda }}" style="height: 32px; width: auto; object-fit: contain;">
             {% else %}
@@ -78,8 +79,11 @@
             </span>
         </a>
 
-        {% if user.is_authenticated and not es_subdominio %}
-            <a href="/dashboard/" class="btn btn-sm btn-outline-light" style="font-size: 12px;">📊 Panel</a>
+        {% if user.is_authenticated %}
+            <div class="d-flex align-items-center gap-2">
+                <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-light" style="font-size: 12px;">📊 Dashboard</a>
+                <a href="{% url 'logout' %}" class="btn btn-sm btn-danger" style="font-size: 12px;">🚪 Salir</a>
+            </div>
         {% endif %}
     </div>
 </nav>
@@ -102,7 +106,8 @@
 <div class="nav-subbar py-2 px-3 shadow-sm">
     <div class="container d-flex align-items-center justify-content-between flex-wrap gap-2">
         <div class="d-flex align-items-center gap-3">
-            <a href="{% url 'inicio' %}" class="text-dark text-decoration-none fw-bold small">🏠 Inicio</a>
+            <!-- Botón Inicio Inteligente -->
+            <a href="{% if user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'inicio' %}{% endif %}" class="text-dark text-decoration-none fw-bold small">🏠 Inicio</a>
             <a href="{% url 'ver_carrito' %}" class="text-dark text-decoration-none fw-bold small">
                 🛒 Carrito <span class="badge bg-dark rounded-pill">{{ cantidad_carrito|default:0 }}</span>
             </a>
