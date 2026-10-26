@@ -114,7 +114,7 @@ def crear_categoria(request):
         return redirect('crear_categoria') # Te recarga la misma página para verla en la lista
 
     categorias = Categoria.objects.filter(usuario=request.user)
-    return render(request, 'admin/crear_categoria.html', {'categorias': categorias})
+    return render(request, 'crear_categoria.html', {'categorias': categorias})
 
 @login_required
 def eliminar_categoria(request, categoria_id):
