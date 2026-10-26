@@ -37,21 +37,17 @@ urlpatterns = [
     # ===============================
     path('buscar/', catalogo.buscar_productos, name='buscar_productos'),
     path('producto/<int:id>/<slug:slug>/', catalogo.detalle_producto, name='detalle_producto'),
-    #path('productos/nuevo/',views.crear_producto,name='crear_producto'),
     path('productos/mis-productos/', admin_catalogo.mis_productos, name='mis_productos'),
-    path('productos/eliminar/<int:id>/',admin_catalogo.eliminar_producto,name='eliminar_producto'),
-    #path('productos/editar/<int:id>/',views.editar_producto,name='editar_producto'),
-    path('productos/<int:id>/eliminar-imagen/',admin_catalogo.eliminar_imagen_producto,name='eliminar_imagen_producto'),
-    path('imagen-galeria/eliminar/<int:id>/',admin_catalogo.eliminar_imagen_galeria,name='eliminar_imagen_galeria'),
+    path('productos/eliminar/<int:id>', admin_catalogo.eliminar_producto, name='eliminar_producto'),
+    path('productos/<int:id>/eliminar-imagen/', admin_catalogo.eliminar_imagen_producto, name='eliminar_imagen_producto'),
+    path('imagen-galeria/eliminar/<int:id>/', admin_catalogo.eliminar_imagen_galeria, name='eliminar_imagen_galeria'),
     path('categoria/<int:categoria_id>/', views.productos_por_categoria, name='productos_por_categoria'),
-    path('categorias/nueva/',admin_catalogo.crear_categoria,name='crear_categoria'),
+    path('categorias/nueva/', admin_catalogo.crear_categoria, name='crear_categoria'),
     path('top-productos/', catalogo.productos_top, name='top_productos'),
-    # Ruta para crear un producto nuevo
+    
+    # Rutas unificadas para crear y editar usando el mismo controlador
     path('productos/nuevo/', admin_catalogo.guardar_producto_view, name='crear_producto'),
-    
-    # Ruta para editar un producto existente (recibe la clave primaria 'pk')
-    path('productos/<int:pk>/editar/', views.guardar_producto_view, name='editar_producto'),
-    
+    path('productos/<int:pk>/editar/', admin_catalogo.guardar_producto_view, name='editar_producto'),
     # ===============================
     # 🛒 CARRITO
     # ===============================

@@ -121,16 +121,17 @@ def crear_categoria(request):
         'crear_categoria.html'
     )
 
+@login_required
 def guardar_producto_view(request, pk=None):
     """
     Controlador unificado de nivel Enterprise.
     Delega la lógica pesada a ProductoService y gestiona el flujo HTTP y UX.
     """
     if pk:
-        producto = get_object_or_404(Producto, pk=pk)
+        producto = get_object_or_404(Producto, pk=pk, usuario=request.user)
         accion = "actualizado"
     else:
-        producto = Producto()
+        producto = None  # None indica que es un producto nuevo
         accion = "creado"
 
     if request.method == 'POST':
@@ -145,18 +146,18 @@ def guardar_producto_view(request, pk=None):
             logger.error(f"Error crítico en controlador al procesar producto: {str(e)}")
             messages.error(request, f"⚠️ Error interno: No se guardaron los cambios. Motivo: {str(e)}")
             
-            # ✨ RUTAS CORREGIDAS: Apuntando a la raíz de templates para evitar el TemplateDoesNotExist
-            return render(request, f'{"editar_producto" if pk else "crear_producto"}.html', {
+            # ✨ Siempre renderiza la plantilla unificada de edición/creación
+            return render(request, 'editar_producto.html', {
                 'producto': producto,
                 'valores': request.POST,  
-                'categorias': Categoria.objects.all()
+                'categorias': Categoria.objects.filter(usuario=request.user)
             })
 
     # 🔄 Carga por petición GET normal (Edición o Creación limpia)
     valores_iniciales = producto if pk else None
 
-    # ✨ RUTAS CORREGIDAS: Apuntando a la raíz de templates para evitar el TemplateDoesNotExist
-    return render(request, f'{"editar_producto" if pk else "crear_producto"}.html', {
+    # ✨ Siempre renderiza la plantilla unificada
+    return render(request, 'editar_producto.html', {
         'producto': producto,
         'valores': valores_iniciales,
         'categorias': Categoria.objects.filter(usuario=request.user)
