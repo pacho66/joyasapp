@@ -44,6 +44,18 @@
 
 <div style="max-width: 1200px; margin: auto; padding: 20px; font-family: 'Segoe UI', system-ui, sans-serif;">
 
+    <!-- ⬅️ BARRA DE NAVEGACIÓN Y RETORNO OBLIGATORIO -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+        <a href="{% url 'dashboard' %}" class="btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #f1f5f9; color: #334155; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; border: 1px solid #cbd5e1;">
+            ⬅️ Volver al Dashboard
+        </a>
+        
+        <!-- 🚪 Botón de Salida / Cerrar Sesión -->
+        <a href="{% url 'logout' %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #fef2f2; color: #dc2626; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; border: 1px solid #fecaca;">
+            🚪 Salir
+        </a>
+    </div>
+
     <!-- 🏦 ENCABEZADO DE CATEGORÍA ERP -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-bottom: 2px solid #eee; padding-bottom: 10px; flex-wrap: wrap; gap: 10px;">
         <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
@@ -55,7 +67,6 @@
                 <a href="#" style="color: #666; text-decoration: none; padding-bottom: 12px;">📈 Estadísticas</a>
             </nav>
         </div>
-        <a href="{% url 'dashboard' %}" style="background:#222; color:white; padding:8px 14px; border-radius:6px; text-decoration:none; font-size: 14px; font-weight: bold;">📊 Dashboard</a>
     </div>
 
     <!-- ✅ MENSAJES DEL SISTEMA -->
@@ -230,7 +241,7 @@
             const categoria = boton.getAttribute("data-categoria") || "fabricacion";
             const observaciones = boton.getAttribute("data-observaciones") || "";
 
-            formulario.setAttribute("action", `/lista-gastos/editar/${id}/`);
+            formulario.setAttribute("action", /lista-gastos/editar/${id}/);
             document.getElementById("id_nombre").value = nombre;
             document.getElementById("id_monto").value = monto;
             document.getElementById("id_categoria").value = categoria;

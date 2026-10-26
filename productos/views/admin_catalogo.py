@@ -104,24 +104,18 @@ def lista_productos(request):
 
 @login_required
 def crear_categoria(request):
-
     if request.method == 'POST':
-
         nombre = request.POST.get('nombre')
-
-        Categoria.objects.create(
-            nombre=nombre,
-            usuario=request.user
-        )
-
+        if nombre:
+            Categoria.objects.create(
+                nombre=nombre,
+                usuario=request.user
+            )
         return redirect('dashboard')
 
-    return render(
-        request,
-        'crear_categoria.html'
-    )
-
+    return render(request, 'crear_categoria.html')
 @login_required
+
 def guardar_producto_view(request, pk=None):
     """
     Controlador unificado de nivel Enterprise.

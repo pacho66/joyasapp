@@ -162,6 +162,18 @@
 
 <div class="inventory-container">
 
+    <!-- ⬅️ BARRA DE NAVEGACIÓN Y RETORNO OBLIGATORIO -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+        <a href="{% url 'dashboard' %}" class="btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #f1f5f9; color: #334155; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; border: 1px solid #cbd5e1;">
+            ⬅️ Volver al Dashboard
+        </a>
+        
+        <!-- 🚪 Botón de Salida / Cerrar Sesión -->
+        <a href="{% url 'logout' %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #fef2f2; color: #dc2626; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; border: 1px solid #fecaca;">
+            🚪 Salir
+        </a>
+    </div>
+
     <!-- Cabecera de Control -->
     <div class="inventory-header">
         <h2 style="margin: 0; font-size: 24px; color: #111; font-weight: 700;">📦 Panel de Inventario</h2>
@@ -218,7 +230,7 @@
                 </div>
             </div>
 
-            <!-- 🔥 MATRIZ FINANCIERA PERMANENTE (Sin el símbolo $ repetido) -->
+            <!-- 🔥 MATRIZ FINANCIERA PERMANENTE -->
             <div class="financial-box">
                 <div class="financial-item">
                     <span class="financial-label">🏭 Costo:</span>

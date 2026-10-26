@@ -1,64 +1,33 @@
 {% extends 'base.html' %}
-{% load static %}
-
 {% block content %}
-<div class="container py-4">
-    <!-- Encabezado de la Categoría -->
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-        <div>
-            <span class="badge bg-dark text-gold mb-1">Categoría Oficial</span>
-            <h1 class="fw-bold text-dark mb-0">{{ categoria.nombre }}</h1>
-        </div>
-        <a href="javascript:history.back()" class="btn btn-outline-dark btn-sm fw-semibold rounded-pill px-3">
-            ⬅️ Volver
+
+<div class="container py-5" style="max-width: 600px;">
+    <!-- Botón de Retorno -->
+    <div class="mb-4">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm fw-semibold rounded-pill px-3">
+            ⬅️ Volver al Dashboard
         </a>
     </div>
 
-    <!-- Cuadrícula (Grid) de Productos idéntica al catálogo principal -->
-    {% if productos %}
-        <div class="row g-4">
-            {% for producto in productos %}
-                <div class="col-6 col-md-4 col-lg-3">
-                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden position-relative">
-                        <!-- Imagen del producto -->
-                        <div class="bg-light text-center overflow-hidden position-relative" style="height: 200px;">
-                            {% if producto.imagen %}
-                                <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" class="w-100 h-100 object-fit-cover">
-                            {% else %}
-                                <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted bg-secondary bg-opacity-10">
-                                    <i class="bi bi-gem fs-1 text-gold"></i>
-                                </div>
-                            {% endif %}
-                        </div>
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        <h2 class="fw-bold text-dark mb-4">📂 Crear Nueva Categoría</h2>
+        
+        <form method="POST">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label for="nombre" class="form-label fw-bold text-secondary">Nombre de la Categoría</label>
+                <input type="text" class="form-control rounded-3 py-2" id="nombre" name="nombre" placeholder="Ej. Anillos, Oro 18K, Relojes..." required>
+            </div>
 
-                        <!-- Cuerpo de la tarjeta -->
-                        <div class="card-body d-flex flex-column p-3">
-                            <h5 class="card-title fw-bold fs-6 text-dark text-truncate mb-1">{{ producto.nombre }}</h5>
-                            
-                            {% if producto.gramos %}
-                                <p class="text-muted small mb-2">⚖️ {{ producto.gramos }} gr</p>
-                            {% endif %}
-
-                            <div class="mt-auto">
-                                <div class="fw-bold text-dark fs-5 mb-2">
-                                    ${{ producto.precio|floatformat:0 }}
-                                </div>
-                                <a href="{% url 'detalle_producto' producto.id %}" class="btn btn-dark w-100 btn-sm fw-bold rounded-3">
-                                    Ver Joya 💎
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="text-center py-5">
-            <div class="fs-1 mb-3">💍</div>
-            <h4 class="fw-bold text-dark">No hay joyas en esta categoría</h4>
-            <p class="text-secondary small">Pronto agregaremos nuevas piezas exclusivas.</p>
-            <a href="/" class="btn btn-sm fw-bold px-4 py-2 rounded-3 mt-2 text-white" style="background: #d4af37;">Ir al Catálogo Principal</a>
-        </div>
-    {% endif %}
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="{% url 'dashboard' %}" class="btn btn-light rounded-3 px-4">Cancelar</a>
+                <button type="submit" class="btn text-white fw-bold rounded-3 px-4" style="background: #2563eb;">
+                    Guardar Categoría
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
+
 {% endblock %}
