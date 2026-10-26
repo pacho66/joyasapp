@@ -1,3 +1,6 @@
+
+
+
 import traceback
 import time
 from decimal import Decimal
@@ -408,7 +411,6 @@ def ganancias(request):
     # Sumamos los montos de todos los gastos activos del usuario en los últimos 30 días
     gastos_mes = Gasto.objects.filter(
         usuario=usuario,
-        activo=True,
         fecha__date__gte=hace_30
     ).aggregate(total=Sum('monto'))['total'] or 0
 
