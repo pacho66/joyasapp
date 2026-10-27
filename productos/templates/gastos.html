@@ -241,7 +241,9 @@
             const categoria = boton.getAttribute("data-categoria") || "fabricacion";
             const observaciones = boton.getAttribute("data-observaciones") || "";
 
-            formulario.setAttribute("action", /lista-gastos/editar/${id}/);
+            // ✅ URL corregida con comillas invertidas para interpolación segura
+            formulario.setAttribute("action", `/lista-gastos/editar/${id}/`);
+            
             document.getElementById("id_nombre").value = nombre;
             document.getElementById("id_monto").value = monto;
             document.getElementById("id_categoria").value = categoria;

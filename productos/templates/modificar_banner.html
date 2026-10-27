@@ -20,7 +20,7 @@
             padding: 20px 15px !important;
         }
         
-        /* Hace que campos compartidos (como Fecha Inicio/Fin o Ícono/Título) se pongan uno abajo del otro */
+        /* Hace que campos compartidos se pongan uno abajo del otro */
         .row.g-2 {
             display: flex !important;
             flex-direction: column !important;
@@ -35,6 +35,14 @@
 </style>
 
 <div class="container my-4" style="max-width: 1100px;">
+    
+    <!-- ⬅️ Botón de Retorno (Coherente con el resto del SaaS) -->
+    <div class="mb-3">
+        <a href="{% url 'dashboard' %}" class="btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #f1f5f9; color: #334155; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; border: 1px solid #cbd5e1;">
+            ⬅️ Volver al Dashboard
+        </a>
+    </div>
+
     <div class="row g-4">
         
         <!-- ==================== COLUMNA IZQUIERDA: FORMULARIO DE CONFIGURACIÓN ==================== -->
@@ -46,17 +54,17 @@
                     <p class="text-muted small">Configura la vitrina principal de tu joyería para el celular.</p>
                 </div>
 
-                <!-- Formulario unificado con soporte para multipart/form-data -->
+                <!-- Formulario unificado con soporte indispensable para archivos (multipart/form-data) -->
                 <form method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
                     
                     <!-- Nombre de la Tienda -->
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-uppercase text-secondary">Nombre de la Tienda</label>
-                        <input type="text" id="input_titulo"name="nombre_tienda" value="{{ perfil.nombre_tienda|default:'' }}" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Ej: PG Joyas o Platería González">
+                        <input type="text" id="input_titulo" name="nombre_tienda" value="{{ perfil.nombre_tienda|default:'' }}" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Ej: PG Joyas o Platería González">
                     </div>
 
-                    <!-- 🌐 CONFIGURACIÓN DE REDES SOCIALES (CAMPOS REALES) -->
+                    <!-- 🌐 CONFIGURACIÓN DE REDES SOCIALES -->
                     <div class="card p-3 bg-light rounded-3 border mb-4">
                         <span class="badge bg-secondary text-uppercase px-2 py-1 rounded-pill small mb-3 align-self-start" style="font-size: 0.7rem;">Enlaces Comerciales</span>
     
@@ -88,7 +96,7 @@
                         <textarea id="input_mensaje" name="banner_texto" rows="2" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" placeholder="Describe tu oferta o lema principal...">{{ perfil.banner_texto|default:'' }}</textarea>
                     </div>
 
-                    <!-- Subir Imagen de Fondo (Sincronizado con el campo real: banner) -->
+                    <!-- Subir Imagen de Fondo (Sincronizado con request.FILES['banner']) -->
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-uppercase text-secondary">Imagen de Fondo del Banner</label>
                         <input type="file" name="banner" class="form-control p-2" style="border-radius: 10px; font-size: 0.9rem;" accept="image/*">
@@ -112,14 +120,14 @@
                         {% endif %}
                     </div>
                     
-                    <!-- Estilo Visual (Corregido para coincidir con el backend) -->
+                    <!-- Estilo Visual -->
                     <div class="mb-4">
                         <label class="form-label small fw-bold text-uppercase text-secondary">Estilo Color Principal (Filtro Hero)</label>
-                        <select id="input_color" name="color_principal" class="form-select p-2" style="border-radius: 10px; font-size: 0.9rem;">
-                            <option value="#000000" {% if perfil.color_principal == "#000000" %}selected{% endif %}>⚫ Negro Elegante</option>
-                            <option value="#b38938" {% if perfil.color_principal == "#b38938" %}selected{% endif %}>🟡 Dorado Premium</option>
-                            <option value="#2b5876" {% if perfil.color_principal == "#2b5876" %}selected{% endif %}>🔵 Azul Corporativo</option>
-                            <option value="#11998e" {% if perfil.color_principal == "#11998e" %}selected{% endif %}>🟢 Verde Esmeralda</option>
+                        <select id="input_color" name="color_primario" class="form-select p-2" style="border-radius: 10px; font-size: 0.9rem;">
+                            <option value="#000000" {% if perfil.color_primario == "#000000" %}selected{% endif %}>⚫ Negro Elegante</option>
+                            <option value="#b38938" {% if perfil.color_primario == "#b38938" %}selected{% endif %}>🟡 Dorado Premium</option>
+                            <option value="#2b5876" {% if perfil.color_primario == "#2b5876" %}selected{% endif %}>🔵 Azul Corporativo</option>
+                            <option value="#11998e" {% if perfil.color_primario == "#11998e" %}selected{% endif %}>🟢 Verde Esmeralda</option>
                         </select>
                     </div>
 
@@ -162,13 +170,12 @@
             </div>
         </div>
 
-    </div> <!-- Cierre de row g-4 -->
-</div> <!-- Cierre de container my-4 -->
+    </div>
+</div>
 
 <!-- JAVASCRIPT SEGURO PARA EL RENDER EN VIVO -->
 <script>
     function actualizarPreview() {
-        // Actualizar textos dinámicamente con los campos reales
         const tituloInput = document.getElementById('input_titulo');
         const mensajeInput = document.getElementById('input_mensaje');
         const colorSelect = document.getElementById('input_color');
@@ -180,14 +187,11 @@
         if (mensajeInput) {
             document.getElementById('preview_mensaje').innerText = mensajeInput.value || 'Tu mensaje publicitario se verá reflejado aquí en tiempo real.';
         }
-        
-        // Sincronizar el color seleccionado directamente con el fondo del banner
         if (colorSelect && banner) {
             banner.style.backgroundColor = colorSelect.value;
         }
     }
 
-    // Escuchas de eventos para actualizar en tiempo real
     document.addEventListener("DOMContentLoaded", function() {
         const inputTitulo = document.getElementById('input_titulo');
         const inputMensaje = document.getElementById('input_mensaje');
