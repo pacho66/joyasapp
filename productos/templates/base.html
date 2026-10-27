@@ -90,7 +90,7 @@
 
 <!-- BANNER PRINCIPAL DE LA TIENDA (ÚNICO) -->
 {% if perfil %}
-    <div class="tenant-banner-hero" style="{% if perfil.banner %}background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.75)), url('{{ perfil.banner.url }}'); background-size: cover; background-position: center;{% else %}background: linear-gradient(135deg, #111111 0%, #2a2a2a 100%);{% endif %}">
+    <div class="tenant-banner-hero" style="{% if perfil.banner %}background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.75)), url('{{ perfil.banner.url }}'); background-size: cover; background-position: center;{% else %}background: linear-gradient(135deg, {{ perfil.color_primario|default:'#122216' }} 0%, {{ perfil.color_secundario|default:'#000000' }} 100%);{% endif %}">
         <div class="px-3" style="position: relative; z-index: 2; color: #ffffff;">
             <h1 class="m-0 fw-bold fs-3 text-uppercase" style="letter-spacing: 1px; text-shadow: 2px 2px 6px rgba(0,0,0,0.8);">
                 {{ perfil.nombre_tienda }}
@@ -101,7 +101,6 @@
         </div>
     </div>
 {% endif %}
-
 <!-- SUB-BARRA DE NAVEGACIÓN Y MENÚ DESPLEGABLE -->
 <div class="nav-subbar py-2 px-3 shadow-sm">
     <div class="container d-flex align-items-center justify-content-between flex-wrap gap-2">
