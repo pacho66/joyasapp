@@ -32,8 +32,7 @@ def configurar_negocio(request):
     perfil = request.user.perfil
 
     if request.method == 'POST':
-        form = ConfiguracionNegocioForm(request.POST, request.FILES)
-
+        form = ConfiguracionNegocioForm(request.POST, request.FILES, instance=perfil)
         if form.is_valid():
             # 🌐 GUARDAR SUBDOMINIO (Limpiando espacios y pasándolo a minúsculas)
             perfil.subdominio = form.cleaned_data.get('subdominio', '').lower().strip()
