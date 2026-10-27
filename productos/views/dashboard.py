@@ -1,32 +1,30 @@
-
-
-
-import traceback
+import logging
 import time
-from decimal import Decimal
+import traceback
 from datetime import timedelta
+from decimal import Decimal
 
 import openpyxl
+from openpyxl.utils import get_column_letter
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum, Avg, Q
+from django.db.models import Avg, Q, Sum
 from django.db.models.functions import TruncDate
 from django.http import HttpResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from ..models import (
-    Perfil,
-    Pedido,
     Cliente,
-    Producto,
     Gasto,
+    Pedido,
     PedidoItem,
+    Perfil,
+    Producto,
 )
-import logging
 
-
+logger = logging.getLogger(__name__)
 # =========================================================================
 # 📊 BLOQUE 7: DASHBOARD ADMINISTRATIVO, CRM Y ESTADÍSTICAS
 # =========================================================================
