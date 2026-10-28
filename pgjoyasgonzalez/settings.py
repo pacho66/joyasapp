@@ -86,7 +86,7 @@ STORAGES = {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
     },
     "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage", # 👈 CAMBIÁNDOLO A ESTO
     },
 }
 #DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
@@ -204,3 +204,22 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 WOMPI_PUBLIC_KEY = os.getenv("WOMPI_PUBLIC_KEY")
 WOMPI_PRIVATE_KEY = os.getenv("WOMPI_PRIVATE_KEY")
 print("WOMPI PUBLIC:", os.getenv("WOMPI_PUBLIC_KEY"))
+
+JAZZMIN_SETTINGS = {
+    "site_title": "JoyasApp Admin",
+    "site_header": "JoyasApp",
+    "site_brand": "💎 JoyasApp SaaS",
+    "welcome_sign": "Bienvenido al Panel de Control Global de JoyasApp",
+    "copyright": "JoyasApp Ltda",
+    
+    # Opcional: Iconos para tus modelos de base de datos
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        # Aquí puedes mapear tus modelos, ej: "tu_app.perfil": "fas fa-store"
+    },
+    
+    # Estilo visual de la interfaz
+    "theme": "flatly",  # Puedes probar otros como "cosmo", "lumen", "darkly", etc.
+}
