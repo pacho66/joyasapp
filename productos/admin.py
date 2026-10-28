@@ -163,6 +163,8 @@ class PedidoAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
+        # Prefetch para acelerar la carga y evitar consultas N+1
+        qs = qs.prefetch_related('items__producto')
         if request.user.is_superuser:
             return qs
         return qs.filter(usuario=request.user)
@@ -173,18 +175,28 @@ class PedidoAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
     def whatsapp_pedido(self, obj):
-        mensaje = f"Hola {obj.cliente_nombre}, te confirmo tu pedido 💎\n\nOrden: {obj.numero_orden}\n\n"
+        cliente = obj.cliente_nombre or "Cliente"
+        telefono = obj.cliente_telefono or ""
+        total_pedido = obj.total or 0
+        
+        mensaje = f"Hola {cliente}, te confirmo tu pedido 💎\n\nOrden: {obj.numero_orden}\n\n"
+        
         for item in obj.items.all():
-            mensaje += f"{item.producto.nombre} x{item.cantidad} - ${item.total_final:,.0f}\n".replace(",", ".")
-        mensaje += f"\nTotal: ${obj.total:,.0f}".replace(",", ".")
-        url = f"https://wa.me/57{obj.cliente_telefono}?text={quote(mensaje)}"
+            nombre_prod = item.producto.nombre if item.producto else "Producto"
+            total_item = item.total_final or 0
+            mensaje += f"{nombre_prod} x{item.cantidad} - ${total_item:,.0f}\n".replace(",", ".")
+            
+        mensaje += f"\nTotal: ${total_pedido:,.0f}".replace(",", ".")
+        url = f"https://wa.me/57{telefono}?text={quote(mensaje)}"
         return format_html('<a href="{}" target="_blank">📲 WhatsApp</a>', url)
     whatsapp_pedido.short_description = "WhatsApp"
 
     def envio_info(self, obj):
-        if obj.costo_envio == 0:
-            return f"Gratis - {obj.tipo_envio}"
-        return f"${obj.costo_envio:,.0f} - {obj.tipo_envio}".replace(",", ".")
+        costo = obj.costo_envio or 0
+        tipo = obj.tipo_envio or "Estándar"
+        if costo == 0:
+            return f"Gratis - {tipo}"
+        return f"${costo:,.0f} - {tipo}".replace(",", ".")
     envio_info.short_description = "Envío"
 
     def get_urls(self):
@@ -216,7 +228,7 @@ class PedidoAdmin(admin.ModelAdmin):
         if obj.porcentaje_descuento and obj.porcentaje_descuento > 0:
             return f"{obj.porcentaje_descuento}%"
         elif obj.descuento_total and obj.descuento_total > 0:
-            return f"${obj.descuento_total:,.0f}"
+            return f"${obj.descuento_total:,.0f}".replace(",", ".")
         return "-"
     descuento_tipo.short_description = "Descuento"
 
@@ -231,10 +243,14 @@ class PedidoAdmin(admin.ModelAdmin):
     ver_en_web.short_description = "Pedidos"
 
     def enviar_whatsapp(self, obj):
-        mensaje = f"Hola, te confirmo tu pedido:\n\nOrden: {obj.numero_orden}\n"
+        cliente = obj.cliente_nombre or "Cliente"
+        mensaje = f"Hola {cliente}, te confirmo tu pedido:\n\nOrden: {obj.numero_orden}\n"
         for item in obj.items.all():
-            mensaje += f"{item.producto.nombre} x{item.cantidad} - ${item.precio}\n"
-        mensaje += f"\nTotal: ${obj.total}"
+            nombre_prod = item.producto.nombre if item.producto else "Producto"
+            precio = item.precio or 0
+            mensaje += f"{nombre_prod} x{item.cantidad} - ${precio}\n"
+        total_pedido = obj.total or 0
+        mensaje += f"\nTotal: ${total_pedido}"
         url = f"https://wa.me/573215280610?text={quote(mensaje)}"
         return format_html('<a href="{}" target="_blank">📲 WhatsApp</a>', url)
     enviar_whatsapp.short_description = "WhatsApp"
@@ -269,7 +285,6 @@ class PedidoAdmin(admin.ModelAdmin):
         ws_detalle = wb.create_sheet(title="Detalle")
         ws_detalle.append(["Orden", "Producto", "Cantidad", "Gramos", "Precio Unitario", "Subtotal", "Descuento", "IVA", "Total"])
 
-        # 🎯 IDENTACIÓN CORREGIDA: Todo el proceso contable ahora corre DENTRO del bucle de pedidos
         for pedido in queryset:
             subtotal_pedido = Decimal('0')
             iva_total = Decimal('0')
@@ -277,11 +292,11 @@ class PedidoAdmin(admin.ModelAdmin):
             descuento_total = Decimal('0')
 
             for item in pedido.items.all():
-                cantidad = Decimal(item.cantidad)
-                precio = Decimal(item.precio)
+                cantidad = Decimal(item.cantidad or 0)
+                precio = Decimal(item.precio or 0)
 
                 gramos = ''
-                if item.producto.tipo_venta == 'gramo':
+                if item.producto and item.producto.tipo_venta == 'gramo':
                     peso = item.producto.peso_producto or 1
                     gramos = cantidad * Decimal(peso)
                     base = gramos * precio
@@ -299,8 +314,10 @@ class PedidoAdmin(admin.ModelAdmin):
                 rete_total += rete
                 descuento_total += descuento
 
+                nombre_prod = item.producto.nombre if item.producto else "Producto"
+
                 ws_detalle.append([
-                    pedido.numero_orden, item.producto.nombre, float(cantidad),
+                    pedido.numero_orden, nombre_prod, float(cantidad),
                     float(gramos) if gramos else '', float(precio), float(subtotal),
                     float(descuento), float(iva), float(total),
                 ])
@@ -308,7 +325,7 @@ class PedidoAdmin(admin.ModelAdmin):
             ws_resumen.append([
                 pedido.numero_orden, pedido.fecha.strftime('%Y-%m-%d') if pedido.fecha else '',
                 pedido.cliente_nombre or '', float(subtotal_pedido), float(iva_total),
-                float(rete_total), float(descuento_total), float(pedido.total),
+                float(rete_total), float(descuento_total), float(pedido.total or 0),
             ])
 
         for ws in [ws_resumen, ws_detalle]:
@@ -329,22 +346,10 @@ class PedidoAdmin(admin.ModelAdmin):
         return response
     exportar_excel.short_description = "📊 Excel contable (resumen + detalle)"
 
-
-admin.site.register(Producto, ProductoAdmin)
-admin.site.register(CarritoItem)
-
-try:
-    admin.site.unregister(Categoria)
-except:
-    pass
-
-@admin.action(description="Eliminar categorías seleccionadas")
-def eliminar_categorias(modeladmin, request, queryset):
-    queryset.delete()
-
+@admin.register(Categoria)
 class CategoriaAdmin(admin.ModelAdmin):
     list_display = ('id', 'nombre', 'usuario')
-    actions = [eliminar_categorias]
+    actions = ['eliminar_categorias']
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -357,4 +362,8 @@ class CategoriaAdmin(admin.ModelAdmin):
             obj.usuario = request.user
         super().save_model(request, obj, form, change)
 
-admin.site.register(Categoria, CategoriaAdmin)
+    @admin.action(description="🗑️ Eliminar categorías seleccionadas")
+    def eliminar_categorias(self, request, queryset):
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(request, f"Se eliminaron {count} categorías correctamente.", messages.SUCCESS)
