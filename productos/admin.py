@@ -13,6 +13,8 @@ from django.shortcuts import redirect
 import openpyxl
 from django.http import HttpResponse
 from decimal import Decimal
+from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 # =====================================
 # 🔥 1. FUNCIÓN MASIVA (AQUÍ VA)
@@ -220,10 +222,10 @@ class PedidoAdmin(admin.ModelAdmin):
 
     def iva_activo(self, obj):
         if obj.aplica_iva:
-            return format_html('<span style="color:white; background:green; padding:4px 8px; border-radius:5px;">✔️ Sí</span>')
-        return format_html('<span style="color:white; background:red; padding:4px 8px; border-radius:5px;">✖️ No</span>')
+            return mark_safe('<span style="color:white; background:green; padding:4px 8px; border-radius:5px;">✔️ Sí</span>')
+        return mark_safe('<span style="color:white; background:red; padding:4px 8px; border-radius:5px;">✖️ No</span>')
+    
     iva_activo.short_description = "IVA"
-
     def descuento_tipo(self, obj):
         if obj.porcentaje_descuento and obj.porcentaje_descuento > 0:
             return f"{obj.porcentaje_descuento}%"
