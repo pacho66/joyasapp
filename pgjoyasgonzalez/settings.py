@@ -71,7 +71,8 @@ INSTALLED_APPS = [
     'cloudinary',
     'tienda',
     'productos.apps.ProductosConfig',
-    'django.contrib.humanize',   
+    'django.contrib.humanize',
+    'axes',   
 ]
 
 CLOUDINARY_STORAGE = {
@@ -101,6 +102,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'axes.middleware.AxesMiddleware', 
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'productos.middleware.SubdomainTenantMiddleware',
@@ -231,3 +233,34 @@ JAZZMIN_SETTINGS = {
     # Estilo visual de la interfaz
     "theme": "flatly",  # Puedes probar otros como "cosmo", "lumen", "darkly", etc.
 }
+
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# 🔒 Límites de bloqueo
+AXES_FAILURE_LIMIT = 5         # Bloquea al 5º intento fallido
+AXES_COOLOFF_TIME = 1          # Bloqueo por 1 hora
+AXES_RESET_ON_SUCCESS = True   # Si inicia sesión bien, limpia los intentos
+
+# 🔒 Configuración de bloqueo en axes
+AXES_LOCKOUT_TEMPLATE = 'autenticacion/bloqueado.html'  # O la ruta donde guardes tu template
+
+# ==========================================
+# 🛡️ SEGURIDAD Y CABECERAS HTTP (PRODUCCIÓN)
+# ==========================================
+# Forzar HTTPS y cookies seguras
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+# Protección de Navegador contra XSS y Sniffing
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+
+# HSTS (Fuerza al navegador a usar siempre HTTPS por 1 año)
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Bloqueado | JoyasApp</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f8f9fa;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .card {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            max-width: 440px;
+            width: 100%;
+            padding: 35px 25px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        }
+        .icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        h1 {
+            font-size: 22px;
+            margin-bottom: 12px;
+            color: #111;
+        }
+        p {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+        .btn-action {
+            display: block;
+            width: 100%;
+            background: #000;
+            color: #fff;
+            padding: 12px 0;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        .btn-action:hover {
+            background: #222;
+        }
+        .contact-link {
+            font-size: 13px;
+            color: #666;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="icon">🔒</div>
+    <h1>Acceso bloqueado por seguridad</h1>
+    <p>
+        Hemos detectado demasiados intentos fallidos de inicio de sesión desde tu dirección IP. 
+        Por tu seguridad y la de tu tienda, la cuenta o acceso ha sido suspendido temporalmente.
+    </p>
+    <p style="font-weight: 500; color: #222;">
+        Por favor, reintenta en <strong>1 hora</strong> o restablece tu contraseña.
+    </p>
+
+    <a href="{% url 'password_reset' %}" class="btn-action">
+        Restablecer mi contraseña
+    </a>
+
+    <p style="margin-top: 15px; margin-bottom: 0;">
+        ¿Necesitas ayuda? 
+        <a href="https://wa.me/573001112233" target="_blank" class="contact-link">Contactar a Soporte</a>
+    </p>
+</div>
+
+</body>
+</html>
