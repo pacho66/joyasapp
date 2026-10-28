@@ -346,6 +346,10 @@ class PedidoAdmin(admin.ModelAdmin):
         return response
     exportar_excel.short_description = "📊 Excel contable (resumen + detalle)"
 
+
+admin.site.register(Producto, ProductoAdmin)
+admin.site.register(CarritoItem)
+
 @admin.register(Categoria)
 class CategoriaAdmin(admin.ModelAdmin):
     list_display = ('id', 'nombre', 'usuario')
