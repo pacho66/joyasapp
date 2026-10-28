@@ -86,9 +86,12 @@ STORAGES = {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
     },
     "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage", # 👈 Cambiado a estático estándar (evita el error de compresión)
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
+
+# 👈 AGREGA ESTA LÍNEA EXPLÍCITAMENTE para calmar a django-cloudinary-storage en Django 6.0:
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 #DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 MIDDLEWARE = [
