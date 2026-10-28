@@ -20,27 +20,55 @@ background:white;
 
     <p>Usuario</p>
     {{ form.username }}
+    {% if form.username.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.username.errors.0 }}</p>{% endif %}
     <hr>
 
     <p>Correo</p>
     {{ form.email }}
+    {% if form.email.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.email.errors.0 }}</p>{% endif %}
     <hr>
 
     <p>Contraseña</p>
     {{ form.password }}
+    {% if form.password.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.password.errors.0 }}</p>{% endif %}
     <hr>
 
     <p>Confirmar contraseña</p>
     {{ form.confirmar_password }}
+    {% if form.confirmar_password.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.confirmar_password.errors.0 }}</p>{% endif %}
     <hr>
 
     <p>Nombre tienda</p>
     {{ form.nombre_tienda }}
+    {% if form.nombre_tienda.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.nombre_tienda.errors.0 }}</p>{% endif %}
     <hr>
 
     <p>WhatsApp</p>
     {{ form.whatsapp }}
+    {% if form.whatsapp.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.whatsapp.errors.0 }}</p>{% endif %}
     <hr>
+
+    <!-- 📜 ACEPTACIÓN DE TÉRMINOS Y HABEAS DATA -->
+    <div style="display:flex; align-items:flex-start; gap:10px; margin: 15px 0 20px 0;">
+        <div style="margin-top:3px;">
+            {{ form.acepta_terminos }}
+        </div>
+        <label for="{{ form.acepta_terminos.id_for_label }}" style="font-size:13px; color:#444; line-height:1.4; cursor:pointer;">
+            Acepto los 
+            <a href="{% url 'terminos_y_condiciones' %}" target="_blank" style="color:black; font-weight:bold; text-decoration:underline;">
+                Términos y Condiciones
+            </a> 
+            y la 
+            <a href="{% url 'politica_privacidad' %}" target="_blank" style="color:black; font-weight:bold; text-decoration:underline;">
+                Política de Privacidad
+            </a>.
+        </label>
+    </div>
+    {% if form.acepta_terminos.errors %}
+        <p style="color:red; font-size:12px; margin-top:-10px; margin-bottom:15px; font-weight:bold;">
+            {{ form.acepta_terminos.errors.0 }}
+        </p>
+    {% endif %}
 
     <button type="submit" style="
     width:100%;
@@ -49,7 +77,8 @@ background:white;
     padding:12px;
     border:none;
     border-radius:6px;
-    font-size:16px;">
+    font-size:16px;
+    cursor:pointer;">
         Registrarme
     </button>
 

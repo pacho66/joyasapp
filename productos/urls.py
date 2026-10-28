@@ -11,6 +11,7 @@ from productos.views import checkout, pedidos, utilidades
 from django.contrib.auth import views as auth_views
 from .views import contabilidad
 from .views.catalogo import catalogo_tienda
+from django.views.generic import TemplateView
 
 urlpatterns = [
 
@@ -26,6 +27,11 @@ urlpatterns = [
     path('registro/', auth.registro, name='registro'),
     path('login/', auth.iniciar_sesion, name='login'),
     path('logout/', auth.cerrar_sesion, name='logout'),
+
+     # 📜 Páginas Legales (Habeas Data y Términos SaaS)
+    path('terminos-y-condiciones/', TemplateView.as_view(template_name='terminos.html'), name='terminos_y_condiciones'),
+    path('politica-de-privacidad/', TemplateView.as_view(template_name='privacidad.html'), name='politica_privacidad'),
+
     # 🔑 Rutas de recuperación de contraseña
     path('password_reset/', auth_views.PasswordResetView.as_view(template_name='password_reset_form.html'), name='password_reset'),
     path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='password_reset_done.html'), name='password_reset_done'),

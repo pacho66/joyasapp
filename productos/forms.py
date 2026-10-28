@@ -65,6 +65,18 @@ class RegistroForm(forms.Form):
         })
     )
 
+    # 📜 ACEPTACIÓN DE TÉRMINOS Y HABEAS DATA (NUEVO CAMPO)
+    acepta_terminos = forms.BooleanField(
+        required=True,
+        error_messages={
+            'required': 'Debes aceptar los Términos y Condiciones y la Política de Privacidad para crear tu cuenta.'
+        },
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input',
+            'id': 'acepta_terminos'
+        })
+    )
+
     def clean_username(self):
         username = self.cleaned_data['username'].strip()
         if User.objects.filter(username=username).exists():
@@ -92,7 +104,7 @@ class RegistroForm(forms.Form):
             raise ValidationError("Las contraseñas no coinciden")
 
         return cleaned_data
-
+    
 class ConfiguracionNegocioForm(forms.Form):
     subdominio = forms.CharField(
         max_length=50,
