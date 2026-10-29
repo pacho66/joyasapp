@@ -135,7 +135,7 @@ def registro(request):
     else:
         form = RegistroForm()
 
-    return render(request, 'autenticacion/registro.html', {
+    return render(request, 'registro.html', {
         'form': form,
         'plan_seleccionado': plan_seleccionado
     })
