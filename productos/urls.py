@@ -12,6 +12,7 @@ from django.contrib.auth import views as auth_views
 from .views import contabilidad
 from .views.catalogo import catalogo_tienda
 from django.views.generic import TemplateView
+from .views.dashboard import crear_empleado_tienda
 
 urlpatterns = [
 
@@ -117,7 +118,7 @@ urlpatterns = [
     path('inventario/', admin_catalogo.inventario, name='inventario'),
     path('dashboard/exportar-excel/', views.exportar_excel_dashboard, name='exportar_excel_dashboard'),
     path('crm/', views.panel_crm, name='panel_crm'),
-    path('dashboard/empleados/nuevo/', views.crear_empleado_tienda, name='crear_empleado_tienda'),
+    path('dashboard/empleados/nuevo/', crear_empleado_tienda, name='crear_empleado_tienda'),
 
     # ===============================
     # 💸 GASTOS
