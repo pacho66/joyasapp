@@ -13,7 +13,7 @@ from .views import contabilidad
 from .views.catalogo import catalogo_tienda
 from django.views.generic import TemplateView
 from .views.dashboard import crear_empleado_tienda
-from .views import pagar_plan, webhook_wompi_planes
+from .views import checkout 
 
 urlpatterns = [
 
