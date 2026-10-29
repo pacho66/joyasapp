@@ -13,6 +13,7 @@ from .views import contabilidad
 from .views.catalogo import catalogo_tienda
 from django.views.generic import TemplateView
 from .views.dashboard import crear_empleado_tienda
+from .views import pagar_plan, webhook_wompi_planes
 
 urlpatterns = [
 
@@ -79,6 +80,11 @@ urlpatterns = [
     path('confirmar-pago/<int:pedido_id>/', pedidos.confirmar_pago, name='confirmar_pago'),
     path('pago-fallido/<uuid:token>/', checkout.pago_fallido, name='pago_fallido'),
 
+    # ===============================
+    # 👑 PLANES / SUSCRIPCIONES SAAS (JOYASAPP)
+    # ===============================
+    path('planes/pagar/<str:plan_slug>/', checkout.iniciar_pago_suscripcion_wompi, name='pagar_plan'),
+    path('api/webhook/wompi/suscripciones/', checkout.webhook_wompi_suscripciones, name='webhook_wompi_planes'),
     # ===============================
     # 💳 WEBHOOKS AUTOMÁTICOS
     # ===============================

@@ -570,7 +570,11 @@
                 <div class="max-width-700 mx-auto card-plan-box p-4 text-center">
                     <h3 class="fw-bold text-dark">Plan Básico — $49.900 / mes</h3>
                     <p class="text-secondary">Diseñado para joyeros que están comenzando su proceso de digitalización.</p>
-                    <a href="{% url 'registro' %}?plan=basico" class="btn btn-gold fw-bold mt-2">Crear mi tienda en Plan Básico</a>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'pagar_plan' 'basico' %}" class="btn btn-gold fw-bold mt-2">Pagar Plan Básico ($49.900)</a>
+                    {% else %}
+                        <a href="{% url 'registro' %}?plan=basico" class="btn btn-gold fw-bold mt-2">Crear mi tienda en Plan Básico</a>
+                    {% endif %}
                 </div>
             </div>
 
@@ -578,7 +582,11 @@
                 <div class="max-width-700 mx-auto card-plan-box p-4 border-warning text-center">
                     <h3 class="fw-bold text-dark">Plan Semi — $89.900 / mes</h3>
                     <p class="text-secondary">Ideal para control de inventarios por gramo e integración con Siigo.</p>
-                    <a href="{% url 'registro' %}?plan=semi" class="btn btn-gold fw-bold mt-2">Crear mi tienda en Plan Semi</a>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'pagar_plan' 'semi' %}" class="btn btn-gold fw-bold mt-2">Pagar Plan Semi 🚀 ($89.900)</a>
+                    {% else %}
+                        <a href="{% url 'registro' %}?plan=semi" class="btn btn-gold fw-bold mt-2">Crear mi tienda en Plan Semi</a>
+                    {% endif %}
                 </div>
             </div>
 
@@ -586,10 +594,13 @@
                 <div class="max-width-700 mx-auto card-plan-box p-4 text-center">
                     <h3 class="fw-bold text-dark">Plan Premium — $149.900 / mes</h3>
                     <p class="text-secondary">Subdominio exclusivo, CRM avanzado y soporte 24/7.</p>
-                    <a href="{% url 'registro' %}?plan=premium" class="btn btn-gold fw-bold mt-2">Crear mi tienda en Plan Premium</a>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'pagar_plan' 'premium' %}" class="btn btn-gold fw-bold mt-2">Pagar Plan Premium ($149.900)</a>
+                    {% else %}
+                        <a href="{% url 'registro' %}?plan=premium" class="btn btn-gold fw-bold mt-2">Crear mi tienda en Plan Premium</a>
+                    {% endif %}
                 </div>
             </div>
-
         </div>
     </div>
 </section>

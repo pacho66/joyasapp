@@ -249,7 +249,7 @@ td {
         </div>
     </section>
 
-    <!-- 3. TARJETAS EN CUADRÍCULA DE ACCIÓN RÁPIDA (CON CONFIGURACIÓN DE NEGOCIO) -->
+    <!-- 3. TARJETAS EN CUADRÍCULA DE ACCIÓN RÁPIDA Y PLANES SAAS -->
     <div class="grid-tarjetas-accion">
         <a href="{% url 'panel_crm' %}" class="card-accion">
             <div style="font-size: 24px; margin-bottom: 6px;">🎯</div>
@@ -302,8 +302,25 @@ td {
             <div style="font-size: 24px; margin-bottom: 6px;">➕</div>
             <span style="font-size: 13px; font-weight: 700; color: #0f172a;">Producto</span>
         </a>
-    </div>
 
+        <!-- 👑 TARJETAS DE PLANES Y SUSCRIPCIÓN WOMPI UNIFICADAS -->
+        <a href="{% url 'pagar_plan' 'basico' %}" class="card-accion" style="border: 2px solid #cbd5e1; background: #f8fafc;">
+            <div style="font-size: 20px; margin-bottom: 4px;">🏷️</div>
+            <span style="font-size: 12px; font-weight: 800; color: #0f172a;">Plan Básico</span>
+            <span style="font-size: 11px; color: #64748b; font-weight: 600;">$49.900 / mes</span>
+        </a>
+        <a href="{% url 'pagar_plan' 'semi' %}" class="card-accion" style="border: 2px solid #d4af37; background: #fffdf4;">
+            <div style="font-size: 20px; margin-bottom: 4px;">🚀</div>
+            <span style="font-size: 12px; font-weight: 800; color: #92400e;">Plan Semi</span>
+            <span style="font-size: 11px; color: #b45309; font-weight: 600;">$89.900 / mes</span>
+        </a>
+        <a href="{% url 'pagar_plan' 'premium' %}" class="card-accion" style="border: 2px solid #2563eb; background: #eff6ff; grid-column: span 2;">
+            <div style="font-size: 20px; margin-bottom: 4px;">👑</div>
+            <span style="font-size: 12px; font-weight: 800; color: #1e40af;">Plan Premium (SaaS Total + Subdominio)</span>
+            <span style="font-size: 11px; color: #1d4ed8; font-weight: 600;">$149.900 / mes</span>
+        </a>
+    </div>
+    
     <!-- 4. BALANCE FINANCIERO OPERATIVO -->
     <div class="seccion-card">
         <h3>💰 Balance Financiero Operativo</h3>
