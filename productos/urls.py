@@ -115,7 +115,6 @@ urlpatterns = [
     # 📊 PANEL / SaaS
     # ===============================
     path('dashboard/', views.dashboard, name='dashboard'),
-    path('fabricacion/', views.fabricacion, name='fabricacion'),
     path('renovar/', views.renovar_manual, name='renovar_manual'),
     path('modificar-banner/', views.modificar_banner, name='modificar_banner'),
     path('estadisticas/', views.estadisticas, name='estadisticas'),
@@ -125,6 +124,12 @@ urlpatterns = [
     path('dashboard/exportar-excel/', views.exportar_excel_dashboard, name='exportar_excel_dashboard'),
     path('crm/', views.panel_crm, name='panel_crm'),
     path('dashboard/empleados/nuevo/', crear_empleado_tienda, name='crear_empleado_tienda'),
+
+    # ===============================
+    # 🛠️ MÓDULO DE TALLER Y MANUFACTURA
+    # ===============================
+    path('fabricacion/', views.fabricacion, name='fabricacion'),
+    path('producto/<int:producto_id>/calculadora/', views.guardar_variante_fabricacion, name='calculadora_taller'),
 
     # ===============================
     # 💸 GASTOS

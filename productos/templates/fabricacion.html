@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container py-4">
+    <!-- Encabezado de la Sección -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold m-0">⚙️ Control de Taller y Fabricación</h2>
+            <p class="text-secondary small mt-1">Monitorea el peso, costos de metal con merma, mano de obra y precios sugeridos de tus piezas en producción.</p>
+        </div>
+        <div>
+            <a href="{% url 'mis_productos' %}" class="btn btn-dark fw-bold px-4 py-2 rounded-3 shadow-sm">
+                📦 Ir a Mis Productos / Taller
+            </a>
+        </div>
+    </div>
+
+    <!-- 📊 Tarjetas de Resumen Consolidado -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card p-4 border-0 shadow-sm bg-white rounded-4">
+                <span class="text-secondary small text-uppercase fw-bold">Costo Material + Merma</span>
+                <h3 class="fw-bold text-dark mt-2 mb-0">${{ material_total|floatformat:0 }}</h3>
+                <small class="text-muted mt-1">Incluye gramaje y porcentaje de merma</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-4 border-0 shadow-sm bg-white rounded-4">
+                <span class="text-secondary small text-uppercase fw-bold">Total Mano de Obra</span>
+                <h3 class="fw-bold text-dark mt-2 mb-0">${{ total_mano_obra|floatformat:0 }}</h3>
+                <small class="text-muted mt-1">Acumulado de pagos de taller</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-4 border-0 shadow-sm bg-dark text-white rounded-4">
+                <span class="text-white-50 small text-uppercase fw-bold">Costo Total de Taller</span>
+                <h3 class="fw-bold text-warning mt-2 mb-0">${{ costos_totales|floatformat:0 }}</h3>
+                <small class="text-white-50 mt-1">Inversión total en producción</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📋 Tabla de Variantes Registradas en el Taller -->
+    <div class="card border-0 shadow-sm rounded-4 p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold m-0">💎 Piezas y Variantes en Taller</h5>
+            <span class="badge bg-light text-dark px-3 py-2 border">Total registros: {{ variantes|length }}</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table align-middle table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th class="py-3">Producto / Variante</th>
+                        <th class="py-3">Peso (g)</th>
+                        <th class="py-3">Costo Material</th>
+                        <th class="py-3">Mano de Obra</th>
+                        <th class="py-3">Costo Total</th>
+                        <th class="py-3 text-success">Precio Sugerido</th>
+                        <th class="py-3 text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in variantes %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                {% if v.foto %}
+                                    <img src="{{ v.foto.url }}" alt="{{ v.producto.nombre }}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 8px;">
+                                {% else %}
+                                    <div class="bg-light d-flex align-items-center justify-content-center text-muted rounded-3" style="width: 40px; height: 40px; font-size: 18px;">💍</div>
+                                {% endif %}
+                                <div>
+                                    <strong class="text-dark">{{ v.producto.nombre }}</strong><br>
+                                    <span class="text-secondary small">
+                                        {{ v.nombre_variante|default:"Estándar" }} 
+                                        {% if v.color %} | Color: {{ v.color }}{% endif %}
+                                        {% if v.talla %} | Talla: {{ v.talla }}{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="fw-bold">{{ v.peso|default:0 }}g</span></td>
+                        <td>${{ v.costo_material_con_merma|floatformat:0 }}</td>
+                        <td>${{ v.costo_mano_obra|floatformat:0 }}</td>
+                        <td><strong>${{ v.costo_total|floatformat:0 }}</strong></td>
+                        <td class="text-success fw-bold">${{ v.precio_venta_calculado|floatformat:0 }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'calculadora_taller' v.producto.id %}" class="btn btn-sm btn-outline-dark fw-bold px-3 py-1 rounded-2">
+                                ⚙️ Editar
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <div class="text-muted py-3">
+                                <div style="font-size: 36px; margin-bottom: 8px;">🛠️</div>
+                                <h6 class="fw-bold text-dark">No hay piezas registradas en el taller todavía</h6>
+                                <p class="small text-secondary mb-3">Entra a cualquiera de tus productos y usa la calculadora de taller para registrar sus costos y variantes.</p>
+                                <a href="{% url 'mis_productos' %}" class="btn btn-sm btn-dark fw-bold px-4 py-2 rounded-3">Ir a Mis Productos</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

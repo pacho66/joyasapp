@@ -352,26 +352,59 @@ class ProductoImagen(models.Model):
 
 class ProductoVariante(models.Model):
     producto = models.ForeignKey(
-        Producto,
+        'Producto',
         on_delete=models.CASCADE,
         related_name='variantes'
     )
     
+    # Identificación y atributos comerciales
+    nombre_variante = models.CharField(max_length=100, blank=True, null=True, help_text="Ej: Talla 7 / Oro 18K Ley 750")
     color = models.CharField(max_length=100, null=True, blank=True)
     talla = models.CharField(max_length=50, null=True, blank=True)
+    codigo = models.CharField(max_length=50, blank=True, null=True)
     stock = models.PositiveIntegerField(default=0)
+    activo = models.BooleanField(default=True)
+    foto = CloudinaryField('imagen_variante', blank=True, null=True) 
+
+    # ⚙️ Parámetros de Fabricación y Costos de Taller
+    peso = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal('0.00'), blank=True, null=True, help_text="Peso en gramos (equivalente a gramos)")
+    precio_gramo_metal = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), blank=True, null=True)
+    porcentaje_merma = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.10'), blank=True, null=True) # Ej: 0.10 para 10%
+    costo_mano_obra = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), blank=True, null=True)
+    porcentaje_ganancia = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.30'), blank=True, null=True) # Ej: 0.30 para 30%
+
+    # Precio de venta base (manual o calculado)
     precio_venta = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), blank=True, null=True)
+
+    # 🧮 Propiedades Inteligentes de Cálculo de Taller
+    @property
+    def costo_material_con_merma(self):
+        """Calcula el costo del metal sumando el porcentaje de merma"""
+        p = float(self.peso or 0)
+        m = float(self.porcentaje_merma or 0.10)
+        pg = float(self.precio_gramo_metal or 0)
+        gramos_totales = p * (1 + m)
+        return gramos_totales * pg
+
+    @property
+    def costo_total(self):
+        """Suma el costo del material con merma más la mano de obra"""
+        mo = float(self.costo_mano_obra or 0)
+        return self.costo_material_con_merma + mo
+
+    @property
+    def precio_venta_calculado(self):
+        """Aplica el margen de ganancia sobre el costo total de fabricación"""
+        g = float(self.porcentaje_ganancia or 0.30)
+        return self.costo_total * (1 + g)
 
     @property
     def precio_total_dinamico(self):
+        """Calcula el precio final según el tipo de venta de la joya"""
+        precio_base = self.precio_venta if self.precio_venta and self.precio_venta > 0 else Decimal(str(self.precio_venta_calculado))
         if self.producto.tipo_venta == 'gramo':
-            return (self.precio_venta or Decimal('0.00')) * (self.peso or Decimal('0.00'))
-        return self.precio_venta or Decimal('0.00')
-    
-    peso = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('0.00'), blank=True, null=True)
-    codigo = models.CharField(max_length=50, blank=True, null=True)
-    activo = models.BooleanField(default=True)
-    foto = CloudinaryField('imagen_variante', blank=True, null=True) 
+            return precio_base * (self.peso or Decimal('0.00'))
+        return precio_base
 
     class Meta:
         constraints = [
@@ -379,8 +412,9 @@ class ProductoVariante(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.producto.nombre} | {self.color or 'U'}-{self.talla or 'U'} | ${self.precio_venta} ({self.stock} unds)"
-
+        identificador = self.nombre_variante or f"{self.color or 'U'}-{self.talla or 'U'}"
+        precio_mostrar = self.precio_venta if self.precio_venta and self.precio_venta > 0 else self.precio_venta_calculado
+        return f"{self.producto.nombre} | {identificador} | ${precio_mostrar:,.0f} ({self.stock} unds)"
 
 class CarritoItem(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)

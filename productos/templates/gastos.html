@@ -74,25 +74,20 @@
         <div style="background: #d4edda; color: #155724; padding:12px; border-radius:8px; margin: 15px 0; text-align:center;">{{ message }}</div>
     {% endfor %}{% endif %}
 
-    <!-- 📊 TARJETAS KPI -->
+    <!-- 📊 TARJETAS KPI (Gastos Operativos del Negocio) -->
     <div class="kpi-container" style="margin-top: 20px;">
         <div class="kpi-card" style="border-top-color: #f44336;">
-            <span style="color: #777; font-size: 12px; font-weight: bold; text-transform: uppercase;">Total Gastos</span>
+            <span style="color: #777; font-size: 12px; font-weight: bold; text-transform: uppercase;">Total Gastos Operativos</span>
             <h3 style="margin: 8px 0; font-size: 24px; color: #111;">${{ total_gastos|floatformat:0 }}</h3>
-            <span style="font-size: 12px; color: #666; background: #eee; padding: 2px 6px; border-radius: 4px;">Ejecución Global</span>
-        </div>
-        <div class="kpi-card" style="border-top-color: #fd7e14;">
-            <span style="color: #777; font-size: 12px; font-weight: bold; text-transform: uppercase;">🛠️ Fabricación</span>
-            <h3 style="margin: 8px 0; font-size: 24px; color: #fd7e14;">${{ total_fab|floatformat:0 }}</h3>
-            <span style="font-size: 12px; color: #fd7e14; font-weight: bold;">📈 {{ porcentaje_fab|floatformat:1 }}% del total</span>
+            <span style="font-size: 12px; color: #666; background: #eee; padding: 2px 6px; border-radius: 4px;">Ejecución de Caja</span>
         </div>
         <div class="kpi-card" style="border-top-color: #6c757d;">
-            <span style="color: #777; font-size: 12px; font-weight: bold; text-transform: uppercase;">🏢 Gastos Fijos</span>
+            <span style="color: #777; font-size: 12px; font-weight: bold; text-transform: uppercase;">🏢 Gastos Fijos / Arriendos</span>
             <h3 style="margin: 8px 0; font-size: 24px; color: #6c757d;">${{ total_fijo|floatformat:0 }}</h3>
             <span style="font-size: 12px; color: #6c757d; font-weight: bold;">📊 {{ porcentaje_fijo|floatformat:1 }}% del total</span>
         </div>
         <div class="kpi-card" style="border-top-color: #007bff;">
-            <span style="color: #777; font-size: 12px; font-weight: bold; text-transform: uppercase;">📢 Marketing</span>
+            <span style="color: #777; font-size: 12px; font-weight: bold; text-transform: uppercase;">📢 Marketing y Ventas</span>
             <h3 style="margin: 8px 0; font-size: 24px; color: #007bff;">${{ total_mkt|floatformat:0 }}</h3>
             <span style="font-size: 12px; color: #007bff; font-weight: bold;">🎯 {{ porcentaje_mkt|floatformat:1 }}% del total</span>
         </div>
@@ -104,7 +99,6 @@
             <input type="text" name="buscar" placeholder="🔍 Buscar concepto..." value="{{ request.GET.buscar }}" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;">
             <select name="categoria" onchange="this.form.submit()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;">
                 <option value="">📂 Todas las categorías</option>
-                <option value="fabricacion" {% if request.GET.categoria == 'fabricacion' %}selected{% endif %}>🛠️ Fabricación</option>
                 <option value="fijo" {% if request.GET.categoria == 'fijo' %}selected{% endif %}>🏢 Gasto Fijo</option>
                 <option value="marketing" {% if request.GET.categoria == 'marketing' %}selected{% endif %}>📢 Marketing</option>
                 <option value="logistica" {% if request.GET.categoria == 'logistica' %}selected{% endif %}>🚚 Logística</option>
@@ -135,8 +129,6 @@
                 <tr style="border-bottom:1px solid #f1f1f1;">
                     <td style="padding:15px; font-weight: 600; color: #222;">{{ g.nombre }}</td>
                     <td style="padding:15px;">
-                        {% if g.categoria == 'fabricacion' %}
-                            <span class="badge-categoria" style="background: #fd7e14;">🛠️ Fabricación</span>
                         {% elif g.categoria == 'fijo' %}
                             <span class="badge-categoria" style="background: #6c757d;">🏢 Gasto Fijo</span>
                         {% elif g.categoria == 'marketing' %}
@@ -188,7 +180,6 @@
             <div style="margin-bottom:12px;">
                 <label style="display: block; margin-bottom: 4px; font-weight: bold; font-size: 13px;">Categoría:</label>
                 <select name="categoria" id="id_categoria" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;">
-                    <option value="fabricacion">🛠️ Fabricación</option>
                     <option value="fijo">🏢 Gasto Fijo</option>
                     <option value="marketing">📢 Marketing</option>
                     <option value="logistica">🚚 Logística</option>
