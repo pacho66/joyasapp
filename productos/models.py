@@ -126,6 +126,33 @@ class Perfil(models.Model):
         plan_info = PRECIOS_PLANES.get(self.plan, PRECIOS_PLANES['basico'])
         return plan_info['precio_mensual']
 
+    @property
+    def limite_productos(self):
+        """Retorna el límite máximo de productos según el plan."""
+        # Si todos los planes tienen catálogo ilimitado como se indica en la landing:
+        return 999999 
+
+    @property
+    def permite_wompi(self):
+        """Indica si el plan actual soporta pasarela de pagos."""
+        return self.plan in ['semi', 'premium']
+
+    @property
+    def permite_siigo(self):
+        """Indica si el plan soporta integración con Siigo (Semi y Premium)."""
+        return self.plan in ['semi', 'premium']
+
+    @property
+    def usuarios_permitidos(self):
+        """Retorna el número máximo de usuarios administradores según el plan."""
+        if self.plan == 'basico':
+            return 1
+        elif self.plan == 'semi':
+            return 3
+        elif self.plan == 'premium':
+            return 999999  # Ilimitados
+        return 1
+
     def __str__(self):
         return f"{self.user.username} - {self.nombre_tienda} ({self.subdominio or 'Sin subdominio'})"
 class ConfiguracionEmpresa(models.Model):

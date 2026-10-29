@@ -95,7 +95,7 @@ def inicio(request):
         })
 
     except Exception as e:
-        logger = logging.getLogger(_name_)
+        logger = logging.getLogger(__name__)
         logger.error(f"Error crítico en la vista inicio: {str(e)}")
         # Ante algún error en el dominio principal, mostramos la landing saas limpia
         return render(request, 'landing_saas.html', {

@@ -6,6 +6,7 @@ from decimal import Decimal
 
 import openpyxl
 from openpyxl.utils import get_column_letter
+from django.contrib.auth.models import User
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -223,6 +224,41 @@ def dashboard(request):
         traceback.print_exc()
         print("🚨" * 30 + "\n")
         return HttpResponse(f"Error interno en dashboard: {str(e)}", status=500)
+
+@login_required
+def crear_empleado_tienda(request):
+    """
+    Vista del Dashboard para registrar un nuevo empleado o administrador 
+    en la tienda, validando el límite de usuarios permitidos por el plan.
+    """
+    perfil = request.user.perfil
+    
+    # 🔒 Contar cuántos usuarios están asociados a este perfil/tienda
+    # (Nota: Asegúrate de ajustar este filtro según cómo relaciones los empleados con la tienda, 
+    # por ejemplo: User.objects.filter(perfil=perfil) o mediante tu modelo de equipo/empleados)
+    usuarios_actuales_count = User.objects.filter(perfil=perfil).count()
+
+    # Verificar si ya alcanzó o superó el límite de su plan (1 en Básico, 3 en Semi, Ilimitado en Premium)
+    if usuarios_actuales_count >= perfil.usuarios_permitidos:
+        messages.error(
+            request, 
+            f"⚠️ Has alcanzado el límite de {perfil.usuarios_permitidos} usuario(s) administradores permitidos en tu Plan {perfil.get_plan_display()}. "
+            "¡Actualiza tu suscripción para agregar más miembros a tu equipo!"
+        )
+        return redirect('gestionar_planes')
+
+    if request.method == 'POST':
+        # 🛠️ Aquí colocas la lógica de tu formulario para registrar el nuevo usuario colaborador
+        # Ejemplo: form = EmpleadoForm(request.POST)
+        # if form.is_valid(): ...
+        pass
+
+    context = {
+        'perfil': perfil,
+        'usuarios_actuales_count': usuarios_actuales_count,
+        'limite_usuarios': perfil.usuarios_permitidos,
+    }
+    return render(request, 'dashboard/crear_empleado.html', context)
 
 @login_required
 def panel_crm(request):

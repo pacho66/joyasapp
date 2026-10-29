@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.shortcuts import render, redirect
 from django.utils import timezone
+from django.utils.text import slugify
 
 from ..forms import RegistroForm
 from ..models import Perfil,Producto
@@ -74,53 +75,50 @@ def registro(request):
         form = RegistroForm(request.POST)
 
         if form.is_valid():
-            email = form.cleaned_data['email']
+            # Como form.is_valid() ya validó contraseñas, unicidad de correo y usuario,
+            # podemos extraer los datos limpios directamente:
             username = form.cleaned_data['username']
+            email = form.cleaned_data['email']
             password = form.cleaned_data['password']
-            confirmar = form.cleaned_data['confirmar_password']
+            nombre_tienda = form.cleaned_data['nombre_tienda']
+            whatsapp = form.cleaned_data['whatsapp']
 
-            if password != confirmar:
-                return render(request, 'registro.html', {
-                    'form': form,
-                    'error': 'Las contraseñas no coinciden'
-                })
-
-            if User.objects.filter(email=email).exists():
-                return render(request, 'registro.html', {
-                    'form': form,
-                    'error': 'Este correo ya está registrado'
-                })
-
-            if User.objects.filter(username=username).exists():
-                return render(request, 'registro.html', {
-                    'form': form,
-                    'error': 'Este usuario ya existe'
-                })
+            # 🌐 Generar subdominio único automáticamente (Ej: "PG Joyas" -> "pg-joyas")
+            base_subdominio = slugify(nombre_tienda)
+            subdominio = base_subdominio
+            contador = 1
+            while Perfil.objects.filter(subdominio=subdominio).exists():
+                subdominio = f"{base_subdominio}{contador}"
+                contador += 1
 
             with transaction.atomic():
+                # 1. Crear el usuario de Django
                 user = User.objects.create_user(
                     username=username,
                     email=email,
                     password=password
                 )
 
+                # 2. Crear el Perfil con subdominio y 15 días de prueba gratis
                 Perfil.objects.create(
                     user=user,
-                    nombre_tienda=form.cleaned_data['nombre_tienda'],
-                    whatsapp=form.cleaned_data['whatsapp'],
+                    nombre_tienda=nombre_tienda,
+                    whatsapp=whatsapp,
+                    subdominio=subdominio,  # 👈 ¡Asignado correctamente!
                     plan='basico',
                     activa=True,
                     plan_vence=timezone.localdate() + timedelta(days=15)
                 )
 
+            # 3. Autenticar y enviar al dashboard
             login(request, user)
             return redirect('dashboard')
 
     else:
         form = RegistroForm()
 
-    return render(request, 'registro.html', {'form': form})
-    
+    return render(request, 'autenticacion/registro.html', {'form': form})
+
 def iniciar_sesion(request):
     if request.user.is_authenticated:
        return redirect('dashboard')
@@ -171,3 +169,20 @@ def renovar_manual(request):
     perfil = request.user.perfil
     renovar_plan(perfil)
     return redirect('dashboard')
+
+@login_required
+def gestionar_planes(request):
+    """Vista interna para ver el plan actual, días restantes y links de pago Wompi."""
+    perfil = request.user.perfil
+    
+    # Calcular días restantes de prueba o vigencia del plan
+    hoy = timezone.localdate()
+    dias_restantes = (perfil.plan_vence - hoy).days if perfil.plan_vence else 0
+    dias_restantes = max(0, dias_restantes)  # Evitar números negativos
+
+    context = {
+        'perfil': perfil,
+        'precios_planes': PRECIOS_PLANES,
+        'dias_restantes': dias_restantes,
+    }
+    return render(request, 'autenticacion/planes.html', context)

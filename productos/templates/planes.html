@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planes y Suscripción | JoyasApp</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f9f9f9; color: #333; margin: 0; padding: 40px 20px; }
+        .container { max-width: 1050px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .status-box { background: #000; color: #fff; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 30px; }
+        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 20px; }
+        .card { background: white; border: 1px solid #ddd; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+        .card.featured { border: 2px solid #000; }
+        .badge-current { background: #28a745; color: white; padding: 4px 10px; font-size: 11px; border-radius: 4px; text-transform: uppercase; font-weight: bold; position: absolute; top: 20px; right: 20px; }
+        .plan-tag { display: inline-block; background: #f1f1f1; color: #333; font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; margin-bottom: 8px; }
+        .plan-tag.recommended { background: #000; color: #fff; }
+        .plan-tag.premium-tag { background: #333; color: #fff; }
+        h2 { font-size: 24px; margin: 0 0 5px 0; }
+        .price { font-size: 30px; font-weight: bold; margin: 15px 0; }
+        .price span { font-size: 14px; color: #666; font-weight: normal; }
+        ul { list-style: none; padding: 0; margin: 20px 0; }
+        ul li { font-size: 14px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px; color: #444; }
+        .yes { color: #d4af37; font-weight: bold; } /* Tono dorado acorde a la joyería */
+        .btn-pay { display: block; text-align: center; background: #000; color: #fff; padding: 12px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px; }
+        .btn-pay:hover { background: #333; }
+        .btn-back { display: inline-block; margin-bottom: 20px; color: #000; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="{% url 'dashboard' %}" class="btn-back">&larr; Volver al Panel</a>
+    
+    <div class="header">
+        <h1>Planes y Suscripción de JoyasApp</h1>
+        <p>Potencia la administración y ventas de tu joyería con el plan ideal.</p>
+    </div>
+
+    <!-- 📊 ESTADO ACTUAL DEL USUARIO -->
+    <div class="status-box">
+        <p style="margin: 0 0 5px 0; font-size: 14px; color: #ccc;">Tu plan actual:</p>
+        <h3 style="margin: 0; font-size: 20px; text-transform: uppercase;">Plan {{ perfil.get_plan_display }}</h3>
+        <p style="margin: 8px 0 0 0; font-size: 13px;">
+            Tu periodo de prueba / vigencia vence en: <strong>{{ dias_restantes }} días</strong> ({{ perfil.plan_vence }})
+        </p>
+    </div>
+
+    <!-- 📦 TARJETAS DE PLANES (EXACTO A LA LANDING) -->
+    <div class="pricing-grid">
+
+        <!-- PLAN BÁSICO -->
+        <div class="card {% if perfil.plan == 'basico' %}featured{% endif %}">
+            {% if perfil.plan == 'basico' %}<span class="badge-current">Tu Plan</span>{% endif %}
+            <div>
+                <span class="plan-tag">Emprendedor</span>
+                <h2>BÁSICO</h2>
+                <p style="font-size: 13px; color: #666; min-height: 38px;">Todo lo esencial para comenzar</p>
+                <div class="price">$49.900 <span>/ mes</span></div>
+                
+                <ul>
+                    <li><span class="yes">✔️</span> Catálogo de productos ilimitado</li>
+                    <li><span class="yes">✔️</span> Gestión de clientes</li>
+                    <li><span class="yes">✔️</span> Pedidos por WhatsApp</li>
+                    <li><span class="yes">✔️</span> Control básico de inventario</li>
+                    <li><span class="yes">✔️</span> 1 usuario administrador incluido</li>
+                    <li><span class="yes">✔️</span> Soporte por WhatsApp</li>
+                </ul>
+            </div>
+            <a href="{{ precios_planes.basico.link_pago }}" target="_blank" class="btn-pay">Registrarse en Plan Básico</a>
+        </div>
+
+        <!-- PLAN SEMI -->
+        <div class="card {% if perfil.plan == 'semi' %}featured{% endif %}">
+            {% if perfil.plan == 'semi' %}<span class="badge-current">Tu Plan</span>{% endif %}
+            <div>
+                <span class="plan-tag recommended">MÁS RECOMENDADO</span>
+                <h2>SEMI</h2>
+                <p style="font-size: 13px; color: #666; min-height: 38px;">Control avanzado y Siigo</p>
+                <div class="price">$89.900 <span>/ mes</span></div>
+                
+                <ul>
+                    <li><span class="yes">✔️</span> Todo lo del plan Básico</li>
+                    <li><span class="yes">✔️</span> Inventario avanzado por gramos y variantes</li>
+                    <li><span class="yes">✔️</span> CRM</li>
+                    <li><span class="yes">✔️</span> Facturación electrónica con Siigo</li>
+                    <li><span class="yes">✔️</span> Pasarelas de pago (Wompi, Mercado Pago)</li>
+                    <li><span class="yes">✔️</span> Hasta 3 usuarios habilitados</li>
+                </ul>
+            </div>
+            <a href="{{ precios_planes.semi.link_pago }}" target="_blank" class="btn-pay">Registrarse en Plan Semi</a>
+        </div>
+
+        <!-- PLAN PREMIUM -->
+        <div class="card {% if perfil.plan == 'premium' %}featured{% endif %}">
+            {% if perfil.plan == 'premium' %}<span class="badge-current">Tu Plan</span>{% endif %}
+            <div>
+                <span class="plan-tag premium-tag">Potencia Total</span>
+                <h2>PREMIUM</h2>
+                <p style="font-size: 13px; color: #666; min-height: 38px;">Solución completa para joyerías líderes</p>
+                <div class="price">$149.900 <span>/ mes</span></div>
+                
+                <ul>
+                    <li><span class="yes">✔️</span> Todo lo del plan Semi</li>
+                    <li><span class="yes">✔️</span> Subdominio personalizado exclusivo</li>
+                    <li><span class="yes">✔️</span> CRM completo y automatizaciones de WhatsApp</li>
+                    <li><span class="yes">✔️</span> Usuarios ilimitados</li>
+                    <li><span class="yes">✔️</span> Soporte prioritario 24/7</li>
+                </ul>
+            </div>
+            <a href="{{ precios_planes.premium.link_pago }}" target="_blank" class="btn-pay">Registrarse en Plan Premium</a>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

@@ -418,14 +418,22 @@
         </div>
     
         <div style="margin-top: 25px; display: flex; flex-direction: column; gap: 12px;">
+            <!-- 📱 Botón de WhatsApp (Siempre activo para todos los planes) -->
             <button type="submit" class="btn-principal">
                 📱 Confirmar Pedido por WhatsApp
             </button>
 
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <button type="button" onclick="enviarAPagar()" style="background:#007bff; color:white; padding:11px 20px; border-radius:6px; border:none; font-weight:bold; cursor:pointer; flex: 1;">
-                    💳 Pagar ahora
-                </button>
+            <!-- 💳 Botones condicionales según el plan de la tienda (Wompi) -->
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                {% if perfil.permite_wompi %}
+                    <button type="button" onclick="enviarAPagar()" style="background:#007bff; color:white; padding:11px 20px; border-radius:6px; border:none; font-weight:bold; cursor:pointer; flex: 1;">
+                        💳 Pagar ahora
+                    </button>
+                {% else %}
+                    <div style="background:#e8f4fd; color:#0c5460; padding:10px; border-radius:6px; font-size:12px; flex:1; text-align:center; border:1px solid #b8daff;">
+                        ℹ️ Pagos en línea no habilitados en este plan (Solo WhatsApp)
+                    </div>
+                {% endif %}
 
                 <a href="/" style="background:#444; color:white; padding:11px 18px; border-radius:6px; text-decoration:none; font-weight: bold; font-size: 13px; display: inline-block; text-align: center;">
                     Seguir comprando

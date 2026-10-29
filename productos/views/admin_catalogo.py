@@ -123,17 +123,30 @@ def eliminar_categoria(request, categoria_id):
     messages.success(request, "Categoría eliminada correctamente.")
     return redirect('dashboard')
 
+@login_required
 def guardar_producto_view(request, pk=None):
     """
     Controlador unificado de nivel Enterprise.
     Delega la lógica pesada a ProductoService y gestiona el flujo HTTP y UX.
     """
+    perfil = request.user.perfil  # Obtenemos el perfil del usuario actual
+
     if pk:
         producto = get_object_or_404(Producto, pk=pk, usuario=request.user)
         accion = "actualizado"
     else:
         producto = None  # None indica que es un producto nuevo
         accion = "creado"
+
+        # 🔒 VALIDACIÓN DE LÍMITE DE PLAN (Solo aplica para productos nuevos)
+        productos_actuales = Producto.objects.filter(usuario=request.user, activo=True).count()
+        if productos_actuales >= perfil.limite_productos:
+            messages.warning(
+                request, 
+                f"⚠️ Has alcanzado el límite de {perfil.limite_productos} productos de tu Plan {perfil.get_plan_display()}. "
+                "¡Actualiza tu suscripción para seguir subiendo más joyas!"
+            )
+            return redirect('gestionar_planes') # Redirige a la vista de planes que hicimos antes
 
     if request.method == 'POST':
         try:

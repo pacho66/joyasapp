@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuevo Colaborador | JoyasApp</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f9f9f9; color: #333; margin: 0; padding: 40px 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .btn-back { display: inline-block; margin-bottom: 20px; color: #000; text-decoration: none; font-weight: bold; }
+        .form-card { background: white; border: 1px solid #ddd; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .header { margin-bottom: 25px; }
+        .header h1 { font-size: 22px; margin: 0 0 5px 0; }
+        .header p { font-size: 13px; color: #666; margin: 0; }
+        .alert { padding: 12px 15px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+        .alert-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; color: #444; }
+        input[type="text"], input[type="email"], input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+        .badge-limite { background: #f1f1f1; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; display: inline-block; margin-bottom: 20px; }
+        .btn-submit { display: block; width: 100%; text-align: center; background: #000; color: #fff; padding: 12px; border-radius: 6px; border: none; font-weight: bold; font-size: 15px; cursor: pointer; }
+        .btn-submit:hover { background: #333; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="{% url 'dashboard' %}" class="btn-back">&larr; Volver al Dashboard</a>
+    
+    <div class="form-card">
+        <div class="header">
+            <h1>➕ Registrar Nuevo Administrador o Empleado</h1>
+            <p>Agrega personal autorizado para gestionar el inventario y las ventas de tu joyería.</p>
+        </div>
+
+        <!-- 🔔 SISTEMA DE MENSAJES DE ALERTA -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- 📊 CONTADOR DE LÍMITE DE USUARIOS SEGÚN EL PLAN -->
+        <div class="badge-limite">
+            👥 Empleados activos en este plan: <strong>{{ usuarios_actuales_count }} / {{ limite_usuarios }}</strong>
+            {% if limite_usuarios == 999999 %}(Ilimitados){% endif %}
+        </div>
+
+        <!-- FORMULARIO DE CREACIÓN DE EMPLEADO -->
+        <form method="POST">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="username">Nombre de usuario (Login)</label>
+                <input type="text" id="username" name="username" required placeholder="Ej: cajero_joyeria">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Correo electrónico</label>
+                <input type="email" id="email" name="email" required placeholder="empleado@correo.com">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Contraseñas provisional</label>
+                <input type="password" id="password" name="password" required placeholder="••••••••">
+            </div>
+
+            <button type="submit" class="btn-submit">Crear Colaborador</button>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

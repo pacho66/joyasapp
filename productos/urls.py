@@ -27,6 +27,7 @@ urlpatterns = [
     path('registro/', auth.registro, name='registro'),
     path('login/', auth.iniciar_sesion, name='login'),
     path('logout/', auth.cerrar_sesion, name='logout'),
+    path('planes/', views.gestionar_planes, name='gestionar_planes'),
 
      # 📜 Páginas Legales (Habeas Data y Términos SaaS)
     path('terminos-y-condiciones/', TemplateView.as_view(template_name='terminos.html'), name='terminos_y_condiciones'),
@@ -116,6 +117,7 @@ urlpatterns = [
     path('inventario/', admin_catalogo.inventario, name='inventario'),
     path('dashboard/exportar-excel/', views.exportar_excel_dashboard, name='exportar_excel_dashboard'),
     path('crm/', views.panel_crm, name='panel_crm'),
+    path('dashboard/empleados/nuevo/', views.crear_empleado_tienda, name='crear_empleado_tienda'),
 
     # ===============================
     # 💸 GASTOS
