@@ -12,6 +12,8 @@ background:white;
 <form method="post">
     {% csrf_token %}
 
+    <input type="hidden" name="plan" value="{{ plan_seleccionado }}">
+
     {% if error %}
         <p style="color:red;font-weight:bold;text-align:center;">
             {{ error }}

@@ -69,21 +69,36 @@ def index_saas(request):
     # Muestra únicamente la sala principal del SaaS (Landing Page limpia)
     return render(request, 'landing_saas.html')
 
-
 def registro(request):
+    # 1. Capturar el plan desde los parámetros GET (ej: ?plan=semi), por defecto 'basico'
+    plan_seleccionado = request.GET.get('plan', 'basico')
+    if plan_seleccionado not in ['basico', 'semi', 'premium']:
+        plan_seleccionado = 'basico'
+
     if request.method == 'POST':
         form = RegistroForm(request.POST)
 
         if form.is_valid():
-            # Como form.is_valid() ya validó contraseñas, unicidad de correo y usuario,
-            # podemos extraer los datos limpios directamente:
             username = form.cleaned_data['username']
             email = form.cleaned_data['email']
             password = form.cleaned_data['password']
             nombre_tienda = form.cleaned_data['nombre_tienda']
             whatsapp = form.cleaned_data['whatsapp']
 
-            # 🌐 Generar subdominio único automáticamente (Ej: "PG Joyas" -> "pg-joyas")
+            # Capturar el plan enviado por POST (o mantener el de la URL)
+            plan_elegido = request.POST.get('plan', plan_seleccionado)
+            if plan_elegido not in ['basico', 'semi', 'premium']:
+                plan_elegido = 'basico'
+
+            # ⚙️ Mapeo exacto de límites y permisos según el plan elegido
+            config_planes = {
+                'basico': {'usuarios': 1, 'wompi': False, 'siigo': False},
+                'semi': {'usuarios': 3, 'wompi': True, 'siigo': True},
+                'premium': {'usuarios': 999999, 'wompi': True, 'siigo': True}
+            }
+            conf = config_planes.get(plan_elegido, config_planes['basico'])
+
+            # 🌐 Generar subdominio único automáticamente
             base_subdominio = slugify(nombre_tienda)
             subdominio = base_subdominio
             contador = 1
@@ -99,13 +114,16 @@ def registro(request):
                     password=password
                 )
 
-                # 2. Crear el Perfil con subdominio y 15 días de prueba gratis
+                # 2. Crear el Perfil con el plan correcto y sus restricciones lógicas
                 Perfil.objects.create(
                     user=user,
                     nombre_tienda=nombre_tienda,
                     whatsapp=whatsapp,
-                    subdominio=subdominio,  # 👈 ¡Asignado correctamente!
-                    plan='basico',
+                    subdominio=subdominio,
+                    plan=plan_elegido,
+                    usuarios_permitidos=conf['usuarios'],
+                    permite_wompi=conf['wompi'],
+                    permite_siigo=conf['siigo'],
                     activa=True,
                     plan_vence=timezone.localdate() + timedelta(days=15)
                 )
@@ -117,7 +135,10 @@ def registro(request):
     else:
         form = RegistroForm()
 
-    return render(request, 'autenticacion/registro.html', {'form': form})
+    return render(request, 'autenticacion/registro.html', {
+        'form': form,
+        'plan_seleccionado': plan_seleccionado
+    })
 
 def iniciar_sesion(request):
     if request.user.is_authenticated:
