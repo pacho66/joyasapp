@@ -21,10 +21,15 @@ from ..forms import GastoForm
 def gastos(request):
     usuario = request.user
 
+    # 🛡️ REDIRECCIÓN DE SEGURIDAD: Si intentan entrar a la categoría vieja de fabricación
+    if request.GET.get('categoria') == 'fabricacion':
+        return redirect('fabricacion')
+
     if request.method == 'POST':
         nombre = request.POST.get('nombre')
         monto = request.POST.get('monto')
-        categoria = request.POST.get('categoria', 'fabricacion')
+        # ✅ Cambiamos el respaldo por defecto a 'fijo'
+        categoria = request.POST.get('categoria', 'fijo')
         observaciones = request.POST.get('observaciones', '')
 
         if nombre and monto:
@@ -44,26 +49,24 @@ def gastos(request):
             messages.error(request, "Por favor completa el concepto y el monto.")
         return redirect('gastos')
 
-    # 1. Queryset base para calcular las métricas generales sin interferir con los filtros
+    # 1. Queryset base para métricas de gastos generales (sin fabricacion)
     base_query = Gasto.objects.filter(usuario=usuario)
 
     metricas = base_query.aggregate(
         total_global=Sum('monto'),
         total_fijo=Sum('monto', filter=Q(categoria='fijo')),
-        total_fab=Sum('monto', filter=Q(categoria='fabricacion')),
         total_mkt=Sum('monto', filter=Q(categoria='marketing')),
+        total_log=Sum('monto', filter=Q(categoria='logistica')),
     )
 
     total_global = metricas['total_global'] or 0
     total_fijo = metricas['total_fijo'] or 0
-    total_fab = metricas['total_fab'] or 0
     total_mkt = metricas['total_mkt'] or 0
 
     porcentaje_fijo = (total_fijo / total_global * 100) if total_global > 0 else 0
-    porcentaje_fab = (total_fab / total_global * 100) if total_global > 0 else 0
     porcentaje_mkt = (total_mkt / total_global * 100) if total_global > 0 else 0
 
-    # 2. Queryset independiente para la tabla (búsqueda y filtros de categoría)
+    # 2. Queryset independiente para la tabla
     gastos_query = base_query
     buscar = request.GET.get('buscar')
     categoria_filtrada = request.GET.get('categoria')
@@ -80,7 +83,6 @@ def gastos(request):
         "categoria_filtrada": categoria_filtrada,
         "total_gastos": total_global,
         "total_fijo": total_fijo, "porcentaje_fijo": porcentaje_fijo,
-        "total_fab": total_fab, "porcentaje_fab": porcentaje_fab,
         "total_mkt": total_mkt, "porcentaje_mkt": porcentaje_mkt,
     })
 

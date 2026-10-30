@@ -210,11 +210,11 @@
         formulario.setAttribute("action", "{% url 'gastos' %}");
         document.getElementById("id_nombre").value = "";
         document.getElementById("id_monto").value = "";
-        document.getElementById("id_categoria").value = "fabricacion";
+        // ✅ Cambiamos el valor por defecto a una categoría de gastos reales
+        document.getElementById("id_categoria").value = "fijo"; 
         document.getElementById("id_observaciones").value = "";
         modal.style.display = "flex";
     }
-
     function cerrarModal() {
         if (modal) modal.style.display = "none";
     }
