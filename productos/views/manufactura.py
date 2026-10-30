@@ -52,18 +52,16 @@ def guardar_variante_fabricacion(request, producto_id):
     if request.method == 'POST':
         # Captura de datos del formulario del taller
         nombre = request.POST.get('nombre_variante', 'Estándar')
-        peso = request.POST.get('gramos', 0)  # Mapeamos gramos al campo 'peso' de ProductoVariante
+        peso = request.POST.get('gramos', 0)  
         precio_gramo = request.POST.get('precio_gramo_metal', 0)
         merma = request.POST.get('porcentaje_merma', 0.10)
         mano_obra = request.POST.get('costo_mano_obra', 0)
         ganancia = request.POST.get('porcentaje_ganancia', 0.30)
         
-        # Atributos comerciales opcionales
         color = request.POST.get('color', '')
         talla = request.POST.get('talla', '')
         stock = request.POST.get('stock', 1)
 
-        # Crear la variante unificada con los parámetros de taller
         variante = ProductoVariante(
             producto=producto,
             nombre_variante=nombre,
@@ -77,10 +75,14 @@ def guardar_variante_fabricacion(request, producto_id):
             porcentaje_ganancia=ganancia,
         )
 
-        # Asignamos directamente el precio de venta sugerido al campo precio_venta comercial
         variante.precio_venta = Decimal(str(round(variante.precio_venta_calculado, 2)))
         variante.save()
         
         return redirect('detalle_producto', producto_id=producto.id, slug=producto.slug)
         
-    return render(request, 'productos/calculadora_taller.html', {'producto': producto})
+    # ✅ AQUÍ DEFINIMOS EL CONTEXTO ANTES DE USARLO EN EL GET:
+    context = {
+        'producto': producto,
+    }
+    
+    return render(request, 'calculadora_taller.html', context)
