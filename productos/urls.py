@@ -42,10 +42,16 @@ urlpatterns = [
     path('reset/done/', auth_views.PasswordResetCompleteView.as_view(template_name='password_reset_complete.html'), name='password_reset_complete'),
 
     # ===============================
-    # 🛍️ CATÁLOGO / PRODUCTOS
+    # 🛍️ CATÁLOGO / PRODUCTOS & TALLER
     # ===============================
     path('buscar/', catalogo.buscar_productos, name='buscar_productos'),
+    
+    # ⚠️ IMPORTANTE: La ruta específica de la calculadora DEBE IR ANTES de 'producto/<int:id>/<slug:slug>/'
+    path('producto/<int:producto_id>/calculadora/', views.guardar_variante_fabricacion, name='calculadora_taller'),
+    
+    # Ruta genérica de detalle del producto en la tienda
     path('producto/<int:id>/<slug:slug>/', catalogo.detalle_producto, name='detalle_producto'),
+    
     path('productos/mis-productos/', admin_catalogo.mis_productos, name='mis_productos'),
     path('productos/eliminar/<int:id>', admin_catalogo.eliminar_producto, name='eliminar_producto'),
     path('productos/<int:id>/eliminar-imagen/', admin_catalogo.eliminar_imagen_producto, name='eliminar_imagen_producto'),
@@ -58,6 +64,11 @@ urlpatterns = [
     # Rutas unificadas para crear y editar usando el mismo controlador
     path('productos/nuevo/', admin_catalogo.guardar_producto_view, name='crear_producto'),
     path('productos/<int:pk>/editar/', admin_catalogo.guardar_producto_view, name='editar_producto'),
+
+    # ===============================
+    # 🛠️ MÓDULO DE TALLER Y MANUFACTURA
+    # ===============================
+    path('fabricacion/', views.fabricacion, name='fabricacion'),
     # ===============================
     # 🛒 CARRITO
     # ===============================
@@ -124,12 +135,6 @@ urlpatterns = [
     path('dashboard/exportar-excel/', views.exportar_excel_dashboard, name='exportar_excel_dashboard'),
     path('crm/', views.panel_crm, name='panel_crm'),
     path('dashboard/empleados/nuevo/', crear_empleado_tienda, name='crear_empleado_tienda'),
-
-    # ===============================
-    # 🛠️ MÓDULO DE TALLER Y MANUFACTURA
-    # ===============================
-    path('fabricacion/', views.fabricacion, name='fabricacion'),
-    path('producto/<int:producto_id>/calculadora/', views.guardar_variante_fabricacion, name='calculadora_taller'),
 
     # ===============================
     # 💸 GASTOS
