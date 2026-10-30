@@ -85,4 +85,4 @@ def guardar_variante_fabricacion(request, producto_id):
         'producto': producto,
     }
     
-    return render(request, 'productos/calculadora_taller.html', context)
+    return render(request, 'calculadora_taller.html', context)
