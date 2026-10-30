@@ -42,7 +42,7 @@ def fabricacion(request):
         'costos_totales': costos_totales,
         'mensaje': "⚙️ Control de Fabricación Activo"
     }
-    return render(request, 'productos/fabricacion.html', context)
+    return render(request, 'fabricacion.html', context)
 
 @login_required
 def guardar_variante_fabricacion(request, producto_id):
