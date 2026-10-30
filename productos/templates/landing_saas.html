@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JoyasApp — El SaaS todo en uno para joyerías modernas</title>
+    <title>JoyasApp — El SaaS Definitorio para la Industria Joyera y Talleres</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -16,9 +16,10 @@
         :root {
             --ja-gold: #d4af37;
             --ja-gold-dark: #b89326;
-            --ja-gold-light: #f4e5a9;
-            --ja-dark: #111111;
-            --ja-dark-card: #1a1a1a;
+            --ja-gold-light: #fbeeb8;
+            --ja-dark: #0d0d0d;
+            --ja-dark-card: #161616;
+            --ja-dark-card-hover: #1f1f1f;
             --ja-gray-bg: #f8f9fa;
             --ja-gray-border: #e2e8f0;
         }
@@ -27,6 +28,7 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #ffffff;
             color: var(--ja-dark);
+            overflow-x: hidden;
         }
 
         .text-gold { color: var(--ja-gold) !important; }
@@ -38,20 +40,20 @@
             color: #ffffff !important;
             font-weight: 700;
             border: none;
-            box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3);
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.35);
             transition: all 0.3s ease;
         }
         .btn-gold:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 25px rgba(212, 175, 55, 0.45);
+            box-shadow: 0 12px 30px rgba(212, 175, 55, 0.5);
             color: #ffffff !important;
         }
 
-        /* BARRA SUPERIOR DE ACCESO Y NAVEGACIÓN */
+        /* BARRA SUPERIOR */
         .saas-header-bar {
             background: var(--ja-dark);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 12px 0;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            padding: 14px 0;
             position: sticky;
             top: 0;
             z-index: 1000;
@@ -59,177 +61,143 @@
 
         /* HERO SECTION */
         .hero-section {
-            background: radial-gradient(circle at top right, rgba(212, 175, 55, 0.08) 0%, rgba(255, 255, 255, 1) 65%);
-            padding-top: 3.5rem;
-            padding-bottom: 4rem;
-            overflow: hidden;
+            background: radial-gradient(circle at top right, rgba(212, 175, 55, 0.12) 0%, rgba(255, 255, 255, 1) 70%);
+            padding-top: 4.5rem;
+            padding-bottom: 5rem;
+            position: relative;
         }
 
         .hero-title {
-            font-size: clamp(2.2rem, 5vw, 3.8rem);
+            font-size: clamp(2.4rem, 5vw, 4rem);
             font-weight: 900;
             line-height: 1.1;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.03em;
         }
 
-        /* BUSCADOR / ACCESO A SUBDOMINIOS */
+        /* BUSCADOR SUBDOMINIOS */
         .subdomain-access-box {
             background: #ffffff;
             border: 2px solid var(--ja-gold);
             border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.15);
+            padding: 22px;
+            box-shadow: 0 10px 35px rgba(212, 175, 55, 0.18);
         }
 
-        /* PILARES DE BENEFICIO */
-        .pillar-box {
-            text-align: center;
-            padding: 20px 10px;
-            border-radius: 12px;
-            background: #ffffff;
-            border: 1px solid var(--ja-gray-border);
-            transition: all 0.3s ease;
-        }
-        .pillar-box:hover {
-            border-color: var(--ja-gold);
-            transform: translateY(-4px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-        }
-        .pillar-icon {
-            width: 50px;
-            height: 50px;
-            margin: 0 auto 12px;
-            background: rgba(212, 175, 55, 0.12);
-            color: var(--ja-gold-dark);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-        }
-
-        /* CARDS NEGRAS MÓDULOS */
+        /* CARDS DE CARACTERÍSTICAS PREMIUM */
         .feature-card-dark {
             background: var(--ja-dark-card);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 18px;
-            padding: 28px 22px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 20px;
+            padding: 32px 24px;
             height: 100%;
             color: #ffffff;
-            position: relative;
-            overflow: hidden;
-            transition: transform 0.3s ease, border-color 0.3s ease;
+            transition: all 0.3s ease;
         }
         .feature-card-dark:hover {
-            transform: translateY(-5px);
+            transform: translateY(-6px);
             border-color: var(--ja-gold);
+            background: var(--ja-dark-card-hover);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
         }
         .feature-icon-badge {
-            width: 44px;
-            height: 44px;
-            border-radius: 10px;
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
             background: rgba(212, 175, 55, 0.15);
             color: var(--ja-gold);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
-            margin-bottom: 16px;
+            font-size: 24px;
+            margin-bottom: 20px;
         }
 
-        .color-swatch {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            display: inline-block;
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-
-        .size-badge {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 6px;
-            padding: 2px 8px;
-            font-size: 11px;
-            font-weight: 600;
-            color: #ddd;
-        }
-
-        /* HISTORIA SECTION */
-        .story-section {
-            background: #ffffff;
-            padding: 4.5rem 0;
-        }
-
-        .check-list-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            margin-bottom: 14px;
-        }
-
-        .check-icon {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: rgba(212, 175, 55, 0.15);
-            color: var(--ja-gold-dark);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            flex-shrink: 0;
-            margin-top: 2px;
-        }
-
-        /* PLANES SUBMENÚ */
-        .plan-nav-pills .nav-link {
-            color: var(--ja-dark);
+        /* ESCALAS DE PRECIOS BADGES */
+        .scale-badge {
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid var(--ja-gold);
+            color: var(--ja-gold);
             font-weight: 700;
-            border-radius: 30px;
-            padding: 10px 24px;
-            border: 1px solid var(--ja-gray-border);
-            background: #fff;
-        }
-        .plan-nav-pills .nav-link.active {
-            background: var(--ja-gold);
-            color: #000;
-            border-color: var(--ja-gold);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 12px;
         }
 
+        /* PLANES */
         .card-plan-box {
             background: #ffffff;
             border: 2px solid var(--ja-gray-border);
             border-radius: 20px;
-            padding: 30px;
+            padding: 35px;
             transition: all 0.3s ease;
         }
         .card-plan-box.featured {
             border-color: var(--ja-gold);
-            box-shadow: 0 15px 35px rgba(212, 175, 55, 0.15);
+            box-shadow: 0 15px 40px rgba(212, 175, 55, 0.18);
+            position: relative;
+        }
+
+        /* FOOTER PROFESIONAL MAJESTUOSO */
+        .saas-footer {
+            background: #090909;
+            color: #b0b0b0;
+            padding-top: 5rem;
+            padding-bottom: 3rem;
+            border-top: 3px solid var(--ja-gold);
+        }
+        .saas-footer h6 {
+            color: #ffffff;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .saas-footer a {
+            color: #b0b0b0;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        .saas-footer a:hover {
+            color: var(--ja-gold);
+        }
+        .social-circle-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        .social-circle-btn:hover {
+            background: var(--ja-gold);
+            color: #000000;
+            border-color: var(--ja-gold);
+            transform: translateY(-3px);
         }
     </style>
 </head>
 <body>
 
-<!-- BARRA DE ACCESO RÁPIDO (LOGIN / REGISTRO / PANEL) -->
+<!-- BARRA DE NAVEGACIÓN Y ACCESO -->
 <header class="saas-header-bar">
     <div class="container d-flex justify-content-between align-items-center">
         <a href="/" class="d-flex align-items-center gap-2 text-decoration-none">
-            <span class="fs-4">💎</span>
+            <span class="fs-3">💎</span>
             <span class="fw-bold fs-4 text-white">Joyas<span class="text-gold">App</span></span>
         </a>
 
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-3">
             {% if user.is_authenticated %}
-                <a href="{% url 'dashboard' %}" class="btn btn-gold btn-sm px-3 fw-bold">
+                <a href="{% url 'dashboard' %}" class="btn btn-gold btn-sm px-4 fw-bold rounded-pill">
                     📊 Mi Dashboard
                 </a>
             {% else %}
-                <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm px-3 fw-semibold">
+                <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm px-3 fw-semibold rounded-pill">
                     🔑 Iniciar Sesión
                 </a>
-                <a href="{% url 'registro' %}" class="btn btn-gold btn-sm px-3 fw-bold">
+                <a href="{% url 'registro' %}" class="btn btn-gold btn-sm px-4 fw-bold rounded-pill">
                     🚀 Registrar mi Tienda
                 </a>
             {% endif %}
@@ -237,162 +205,160 @@
     </div>
 </header>
 
-<!-- 1. HERO PRINCIPAL CON BANNER PROFESIONAL -->
+<!-- HERO PRINCIPAL -->
 <section class="hero-section">
     <div class="container">
         <div class="row align-items-center gy-5">
-            <!-- Columna Izquierda: Textos y Buscador -->
             <div class="col-lg-6">
-                <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill bg-gray-custom border mb-3">
-                    <span class="badge bg-dark text-gold px-2 py-1" style="font-size:10px;">SaaS PREMIUM</span>
-                    <span class="text-muted fw-semibold" style="font-size: 13px;">Software Especializado para Joyerías</span>
+                <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill bg-white border shadow-sm mb-3">
+                    <span class="badge bg-dark text-gold px-2 py-1" style="font-size:10px;">SAAS MULTI-TENANT</span>
+                    <span class="text-muted fw-semibold" style="font-size: 13px;">Diseñado para Fabricantes y Joyerías</span>
                 </div>
                 
                 <h1 class="hero-title text-dark mb-3">
-                    El SaaS todo en uno <br>
-                    <span class="text-gold">para joyerías modernas</span>
+                    El control absoluto <br>
+                    <span class="text-gold">de tu joyería y taller</span>
                 </h1>
                 
-                <p class="lead text-secondary mb-4" style="max-width: 540px; font-size: 1.15rem;">
-                    Administra, vende, factura y haz crecer tu joyería desde cualquier lugar.
+                <p class="lead text-secondary mb-4" style="font-size: 1.15rem; line-height: 1.6;">
+                    Administra inventarios por gramo o unidad, escala de precios <strong>(1, 6 y 12 unidades)</strong>, costos de taller con merma y contabilidad integrada en una sola plataforma profesional.
                 </p>
 
-                <!-- BUSCADOR / ACCESO A SUBDOMINIOS -->
+                <!-- BUSCADOR DE SUBDOMINIOS -->
                 <div class="subdomain-access-box mb-4">
                     <label class="fw-bold text-dark mb-2" style="font-size: 13px;">
-                        🔍 ¿Ya tienes una tienda? Ingresa a tu subdominio:
+                        🔍 ¿Ya tienes cuenta? Ingresa a tu tienda o subdominio:
                     </label>
                     <div class="input-group">
-                        <input type="text" id="input-subdominio" class="form-control" placeholder="nombre-de-tu-joyeria" aria-label="Subdominio">
+                        <input type="text" id="input-subdominio" class="form-control" placeholder="tu-joyeria" aria-label="Subdominio">
                         <span class="input-group-text bg-light fw-semibold text-muted">.joyasapp.com</span>
-                        <button class="btn btn-dark fw-bold px-3" type="button" onclick="irASubdominio()">Ir a mi Tienda ➡️</button>
+                        <button class="btn btn-dark fw-bold px-4" type="button" onclick="irASubdominio()">Acceder ➡️</button>
                     </div>
                 </div>
 
                 <div class="d-flex flex-column flex-sm-row gap-3 align-items-sm-center mb-4">
-                    <a href="{% url 'registro' %}" class="btn btn-gold btn-lg px-4 py-3 rounded-3 d-inline-flex align-items-center justify-content-center gap-2">
+                    <a href="{% url 'registro' %}" class="btn btn-gold btn-lg px-5 py-3 rounded-3 fw-bold d-inline-flex align-items-center justify-content-center gap-2">
                         <span>Crear mi Tienda Gratis 🚀</span>
                     </a>
-                    <a href="https://wa.me/573215280610?text=Hola%20Francisco,%20quiero%20solicitar%20una%20demostraci%C3%B3n%20gratuita%20de%20JoyasApp" 
+                    <a href="https://wa.me/573215280610?text=Hola%20Francisco,%20quiero%20conocer%20m%C3%A1s%20sobre%20JoyasApp" 
                        target="_blank" 
-                       class="btn btn-outline-dark btn-lg px-4 py-3 rounded-3 d-inline-flex align-items-center justify-content-center gap-2">
-                        <i class="bi bi-whatsapp"></i>
-                        <span>Solicitar Demo</span>
+                       class="btn btn-outline-dark btn-lg px-4 py-3 rounded-3 fw-semibold d-inline-flex align-items-center justify-content-center gap-2">
+                        <i class="bi bi-whatsapp text-success fs-5"></i>
+                        <span>Hablar con Soporte</span>
                     </a>
                 </div>
 
-                <p class="text-muted small d-flex align-items-center gap-2">
-                    <i class="bi bi-shield-check text-gold fs-6"></i>
-                    Sin cláusulas de permanencia • Configuración inmediata
-                </p>
+                <div class="d-flex align-items-center gap-4 text-muted small">
+                    <div class="d-flex align-items-center gap-1"><i class="bi bi-check-circle-fill text-gold"></i> Sin permanencia</div>
+                    <div class="d-flex align-items-center gap-1"><i class="bi bi-check-circle-fill text-gold"></i> Activación inmediata</div>
+                    <div class="d-flex align-items-center gap-1"><i class="bi bi-check-circle-fill text-gold"></i> Datos encriptados</div>
+                </div>
             </div>
 
-            <!-- Columna Derecha: Imagen del Banner con tamaño controlado -->
+            <!-- BANNER VISUAL DERECHA -->
             <div class="col-lg-6 text-center">
-                <div class="rounded-3 shadow-sm overflow-hidden" style="height: 280px;">
-                    <img src=https://res.cloudinary.com/dvq49bzsv/image/upload/v1792956217/media/banners/AQPm77mhfGjw-Q5WyEu1_O4RTkiEySVHwoRl93Td4JcykJJq0YwNaiL4zOH3cWTIi0Tpmg0EBwUZ3FAz2Gs1P3OBZfss_lanipk.jpg 
-                        alt="JoyasApp Catálogo en Laptop y Móvil" 
-                        class="w-100 h-100" 
-                        style="object-fit: cover;">
+                <div class="position-relative">
+                    <div class="rounded-4 shadow-lg overflow-hidden border border-3 border-warning bg-dark p-2" style="transform: rotate(1deg);">
+                        <img src="https://res.cloudinary.com/dvq49bzsv/image/upload/v1792956217/media/banners/AQPm77mhfGjw-Q5WyEu1_O4RTkiEySVHwoRl93Td4JcykJJq0YwNaiL4zOH3cWTIi0Tpmg0EBwUZ3FAz2Gs1P3OBZfss_lanipk.jpg" 
+                            alt="JoyasApp Panel y Catálogo" 
+                            class="w-100 rounded-3" 
+                            style="max-height: 380px; object-fit: cover;">
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- 2. BARRA DE 4 PILARES -->
+<!-- PILARES COMERCIALES -->
 <section class="py-4 bg-gray-custom border-top border-bottom">
     <div class="container">
-        <div class="row g-3 text-center">
+        <div class="row g-4 text-center">
             <div class="col-6 col-md-3">
-                <div class="pillar-box">
-                    <div class="pillar-icon"><i class="bi bi-bar-chart-fill"></i></div>
-                    <h6 class="fw-bold mb-1">MÁS CONTROL</h6>
-                    <p class="text-muted mb-0 small">Inventario y reportes claros</p>
+                <div class="p-3 bg-white rounded-3 shadow-sm border">
+                    <span class="fs-3 text-gold">⚖️</span>
+                    <h6 class="fw-bold mt-2 mb-1">Venta por Gramo / Unidad</h6>
+                    <p class="text-muted small mb-0">Cálculo dinámico de metales</p>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="pillar-box">
-                    <div class="pillar-icon"><i class="bi bi-cart-plus-fill"></i></div>
-                    <h6 class="fw-bold mb-1">MÁS VENTAS</h6>
-                    <p class="text-muted mb-0 small">Catálogo digital rápido</p>
+                <div class="p-3 bg-white rounded-3 shadow-sm border">
+                    <span class="fs-3 text-gold">📈</span>
+                    <h6 class="fw-bold mt-2 mb-1">Precios en Escala (1-6-12)</h6>
+                    <p class="text-muted small mb-0">DetAL, mayorista y docena</p>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="pillar-box">
-                    <div class="pillar-icon"><i class="bi bi-shield-check"></i></div>
-                    <h6 class="fw-bold mb-1">MENOS ERRORES</h6>
-                    <p class="text-muted mb-0 small">Facturación y trazabilidad</p>
+                <div class="p-3 bg-white rounded-3 shadow-sm border">
+                    <span class="fs-3 text-gold">⚙️</span>
+                    <h6 class="fw-bold mt-2 mb-1">Calculadora de Taller</h6>
+                    <p class="text-muted small mb-0">Merma, mano de obra y costos</p>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="pillar-box">
-                    <div class="pillar-icon"><i class="bi bi-cash-stack"></i></div>
-                    <h6 class="fw-bold mb-1">MÁS GANANCIAS</h6>
-                    <p class="text-muted mb-0 small">Optimiza tu rentabilidad</p>
+                <div class="p-3 bg-white rounded-3 shadow-sm border">
+                    <span class="fs-3 text-gold">📊</span>
+                    <h6 class="fw-bold mt-2 mb-1">Contabilidad y Gastos</h6>
+                    <p class="text-muted small mb-0">Control financiero total</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- 3. MÓDULOS CLAVE (CARDS NEGRAS) -->
+<!-- MÓDULOS Y CARACTERÍSTICAS TÉCNICAS -->
 <section class="py-5 bg-dark-custom text-white">
-    <div class="container py-3">
+    <div class="container py-4">
         <div class="text-center mb-5">
-            <span class="text-gold fw-bold text-uppercase" style="font-size: 12px; letter-spacing: 1.5px;">Potencia tu Operación</span>
-            <h2 class="fw-extrabold mt-1 text-white">Herramientas diseñadas para la alta joyería</h2>
+            <span class="text-gold fw-bold text-uppercase" style="font-size: 12px; letter-spacing: 2px;">Ingeniería para Joyerías</span>
+            <h2 class="fw-extrabold mt-1 text-white display-6">Módulos especializados que marcan la diferencia</h2>
+            <p class="text-muted mx-auto" style="max-width: 600px;">Herramientas creadas específicamente para resolver las complejidades de la fabricación y comercialización de joyas.</p>
         </div>
 
         <div class="row g-4">
+            <!-- Módulo 1: Taller y Calculadora -->
             <div class="col-lg-4">
                 <div class="feature-card-dark">
-                    <div class="feature-icon-badge"><i class="bi bi-box-seam"></i></div>
-                    <h4 class="fw-bold mb-2">VARIANTES SIN LÍMITES</h4>
+                    <div class="feature-icon-badge"><i class="bi bi-gear-wide-connected"></i></div>
+                    <h4 class="fw-bold mb-3">Calculadora de Taller & Merma</h4>
                     <p class="text-muted small mb-4">
-                        Gestiona tallas, colores, diseños y combinaciones de tus joyas de forma simple y profesional.
+                        Calcula automáticamente el costo de fabricación ingresando el peso en gramos, precio del metal, porcentaje de merma y costos de mano de obra antes de lanzar al mercado.
                     </p>
-                    <div class="d-flex align-items-center gap-2 pt-3 border-top border-secondary">
-                        <span class="color-swatch" style="background:#d4af37;" title="Oro Amarillo"></span>
-                        <span class="color-swatch" style="background:#e0e0e0;" title="Plata / Oro Blanco"></span>
-                        <span class="color-swatch" style="background:#b76e79;" title="Oro Rosado"></span>
-                        <div class="ms-auto d-flex gap-1">
-                            <span class="size-badge">6</span>
-                            <span class="size-badge">7</span>
-                            <span class="size-badge">8</span>
-                            <span class="size-badge">9</span>
-                        </div>
+                    <div class="d-flex gap-2 flex-wrap pt-3 border-top border-secondary">
+                        <span class="scale-badge">Peso en Gramos (g)</span>
+                        <span class="scale-badge">Merma %</span>
+                        <span class="scale-badge">Mano de Obra</span>
                     </div>
                 </div>
             </div>
 
+            <!-- Módulo 2: Escalas 1-6-12 -->
             <div class="col-lg-4">
                 <div class="feature-card-dark">
-                    <div class="feature-icon-badge"><i class="bi bi-cart3"></i></div>
-                    <h4 class="fw-bold mb-2">CARRITO INTELIGENTE</h4>
+                    <div class="feature-icon-badge"><i class="bi bi-layers-fill"></i></div>
+                    <h4 class="fw-bold mb-3">Precios por Escala (1-6-12)</h4>
                     <p class="text-muted small mb-4">
-                        Agrega por unidad o por gramos, aplica precios automáticos y ofrece la mejor experiencia de compra directa por WhatsApp.
+                        Estructura comercial perfecta para mayoristas y detallistas. Configura precios automáticos según el volumen de compra: 1 unidad, media docena (6) o docenas completas (12).
                     </p>
-                    <div class="d-flex align-items-center justify-content-between pt-3 border-top border-secondary small">
-                        <span class="text-gold"><i class="bi bi-check2-circle me-1"></i>Venta por gramo</span>
-                        <span class="text-gold"><i class="bi bi-check2-circle me-1"></i>Pedidos rápidos</span>
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary text-gold small fw-bold">
+                        <span>📦 Escala 1 (Detal)</span>
+                        <span>📦 Escala 6</span>
+                        <span>📦 Escala 12</span>
                     </div>
                 </div>
             </div>
 
+            <!-- Módulo 3: Facturación y Gastos -->
             <div class="col-lg-4">
                 <div class="feature-card-dark">
-                    <div class="feature-icon-badge"><i class="bi bi-person-lines-fill"></i></div>
-                    <h4 class="fw-bold mb-2">CRM ESPECIALIZADO</h4>
-                    <p class="text-muted small mb-3">
-                        Un CRM completo para gestionar tus clientes, seguimientos, cotizaciones y oportunidades de venta.
+                    <div class="feature-icon-badge"><i class="bi bi-wallet2"></i></div>
+                    <h4 class="fw-bold mb-3">Módulo de Gastos y Finanzas</h4>
+                    <p class="text-muted small mb-4">
+                        Lleva el registro milimétrico de gastos fijos, marketing, logística y costos administrativos con categorización visual y reportes de rentabilidad en tiempo real.
                     </p>
-                    <div class="bg-dark p-2 rounded-3 border border-secondary d-flex align-items-center justify-content-between mt-auto">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-star-fill text-gold" style="font-size: 12px;"></i>
-                            <span style="font-size: 11px;" class="fw-bold text-white">Cliente VIP</span>
-                        </div>
-                        <span style="font-size: 10px;" class="text-muted">Último contacto: Hoy</span>
+                    <div class="bg-black p-2.5 rounded-3 border border-secondary d-flex align-items-center justify-content-between mt-auto">
+                        <span class="small text-muted">Estado Financiero</span>
+                        <span class="badge bg-success text-white">Saludable</span>
                     </div>
                 </div>
             </div>
@@ -400,52 +366,25 @@
     </div>
 </section>
 
-<!-- 4. HISTORIA "DE JOYERO A JOYERO" -->
-<section class="story-section">
-    <div class="container">
+<!-- SECCIÓN HISTORIA "DE JOYERO A JOYERO" -->
+<section class="py-5 bg-white">
+    <div class="container py-4">
         <div class="row align-items-center justify-content-center">
-            <div class="col-lg-9 text-center">
-                <span class="text-gold fw-bold text-uppercase" style="font-size: 12px; letter-spacing: 1px;">NUESTRA HISTORIA</span>
-                <h2 class="fw-extrabold text-dark mb-3">DE JOYERO A JOYERO</h2>
+            <div class="col-lg-8 text-center">
+                <span class="text-gold fw-bold text-uppercase" style="font-size: 12px; letter-spacing: 1.5px;">NUESTRA RAZÓN DE SER</span>
+                <h2 class="fw-extrabold text-dark mb-4 display-6">De Joyero a Joyero</h2>
                 
-                <p class="text-secondary mb-3 fs-5" style="line-height: 1.7;">
-                    Durante más de 30 años recorrí Colombia vendiendo joyas, escuchando joyeros y entendiendo sus verdaderos desafíos en el día a día comercial y operativo.
-                </p>
-                <p class="text-secondary mb-4 fs-5" style="line-height: 1.7;">
-                    De esa experiencia nació <strong>JoyasApp</strong>, una plataforma creada por un joyero, para joyeros. No es solo un software; es la herramienta que siempre necesitó tu joyería para vender más, organizarse mejor y crecer sin límites.
+                <p class="text-secondary fs-5 mb-4" style="line-height: 1.8;">
+                    "Durante más de 30 años recorrí Colombia vendiendo joyas, visitando talleres y escuchando de primera mano los dolores de cabeza de los joyeros: inventarios descuadrados, cálculos manuales de merma y desorden financiero."
                 </p>
 
-                <div class="row g-2 mb-4 text-start justify-content-center">
-                    <div class="col-sm-5">
-                        <div class="check-list-item">
-                            <div class="check-icon"><i class="bi bi-check-lg"></i></div>
-                            <span class="fw-semibold text-dark">Creado por un joyero, para joyeros.</span>
+                <div class="p-4 rounded-4 bg-gray-custom border shadow-sm d-inline-block text-start mb-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="fs-1 text-gold">👑</div>
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark">Francisco Javier González Arboleda</h5>
+                            <p class="text-muted small mb-0">Fundador y Desarrollador de JoyasApp • 321 528 0610</p>
                         </div>
-                    </div>
-                    <div class="col-sm-5">
-                        <div class="check-list-item">
-                            <div class="check-icon"><i class="bi bi-check-lg"></i></div>
-                            <span class="fw-semibold text-dark">Tecnología moderna, fácil de usar.</span>
-                        </div>
-                    </div>
-                    <div class="col-sm-5">
-                        <div class="check-list-item">
-                            <div class="check-icon"><i class="bi bi-check-lg"></i></div>
-                            <span class="fw-semibold text-dark">Actualizaciones constantes.</span>
-                        </div>
-                    </div>
-                    <div class="col-sm-5">
-                        <div class="check-list-item">
-                            <div class="check-icon"><i class="bi bi-check-lg"></i></div>
-                            <span class="fw-semibold text-dark">Soporte humano y especializado.</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="p-3 rounded-3 bg-gray-custom border-start border-4 border-warning d-inline-flex align-items-center gap-3">
-                    <div class="text-start">
-                        <strong class="d-block text-dark">Francisco González</strong>
-                        <span class="text-muted small">Fundador de JoyasApp • 321 528 0610</span>
                     </div>
                 </div>
             </div>
@@ -453,255 +392,199 @@
     </div>
 </section>
 
-<!-- 5. PLANES Y SERVICIOS CON PRECIOS UNIFICADOS -->
-<section id="planes-seccion" class="py-5 bg-gray-custom border-top">
-    <div class="container py-3">
-        <div class="text-center mb-4">
-            <span class="badge bg-dark text-gold px-3 py-2 rounded-pill mb-2">PLANES Y SERVICIOS</span>
-            <h2 class="fw-extrabold text-dark">Planes pensados para cada etapa de tu joyería</h2>
+<!-- PLANES Y PRECIOS -->
+<section id="planes" class="py-5 bg-gray-custom border-top">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <span class="badge bg-dark text-gold px-3 py-2 rounded-pill mb-2">INVERSIÓN INTELIGENTE</span>
+            <h2 class="fw-extrabold text-dark display-6">Planes para cada etapa de tu negocio</h2>
             <p class="text-secondary mx-auto" style="max-width: 600px;">
-                Elegí el plan que mejor se adapte a tu crecimiento. Sin cláusulas de permanencia.
+                Sin cláusulas de permanencia. Cancela o cambia de plan cuando lo necesites.
             </p>
         </div>
 
-        <ul class="nav nav-pills plan-nav-pills justify-content-center gap-2 mb-5" id="planTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="todos-tab" data-bs-toggle="pill" data-bs-target="#tab-todos" type="button" role="tab">Ver Todos los Planes</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="basico-tab" data-bs-toggle="pill" data-bs-target="#tab-basico" type="button" role="tab">Plan Básico ($49.900)</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="semi-tab" data-bs-toggle="pill" data-bs-target="#tab-semi" type="button" role="tab">Plan Semi ($89.900)</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="premium-tab" data-bs-toggle="pill" data-bs-target="#tab-premium" type="button" role="tab">Plan Premium ($149.900)</button>
-            </li>
-        </ul>
-
-        <div class="tab-content" id="planTabsContent">
-            
-            <div class="tab-pane fade show active" id="tab-todos" role="tabpanel">
-                <div class="row g-4 justify-content-center">
+        <div class="row g-4 justify-content-center">
+            <!-- PLAN BÁSICO -->
+            <div class="col-lg-4 col-md-6">
+                <div class="card-plan-box h-100 d-flex flex-column">
+                    <span class="badge bg-secondary text-white align-self-start mb-2 px-3 py-1">Emprendedor</span>
+                    <h3 class="fw-bold text-dark mb-1">BÁSICO</h3>
+                    <p class="text-muted small">Para joyerías que inician su digitalización</p>
                     
-                    <!-- PLAN BÁSICO -->
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card-plan-box h-100 d-flex flex-column">
-                            <span class="badge bg-secondary text-white align-self-start mb-2 px-3 py-1">Emprendedor</span>
-                            <h3 class="fw-bold text-dark mb-1">BÁSICO</h3>
-                            <p class="text-muted small">Todo lo esencial para comenzar</p>
-                            
-                            <div class="my-3">
-                                <span class="h1 fw-bold text-dark">$49.900</span>
-                                <span class="text-muted">/mes</span>
-                            </div>
-
-                            <ul class="list-unstyled text-secondary small my-3 flex-grow-1">
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Catálogo de productos ilimitado</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Gestión de clientes</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Pedidos por WhatsApp</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Control básico de inventario</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>1 usuario administrador incluido</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte por WhatsApp</li>
-                            </ul>
-
-                            <a href="{% url 'registro' %}?plan=basico" class="btn btn-outline-dark w-100 fw-bold py-2 rounded-3 mt-auto">
-                                Registrarse en Plan Básico
-                            </a>
-                        </div>
+                    <div class="my-3">
+                        <span class="h1 fw-bold text-dark">$49.900</span>
+                        <span class="text-muted">/mes</span>
                     </div>
 
-                    <!-- PLAN SEMI -->
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card-plan-box featured h-100 d-flex flex-column">
-                            <span class="badge bg-dark text-gold align-self-start mb-2 px-3 py-1 fw-bold">MÁS RECOMENDADO</span>
-                            <h3 class="fw-bold text-dark mb-1">SEMI</h3>
-                            <p class="text-muted small">Control avanzado y Siigo</p>
-                            
-                            <div class="my-3">
-                                <span class="h1 fw-bold text-dark">$89.900</span>
-                                <span class="text-muted">/mes</span>
-                            </div>
+                    <ul class="list-unstyled text-secondary small my-3 flex-grow-1">
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Catálogo de productos ilimitado</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Gestión de clientes y CRM</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Pedidos rápidos por WhatsApp</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Control de inventario estándar</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte técnico por WhatsApp</li>
+                    </ul>
 
-                            <ul class="list-unstyled text-secondary small my-3 flex-grow-1">
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i><strong>Todo lo del plan Básico</strong></li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Inventario avanzado por gramos y variantes</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i><strong>Facturación electrónica con Siigo</strong></li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Pasarelas de pago (Wompi, Mercado Pago)</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Hasta 3 usuarios habilitados</li>
-                            </ul>
-
-                            <a href="{% url 'registro' %}?plan=semi" class="btn btn-gold w-100 fw-bold py-2 rounded-3 mt-auto">
-                                Registrarse en Plan Semi 🚀
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- PLAN PREMIUM -->
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card-plan-box h-100 d-flex flex-column">
-                            <span class="badge bg-dark text-white align-self-start mb-2 px-3 py-1">Potencia Total</span>
-                            <h3 class="fw-bold text-dark mb-1">PREMIUM</h3>
-                            <p class="text-muted small">Solución completa para joyerías líderes</p>
-                            
-                            <div class="my-3">
-                                <span class="h1 fw-bold text-dark">$149.900</span>
-                                <span class="text-muted">/mes</span>
-                            </div>
-
-                            <ul class="list-unstyled text-secondary small my-3 flex-grow-1">
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Todo lo del plan Semi</strong></li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Subdominio personalizado exclusivo</strong></li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>CRM completo y automatizaciones de WhatsApp</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Usuarios ilimitados</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte prioritario 24/7</li>
-                            </ul>
-
-                            <a href="{% url 'registro' %}?plan=premium" class="btn btn-dark w-100 fw-bold py-2 rounded-3 mt-auto">
-                                Registrarse en Plan Premium
-                            </a>
-                        </div>
-                    </div>
+                    <a href="{% url 'registro' %}?plan=basico" class="btn btn-outline-dark w-100 fw-bold py-2.5 rounded-3 mt-auto">
+                        Elegir Plan Básico
+                    </a>
                 </div>
             </div>
 
-            <!-- TABS INDIVIDUALES -->
-            <div class="tab-pane fade" id="tab-basico" role="tabpanel">
-                <div class="max-width-700 mx-auto card-plan-box p-4 text-center">
-                    <h3 class="fw-bold text-dark">Plan Básico — $49.900 / mes</h3>
-                    <p class="text-secondary">Diseñado para joyeros que están comenzando su proceso de digitalización.</p>
-                    {% if user.is_authenticated %}
-                        <a href="{% url 'pagar_plan' 'basico' %}" class="btn btn-gold fw-bold mt-2">Pagar Plan Básico ($49.900)</a>
-                    {% else %}
-                        <a href="{% url 'registro' %}?plan=basico" class="btn btn-gold fw-bold mt-2">Crear mi tienda en Plan Básico</a>
-                    {% endif %}
+            <!-- PLAN SEMI -->
+            <div class="col-lg-4 col-md-6">
+                <div class="card-plan-box featured h-100 d-flex flex-column">
+                    <span class="badge bg-dark text-gold align-self-start mb-2 px-3 py-1 fw-bold">⭐ MÁS POPULAR</span>
+                    <h3 class="fw-bold text-dark mb-1">SEMI</h3>
+                    <p class="text-muted small">Inventario por gramos, taller y Siigo</p>
+                    
+                    <div class="my-3">
+                        <span class="h1 fw-bold text-dark">$89.900</span>
+                        <span class="text-muted">/mes</span>
+                    </div>
+
+                    <ul class="list-unstyled text-secondary small my-3 flex-grow-1">
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i><strong>Todo lo del plan Básico</strong></li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Inventario avanzado por gramos y variantes</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i><strong>Calculadora de Taller y Merma</strong></li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Integración con Facturación Siigo</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Hasta 3 usuarios administradores</li>
+                    </ul>
+
+                    <a href="{% url 'registro' %}?plan=semi" class="btn btn-gold w-100 fw-bold py-2.5 rounded-3 mt-auto">
+                        Elegir Plan Semi 🚀
+                    </a>
                 </div>
             </div>
 
-            <div class="tab-pane fade" id="tab-semi" role="tabpanel">
-                <div class="max-width-700 mx-auto card-plan-box p-4 border-warning text-center">
-                    <h3 class="fw-bold text-dark">Plan Semi — $89.900 / mes</h3>
-                    <p class="text-secondary">Ideal para control de inventarios por gramo e integración con Siigo.</p>
-                    {% if user.is_authenticated %}
-                        <a href="{% url 'pagar_plan' 'semi' %}" class="btn btn-gold fw-bold mt-2">Pagar Plan Semi 🚀 ($89.900)</a>
-                    {% else %}
-                        <a href="{% url 'registro' %}?plan=semi" class="btn btn-gold fw-bold mt-2">Crear mi tienda en Plan Semi</a>
-                    {% endif %}
-                </div>
-            </div>
+            <!-- PLAN PREMIUM -->
+            <div class="col-lg-4 col-md-6">
+                <div class="card-plan-box h-100 d-flex flex-column">
+                    <span class="badge bg-dark text-white align-self-start mb-2 px-3 py-1">Potencia Total</span>
+                    <h3 class="fw-bold text-dark mb-1">PREMIUM</h3>
+                    <p class="text-muted small">Solución corporativa para grandes talleres</p>
+                    
+                    <div class="my-3">
+                        <span class="h1 fw-bold text-dark">$149.900</span>
+                        <span class="text-muted">/mes</span>
+                    </div>
 
-            <div class="tab-pane fade" id="tab-premium" role="tabpanel">
-                <div class="max-width-700 mx-auto card-plan-box p-4 text-center">
-                    <h3 class="fw-bold text-dark">Plan Premium — $149.900 / mes</h3>
-                    <p class="text-secondary">Subdominio exclusivo, CRM avanzado y soporte 24/7.</p>
-                    {% if user.is_authenticated %}
-                        <a href="{% url 'pagar_plan' 'premium' %}" class="btn btn-gold fw-bold mt-2">Pagar Plan Premium ($149.900)</a>
-                    {% else %}
-                        <a href="{% url 'registro' %}?plan=premium" class="btn btn-gold fw-bold mt-2">Crear mi tienda en Plan Premium</a>
-                    {% endif %}
+                    <ul class="list-unstyled text-secondary small my-3 flex-grow-1">
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Todo lo del plan Semi</strong></li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Subdominio personalizado exclusivo</strong></li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Módulo completo de control de gastos</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Usuarios y accesos ilimitados</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte prioritario 24/7</li>
+                    </ul>
+
+                    <a href="{% url 'registro' %}?plan=premium" class="btn btn-dark w-100 fw-bold py-2.5 rounded-3 mt-auto">
+                        Elegir Plan Premium
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- 6. PIE DE PÁGINA (FOOTER INSTITUCIONAL COMPLETO) -->
-<footer class="bg-dark text-white pt-5 pb-4 border-top border-secondary">
+<!-- FOOTER MAJESTUOSO E INSTITUCIONAL -->
+<footer class="saas-footer">
     <div class="container">
-        <div class="row g-4 mb-4">
-            
-            <!-- COLUMNA 1: SOBRE JOYASAPP -->
+        <div class="row g-5 mb-5">
+            <!-- Columna 1: Marca & Misión -->
             <div class="col-lg-4 col-md-6">
                 <div class="d-flex align-items-center gap-2 mb-3">
                     <span class="fs-3">💎</span>
                     <span class="fw-bold fs-4 text-white">Joyas<span class="text-gold">App</span></span>
                 </div>
-                <p class="text-muted small leading-relaxed mb-3">
-                    Plataforma especializada en gestión de inventarios por gramo, variantes, catálogo virtual, CRM y facturación electrónica para el sector joyero.
+                <p class="small text-muted mb-3" style="line-height: 1.7;">
+                    La plataforma SaaS líder para la gestión integral de talleres, inventarios por gramo, variantes, precios por escala (1-6-12) y contabilidad en la industria de la joyería moderna.
                 </p>
-                <p class="text-gold fw-bold small mb-0">
+                <p class="text-gold small fw-bold mb-0">
                     ✨ Creado por un joyero, para joyeros.
                 </p>
             </div>
 
-            <!-- COLUMNA 2: ATENCIÓN Y CONTACTO OFICIAL -->
+            <!-- Columna 2: Contacto Oficial -->
             <div class="col-lg-3 col-md-6">
-                <h6 class="fw-bold text-gold mb-3 text-uppercase" style="letter-spacing: 1px;">Contacto Oficial</h6>
+                <h6 class="text-uppercase mb-3">Contacto Oficial</h6>
                 <ul class="list-unstyled small text-muted">
                     <li class="mb-2 d-flex align-items-center gap-2">
-                        <i class="bi bi-person-circle text-gold"></i>
+                        <i class="bi bi-person-fill text-gold"></i>
                         <span><strong>Francisco González</strong> (Fundador)</span>
                     </li>
                     <li class="mb-2 d-flex align-items-center gap-2">
                         <i class="bi bi-whatsapp text-success"></i>
-                        <a href="https://wa.me/573215280610" target="_blank" class="text-muted text-decoration-none">+57 321 528 0610</a>
+                        <a href="https://wa.me/573215280610" target="_blank">+57 321 528 0610</a>
                     </li>
                     <li class="mb-2 d-flex align-items-center gap-2">
-                        <i class="bi bi-envelope-at text-gold"></i>
-                        <span>contacto@joyasapp.com</span>
+                        <i class="bi bi-envelope-fill text-gold"></i>
+                        <a href="mailto:contacto@joyasapp.com">contacto@joyasapp.com</a>
                     </li>
                     <li class="mb-2 d-flex align-items-center gap-2">
-                        <i class="bi bi-geo-alt text-gold"></i>
-                        <span>Colombia</span>
+                        <i class="bi bi-geo-alt-fill text-gold"></i>
+                        <span>Colombia (Cobertura Nacional)</span>
                     </li>
                 </ul>
             </div>
 
-            <!-- COLUMNA 3: INTEGRACIONES Y SERVICIOS -->
+            <!-- Columna 3: Ecosistema Tecnológico -->
             <div class="col-lg-2 col-md-6">
-                <h6 class="fw-bold text-gold mb-3 text-uppercase" style="letter-spacing: 1px;">Ecosistema</h6>
+                <h6 class="text-uppercase mb-3">Ecosistema</h6>
                 <ul class="list-unstyled small text-muted">
+                    <li class="mb-2">✓ Calculadora de Taller</li>
+                    <li class="mb-2">✓ Precios Escala (1-6-12)</li>
                     <li class="mb-2">✓ Facturación Siigo</li>
                     <li class="mb-2">✓ Pasarela Wompi</li>
-                    <li class="mb-2">✓ Mercado Pago</li>
-                    <li class="mb-2">✓ Pedidos WhatsApp</li>
-                    <li class="mb-2">✓ Dominio Propio</li>
+                    <li class="mb-2">✓ CRM & Gastos</li>
                 </ul>
             </div>
 
-            <!-- COLUMNA 4: REDES SOCIALES COMERCIALES -->
+            <!-- Columna 4: Redes Sociales Comerciales -->
             <div class="col-lg-3 col-md-6">
-                <h6 class="fw-bold text-gold mb-3 text-uppercase" style="letter-spacing: 1px;">Síguenos en Redes</h6>
-                <p class="text-muted small mb-3">
-                    Conoce las últimas actualizaciones, novedades e historias de joyerías en nuestra comunidad:
+                <h6 class="text-uppercase mb-3">Síguenos en Redes</h6>
+                <p class="small text-muted mb-3">
+                    Conoce las últimas novedades, actualizaciones y casos de éxito de talleres en nuestra comunidad:
                 </p>
                 <div class="d-flex gap-2">
-                    <a href="https://instagram.com" target="_blank" class="btn btn-outline-light btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Instagram JoyasApp">
+                    <a href="https://instagram.com/JoyasAppOficial" target="_blank" class="social-circle-btn" title="Instagram">
                         <i class="bi bi-instagram text-gold"></i>
                     </a>
-                    <a href="https://facebook.com" target="_blank" class="btn btn-outline-light btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Facebook JoyasApp">
+                    <a href="https://facebook.com/JoyasAppOficial" target="_blank" class="social-circle-btn" title="Facebook">
                         <i class="bi bi-facebook text-gold"></i>
                     </a>
-                    <a href="https://tiktok.com" target="_blank" class="btn btn-outline-light btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="TikTok JoyasApp">
+                    <a href="https://tiktok.com" target="_blank" class="social-circle-btn" title="TikTok">
                         <i class="bi bi-tiktok text-gold"></i>
+                    </a>
+                    <a href="https://linkedin.com/company/joyasapp" target="_blank" class="social-circle-btn" title="LinkedIn">
+                        <i class="bi bi-linkedin text-gold"></i>
                     </a>
                 </div>
             </div>
-
         </div>
 
-        <hr class="border-secondary my-4">
+        <hr class="border-secondary opacity-25 my-4">
 
-        <!-- DERECHOS RESERVADOS -->
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center small text-muted gap-2">
-            <div>
-                © 2026 <strong>JoyasApp SaaS</strong>. Todos los derechos reservados.
+        <!-- Derechos y Enlaces Secundarios -->
+        <div class="row align-items-center small text-muted">
+            <div class="col-md-6 text-center text-md-start mb-2 mb-md-0">
+                &copy; 2026 <strong>JoyasApp</strong>. Todos los derechos reservados. Desarrollado para potenciar la joyería moderna.
             </div>
-            <div>
-                Plataforma de Software para el Sector Joyero • <a href="/" class="text-gold text-decoration-none">www.joyasapp.com</a>
+            <div class="col-md-6 text-center text-md-end">
+                <a href="#planes" class="text-muted me-3">Planes</a>
+                <a href="{% url 'login' %}" class="text-muted me-3">Iniciar Sesión</a>
+                <a href="https://wa.me/573215280610" class="text-gold">Soporte WhatsApp</a>
             </div>
         </div>
     </div>
 </footer>
 
-<!-- Bootstrap JS Bundle -->
+<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
 function irASubdominio() {
     let input = document.getElementById("input-subdominio").value.trim().toLowerCase();
     if (!input) {
-        alert("Por favor ingresa el nombre de tu joyería o subdominio.");
+        alert("Por favor ingresa el nombre de tu tienda o subdominio.");
         return;
     }
     window.location.href = "https://" + input + ".joyasapp.com";
