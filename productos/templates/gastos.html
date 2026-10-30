@@ -129,7 +129,7 @@
                 <tr style="border-bottom:1px solid #f1f1f1;">
                     <td style="padding:15px; font-weight: 600; color: #222;">{{ g.nombre }}</td>
                     <td style="padding:15px;">
-                        {% elif g.categoria == 'fijo' %}
+                        {% if g.categoria == 'fijo' %}
                             <span class="badge-categoria" style="background: #6c757d;">🏢 Gasto Fijo</span>
                         {% elif g.categoria == 'marketing' %}
                             <span class="badge-categoria" style="background: #007bff;">📢 Marketing</span>
