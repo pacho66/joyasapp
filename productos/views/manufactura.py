@@ -12,10 +12,28 @@ def fabricacion(request):
         producto__usuario=request.user
     ).select_related('producto')
 
-    # 2. Calculamos los totales consolidados
-    material_total = sum(v.costo_material_con_merma for v in variantes)
-    total_mano_obra = sum(float(v.costo_mano_obra or 0) for v in variantes)
-    costos_totales = sum(v.costo_total for v in variantes)
+    # 2. Calculamos los totales de forma segura evitando mezcla de tipos
+    material_total = 0.0
+    total_mano_obra = 0.0
+    costos_totales = 0.0
+
+    for v in variantes:
+        try:
+            material_total += float(v.costo_material_con_merma or 0)
+        except (ValueError, TypeError):
+            pass
+
+        try:
+            # Evaluamos si es callable (método) o propiedad de mano de obra
+            mo = v.costo_mano_obra() if callable(v.costo_mano_obra) else v.costo_mano_obra
+            total_mano_obra += float(mo or 0)
+        except (ValueError, TypeError):
+            pass
+
+        try:
+            costos_totales += float(v.costo_total or 0)
+        except (ValueError, TypeError):
+            pass
 
     context = {
         'variantes': variantes,
@@ -25,7 +43,6 @@ def fabricacion(request):
         'mensaje': "⚙️ Control de Fabricación Activo"
     }
     return render(request, 'productos/fabricacion.html', context)
-
 
 @login_required
 def guardar_variante_fabricacion(request, producto_id):
