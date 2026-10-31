@@ -15,6 +15,7 @@ from django.http import HttpResponse
 from decimal import Decimal
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
+from .models import ConfiguracionSEO
 
 # =====================================
 # 🔥 1. FUNCIÓN MASIVA (AQUÍ VA)
@@ -148,6 +149,16 @@ class ProductoAdmin(admin.ModelAdmin):
         if not obj.usuario:
             obj.usuario = request.user
         super().save_model(request, obj, form, change)
+
+@admin.register(ConfiguracionSEO)
+class ConfiguracionSEOAdmin(admin.ModelAdmin):
+    list_display = ('meta_titulo', 'sitio_publicado', 'google_search_console')
+    
+    # Prevenir crear múltiples filas de configuración
+    def has_add_permission(self, request):
+        if self.model.objects.exists():
+            return False
+        return super().has_add_permission(request)
 
 @admin.register(Pedido)
 class PedidoAdmin(admin.ModelAdmin):

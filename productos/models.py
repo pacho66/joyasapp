@@ -342,6 +342,48 @@ class Producto(models.Model):
             if self.stock != total_var:
                 Producto.objects.filter(pk=self.pk).update(stock=total_var)
 
+class ConfiguracionSEO(models.Model):
+    sitio_publicado = models.BooleanField(
+        default=True, 
+        verbose_name="¿Publicar sitio en Google y al público?",
+        help_text="Si está marcado, Google indexará tu página. Si lo desmarcas, indicará a los buscadores que no muestren la web aún."
+    )
+    
+    meta_titulo = models.CharField(
+        max_length=200, 
+        default="Software de gestión y taller para joyerías modernas — JoyasApp",
+        verbose_name="Meta Título (SEO Title)",
+        help_text="El título principal que aparecerá en la pestaña del navegador y en las búsquedas de Google."
+    )
+    
+    meta_descripcion = models.TextField(
+        default="Software SaaS especializado para joyerías y talleres. Control de inventario por gramos, calculadora de merma de taller y precios en escala 1-6-12.",
+        verbose_name="Meta Descripción",
+        help_text="Resumen persuasivo de 140 a 160 caracteres que atrae clics en los resultados de Google."
+    )
+    
+    meta_keywords = models.CharField(
+        max_length=255, 
+        default="software joyeria, sistema taller joyeria, inventario gramos joyeria, escala 1-6-12",
+        verbose_name="Palabras Clave (Keywords)",
+        help_text="Términos clave separados por comas."
+    )
+    
+    google_search_console = models.CharField(
+        max_length=150, 
+        blank=True, 
+        null=True,
+        verbose_name="Código de Verificación Google Search Console",
+        help_text="Pega solo la clave/código alfanumérico que te da Google en la meta etiqueta (propiedad content)."
+    )
+
+    class Meta:
+        verbose_name = "Configuración SEO y Visibilidad"
+        verbose_name_plural = "Configuración SEO y Visibilidad"
+
+    def __str__(self):
+        return "Configuración General de SEO"
+
 class ProductoImagen(models.Model):
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='imagenes')
     imagen = CloudinaryField('imagen', blank=True, null=True)

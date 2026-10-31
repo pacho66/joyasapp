@@ -12,6 +12,7 @@ from django.utils.text import slugify
 
 from ..forms import RegistroForm
 from ..models import Perfil,Producto
+from .models import Perfil, Producto, ConfiguracionSEO  
 
 # =========================================================================
 # 🔑 BLOQUE 2: AUTENTICACIÓN, CUENTAS Y PLANES SAAS
@@ -66,8 +67,13 @@ def index_saas(request):
             })
     
     # 4. SI VIENE DE LA RAÍZ PURA (joyasapp.com)
-    # Muestra únicamente la sala principal del SaaS (Landing Page limpia)
-    return render(request, 'landing_saas.html')
+    # Obtenemos la configuración SEO y de visibilidad desde el Admin de Django
+    seo_config, _ = ConfiguracionSEO.objects.get_or_create(id=1)
+    
+    # Muestra la Landing Page limpia con sus metadatos administrables
+    return render(request, 'landing_saas.html', {
+        'seo': seo_config
+    })
 
 def registro(request):
     # 1. Capturar el plan desde los parámetros GET (ej: ?plan=semi), por defecto 'basico'

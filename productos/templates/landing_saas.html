@@ -4,7 +4,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JoyasApp — El SaaS Definitorio para la Industria Joyera y Talleres</title>
+    
+    <!-- CONTROL DE INDEXACIÓN AUTOMÁTICA Y SEO DINÁMICO -->
+    {% if seo %}
+        {% if seo.sitio_publicado %}
+            <meta name="robots" content="index, follow">
+        {% else %}
+            <meta name="robots" content="noindex, nofollow">
+        {% endif %}
+        
+        {% if seo.google_search_console %}
+            <meta name="google-site-verification" content="{{ seo.google_search_console }}" />
+        {% endif %}
+        
+        <title>{{ seo.meta_titulo|default:"Software de gestión para joyerías y taller — JoyasApp" }}</title>
+        <meta name="description" content="{{ seo.meta_descripcion|default:'Software SaaS especializado para joyerías y talleres en Colombia. Control de inventario por gramos, merma y precios escala 1-6-12.' }}">
+        <meta name="keywords" content="{{ seo.meta_keywords|default:'software para joyerias, taller de joyeria, inventario gramos oro plata, saas joyeria colombia' }}">
+    {% else %}
+        <meta name="robots" content="index, follow">
+        <title>Software de gestión para joyerías y taller — JoyasApp</title>
+        <meta name="description" content="Software SaaS especializado para joyerías y talleres en Colombia. Control de inventario por gramos, merma y precios escala 1-6-12.">
+        <meta name="keywords" content="software para joyerias, taller de joyeria, inventario gramos oro plata, saas joyeria colombia">
+    {% endif %}
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -140,7 +162,7 @@
         /* FOOTER PROFESIONAL MAJESTUOSO */
         .saas-footer {
             background: #090909;
-            color: #ffffff !important; /* Blanco puro obligatorio */
+            color: #ffffff !important;
             padding-top: 5rem;
             padding-bottom: 3rem;
             border-top: 3px solid var(--ja-gold);
@@ -154,7 +176,7 @@
         .saas-footer span, 
         .saas-footer li, 
         .saas-footer a {
-            color: #f3f4f6 !important; /* Gris ultra claro / casi blanco */
+            color: #f3f4f6 !important;
             text-decoration: none;
             transition: color 0.2s ease;
         }
@@ -214,17 +236,18 @@
         <div class="row align-items-center gy-5">
             <div class="col-lg-6">
                 <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill bg-white border shadow-sm mb-3">
-                    <span class="badge bg-dark text-gold px-2 py-1" style="font-size:10px;">SAAS MULTI-TENANT</span>
+                    <span class="badge bg-dark text-gold px-2 py-1" style="font-size:10px;">SAAS MULTI-TENANT COLOMBIA</span>
                     <span class="text-muted fw-semibold" style="font-size: 13px;">Diseñado para Fabricantes y Joyerías</span>
                 </div>
                 
+                <!-- H1 ACTUALIZADO -->
                 <h1 class="hero-title text-dark mb-3">
                     Software de gestión <br>
-                    <span class="text-gold">y taller para joyerías modernas</span>
+                    <span class="text-gold">para joyerías y taller</span>
                 </h1>
                 
                 <p class="lead text-secondary mb-4" style="font-size: 1.15rem; line-height: 1.6;">
-                    Domina tu inventario por gramos, controla costos de fabricación con merma, maneja escalas <strong>1-6-12</strong> e impulsa tu negocio al siguiente nivel.
+                    Domina tu inventario por gramos, controla costos de fabricación con merma, maneja escalas <strong>1-6-12</strong> e impulsa tu negocio al siguiente nivel en Colombia.
                 </p>
 
                 <!-- BUSCADOR DE SUBDOMINIOS -->
@@ -288,7 +311,7 @@
                 <div class="p-3 bg-white rounded-3 shadow-sm border">
                     <span class="fs-3 text-gold">📈</span>
                     <h6 class="fw-bold mt-2 mb-1">Precios en Escala (1-6-12)</h6>
-                    <p class="text-muted small mb-0">DetAL, mayorista y docena</p>
+                    <p class="text-muted small mb-0">Detal, mayorista y docena</p>
                 </div>
             </div>
             <div class="col-6 col-md-3">
