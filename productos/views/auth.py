@@ -11,8 +11,8 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from ..forms import RegistroForm
-from ..models import Perfil,Producto
-from .models import Perfil, Producto, ConfiguracionSEO  
+from ..models import Perfil,Producto,ConfiguracionSEO
+
 
 # =========================================================================
 # 🔑 BLOQUE 2: AUTENTICACIÓN, CUENTAS Y PLANES SAAS
