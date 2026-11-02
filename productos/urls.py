@@ -14,6 +14,7 @@ from .views.catalogo import catalogo_tienda
 from django.views.generic import TemplateView
 from .views.dashboard import crear_empleado_tienda
 from .views import checkout 
+from productos.views.landing import registrar_evento_embudo
 
 urlpatterns = [
 
@@ -154,6 +155,9 @@ urlpatterns = [
     # 💼 CARTERA
     # ===============================
     path('cartera/', views.cartera_clientes, name='cartera_clientes'),
+
+    # RUTA DE TRACKING DEL EMBUDO 
+    path('api/track-embudo/', registrar_evento_embudo, name='track_embudo'),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])

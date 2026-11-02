@@ -384,6 +384,29 @@ class ConfiguracionSEO(models.Model):
     def __str__(self):
         return "Configuración General de SEO"
 
+class EventoEmbudo(models.Model):
+    PASOS = [
+        ('landing_view', '1. Visita Landing Page'),
+        ('click_plan_basico', '2a. Clic Plan Básico ($49.900)'),
+        ('click_plan_semi', '2b. Clic Plan Semi ($89.900)'),
+        ('click_plan_premium', '2c. Clic Plan Premium ($149.900)'),
+        ('visit_registro', '3. Visita Pagina Registro'),
+        ('registro_completado', '4. Registro Exitoso'),
+    ]
+
+    paso = models.CharField(max_length=50, choices=PASOS)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    session_key = models.CharField(max_length=100, null=True, blank=True)
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Evento de Embudo"
+        verbose_name_plural = "Eventos de Embudo"
+        ordering = ['-fecha']
+
+    def __str__(self):
+        return f"{self.get_paso_display()} - {self.fecha.strftime('%Y-%m-%d %H:%M')}"
+
 class ProductoImagen(models.Model):
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='imagenes')
     imagen = CloudinaryField('imagen', blank=True, null=True)

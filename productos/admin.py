@@ -16,6 +16,7 @@ from decimal import Decimal
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from .models import ConfiguracionSEO
+from .models import EventoEmbudo
 
 # =====================================
 # 🔥 1. FUNCIÓN MASIVA (AQUÍ VA)
@@ -159,6 +160,27 @@ class ConfiguracionSEOAdmin(admin.ModelAdmin):
         if self.model.objects.exists():
             return False
         return super().has_add_permission(request)
+
+@admin.register(EventoEmbudo)
+class EventoEmbudoAdmin(admin.ModelAdmin):
+    # Columnas que se mostrarán en la lista principal del Admin
+    list_display = ('paso', 'ip_address', 'session_key', 'fecha')
+    
+    # Filtros laterales para analizar el embudo fácilmente
+    list_filter = ('paso', 'fecha')
+    
+    # Buscador por IP o Llave de Sesión
+    search_fields = ('ip_address', 'session_key')
+    
+    # Ordenar desde el más reciente al más antiguo
+    ordering = ('-fecha',)
+    
+    # Hacer que los registros sean solo de lectura (para evitar modificaciones accidentales)
+    readonly_fields = ('paso', 'ip_address', 'session_key', 'fecha')
+
+    # Desactivar la opción de agregar eventos manualmente desde el admin
+    def has_add_permission(self, request):
+        return False
 
 @admin.register(Pedido)
 class PedidoAdmin(admin.ModelAdmin):
