@@ -381,7 +381,7 @@ class ProductoForm(forms.ModelForm):
             'precio_por_gramo_semimayor', 
             'precio_por_gramo_mayor',  # Corregido aquí
             'imagen_principal', 
-            'destacado'
+            'destacado',
             'mostrar_en_catalogo',  
         ]
         widgets = {
