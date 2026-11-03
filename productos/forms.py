@@ -382,6 +382,7 @@ class ProductoForm(forms.ModelForm):
             'precio_por_gramo_mayor',  # Corregido aquí
             'imagen_principal', 
             'destacado'
+            'mostrar_en_catalogo',  
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de la joya'}),
@@ -400,4 +401,5 @@ class ProductoForm(forms.ModelForm):
             'precio_por_gramo_mayor': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Valor gramo mayor'}),
             'imagen_principal': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'destacado': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'mostrar_en_catalogo': forms.CheckboxInput(attrs={'class': 'form-check-input'}), 
         }
