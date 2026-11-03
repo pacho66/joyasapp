@@ -463,7 +463,7 @@
         htmlContenido += '        </div>';
         htmlContenido += '        <label style="display: block; margin-top: 5px; font-size: 11px; color: #2563eb; cursor: pointer; font-weight: bold;">';
         htmlContenido += '            Subir Foto';
-        htmlContenido += '            <input type="file" name="v_foto[]" accept="image/*" style="display: none;" onchange="previsualizarFotoVariante(this, \'' + idUnico + '\')">';
+        htmlContenido += '<input type="file" name="v_foto_' + idUnico + '" accept="image/*" style="display: none;" onchange="previsualizarFotoVariante(this, \'' + idUnico + '\')">';
         htmlContenido += '        </label>';
         htmlContenido += '    </div>';
         htmlContenido += '    <div style="flex: 1; min-width: 200px;" class="grid-4-col">';

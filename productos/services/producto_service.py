@@ -118,7 +118,7 @@ class ProductoService:
                         continue
                     ProductoImagen.objects.create(producto=producto, imagen=f)
 
-            # 5. MOTOR DE VARIANTES
+            # 5. MOTOR DE VARIANTES BLINDADO
             indices = data.getlist('v_index[]')
             colores = data.getlist('v_color[]')
             tallas = data.getlist('v_talla[]')
@@ -126,6 +126,8 @@ class ProductoService:
             stocks = data.getlist('v_stock[]')
             precios = data.getlist('v_precio[]')
             codigos = data.getlist('v_codigo[]')
+            # Si agregas un input oculto v_id[] en tus tarjetas para variantes existentes:
+            ids_variantes = data.getlist('v_id[]') if 'v_id[]' in data else []
 
             codigos_procesados = []
 
@@ -138,6 +140,7 @@ class ProductoService:
 
                     v_stock = cls.entero_seguro(stocks[i])
                     v_peso = cls.decimal_seguro(pesos[i])
+                    v_id = ids_variantes[i] if i < len(ids_variantes) and ids_variantes[i] else None
 
                     if producto.tipo_venta == 'gramo':
                         precio_defecto = producto.precio_por_gramo_detal
@@ -146,36 +149,36 @@ class ProductoService:
                     
                     v_precio = cls.decimal_seguro(precios[i] if i < len(precios) else None, defecto=precio_defecto)
 
-                    variante, created = ProductoVariante.objects.get_or_create(
-                        producto=producto,
-                        codigo=v_codigo,
-                        defaults={
-                            'color': v_color,
-                            'talla': v_talla,
-                            'stock': v_stock,
-                            'precio_venta': v_precio,
-                            'peso': v_peso,
-                            'activo': True
-                        }
-                    )
+                    # Buscar por ID si existe, de lo contrario por código o crear
+                    variante = None
+                    if v_id:
+                        variante = ProductoVariante.objects.filter(pk=v_id, producto=producto).first()
+                    
+                    if not variante:
+                        variante, _ = ProductoVariante.objects.get_or_create(
+                            producto=producto,
+                            codigo=v_codigo,
+                            defaults={
+                                'color': v_color,
+                                'talla': v_talla,
+                                'stock': v_stock,
+                                'precio_venta': v_precio,
+                                'peso': v_peso,
+                                'activo': True
+                            }
+                        )
 
-                    if not created:
-                        cambios = []
-                        if variante.stock != v_stock: cambios.append(f"Stock: {variante.stock} → {v_stock}")
-                        if variante.precio_venta != v_precio: cambios.append(f"Precio: ${variante.precio_venta} → ${v_precio}")
-                        if variante.peso != v_peso: cambios.append(f"Peso: {variante.peso}g → {v_peso}g")
-                        
-                        if cambios:
-                            logger.info(f"Usuario {usuario.username} modificó variante {v_codigo}: {', '.join(cambios)}")
+                    # Actualizar datos incluyendo el SKU (código) de forma segura
+                    variante.codigo = v_codigo
+                    variante.color = v_color
+                    variante.talla = v_talla
+                    variante.stock = v_stock
+                    variante.precio_venta = v_precio
+                    variante.peso = v_peso
+                    variante.activo = True  
 
-                        variante.color = v_color
-                        variante.talla = v_talla
-                        variante.stock = v_stock
-                        variante.precio_venta = v_precio
-                        variante.peso = v_peso
-                        variante.activo = True  
-
-                    foto_archivo = files.get(f'v_foto_{index_js}')
+                    # Captura correcta del archivo de foto de la variante
+                    foto_archivo = files.get(f'v_foto_var_row_{index_js}') or files.get(f'v_foto_{index_js}')
                     if foto_archivo:
                         if not (producto.imagen_principal and foto_archivo.name == producto.imagen_principal.name):
                             variante.foto = foto_archivo
@@ -187,5 +190,5 @@ class ProductoService:
 
             # Soft Delete limpio
             producto.variantes.exclude(codigo__in=codigos_procesados).update(activo=False)
-
+            
         return producto
