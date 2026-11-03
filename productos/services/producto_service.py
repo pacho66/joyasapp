@@ -57,6 +57,7 @@ class ProductoService:
             producto.stock = cls.entero_seguro(data.get('stock'))
             producto.descripcion = data.get('descripcion', '')
             producto.destacado = 'destacado' in data
+            producto.mostrar_en_catalogo = 'mostrar_en_catalogo' in data
 
             producto.precio_costo = cls.decimal_seguro(data.get('precio_costo'))
             producto.precio_detal = cls.decimal_seguro(data.get('precio_detal'))
