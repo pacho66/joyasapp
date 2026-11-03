@@ -44,8 +44,8 @@ def catalogo_tienda(request):
         # 🛒 Petición desde un subdominio activo (ej: pgjoyas.joyasapp.com)
         perfil = request.tenant_perfil
         
-         if hasattr(perfil.user, 'productos'):
-            # ✨ FILTRAMOS SOLO LOS ACTIVOS Y VISIBLES EN CATÁLOGO
+        # Filtramos los productos y destacados asociados a este perfil/usuario de forma segura
+        if hasattr(perfil.user, 'productos'):
             productos = perfil.user.productos.filter(activo=True, mostrar_en_catalogo=True)
             destacados = Producto.objects.filter(
                 usuario=perfil.user, destacado=True, activo=True, mostrar_en_catalogo=True
@@ -57,7 +57,7 @@ def catalogo_tienda(request):
                 destacado=True, activo=True, mostrar_en_catalogo=True
             ).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
             categorias = Categoria.objects.all().order_by('nombre')
-        
+
         context = {
             'perfil': perfil,
             'productos': productos,
@@ -70,7 +70,7 @@ def catalogo_tienda(request):
     else:
         # 🌐 Petición desde el dominio principal (joyasapp.com), reutiliza la vista inicio limpia
         return inicio(request)
-    
+        
 def inicio(request):
     try:
         # 1. Obtener el perfil exclusivamente desde el middleware de subdominio
