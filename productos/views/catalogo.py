@@ -44,16 +44,20 @@ def catalogo_tienda(request):
         # 🛒 Petición desde un subdominio activo (ej: pgjoyas.joyasapp.com)
         perfil = request.tenant_perfil
         
-        # Filtramos los productos y destacados asociados a este perfil/usuario de forma segura
-        if hasattr(perfil.user, 'productos'):
-            productos = perfil.user.productos.all()
-            destacados = Producto.objects.filter(usuario=perfil.user, destacado=True).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
+         if hasattr(perfil.user, 'productos'):
+            # ✨ FILTRAMOS SOLO LOS ACTIVOS Y VISIBLES EN CATÁLOGO
+            productos = perfil.user.productos.filter(activo=True, mostrar_en_catalogo=True)
+            destacados = Producto.objects.filter(
+                usuario=perfil.user, destacado=True, activo=True, mostrar_en_catalogo=True
+            ).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
             categorias = Categoria.objects.filter(usuario=perfil.user).order_by('nombre')
         else:
-            productos = Producto.objects.filter(usuario=perfil.user) if hasattr(perfil, 'user') else []
-            destacados = Producto.objects.filter(destacado=True).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
+            productos = Producto.objects.filter(activo=True, mostrar_en_catalogo=True) if hasattr(perfil, 'user') else []
+            destacados = Producto.objects.filter(
+                destacado=True, activo=True, mostrar_en_catalogo=True
+            ).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
             categorias = Categoria.objects.all().order_by('nombre')
-
+        
         context = {
             'perfil': perfil,
             'productos': productos,
@@ -74,8 +78,14 @@ def inicio(request):
 
         # 2. Si estamos en un subdominio válido (ej: pgjoyas.joyasapp.com)
         if perfil:
-            productos = Producto.objects.filter(usuario=perfil.user).exclude(slug='').exclude(slug__isnull=True)
-            destacados = Producto.objects.filter(usuario=perfil.user, destacado=True).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
+            productos = Producto.objects.filter(
+                usuario=perfil.user, activo=True, mostrar_en_catalogo=True
+            ).exclude(slug='').exclude(slug__isnull=True)
+            
+            destacados = Producto.objects.filter(
+                usuario=perfil.user, destacado=True, activo=True, mostrar_en_catalogo=True
+            ).exclude(slug='').exclude(slug__isnull=True).order_by('-id')[:8]
+            
             categorias = Categoria.objects.filter(usuario=perfil.user).order_by('nombre')
 
             context = {
@@ -85,38 +95,32 @@ def inicio(request):
                 'categorias': categorias,
                 'es_subdominio': True,
             }
-            # Carga la tienda del cliente/inquilino
-            return render(request, 'inicio.html', context) # o 'tienda_cliente.html' según el nombre que uses
+            return render(request, 'inicio.html', context)
 
         # 3. 🌐 Si estamos en el Dominio Principal (joyasapp.com)
-        # Renderiza la landing comercial de venta del SaaS
         return render(request, 'landing_saas.html', {
             'es_subdominio': False
         })
 
     except Exception as e:
-        logger = logging.getLogger(__name__)
         logger.error(f"Error crítico en la vista inicio: {str(e)}")
-        # Ante algún error en el dominio principal, mostramos la landing saas limpia
         return render(request, 'landing_saas.html', {
             'es_subdominio': False,
             'error': str(e)
         })
-    
+
+# 🔍 En buscar_productos(request)
 def buscar_productos(request):
     query = request.GET.get('q', '')
     categoria_id = request.GET.get('categoria', '')
-    
     perfil = getattr(request, 'tenant_perfil', None)
 
-    # 🛒 Determinamos el queryset según el usuario o el subdominio activo
     if request.user.is_authenticated:
-        productos = Producto.objects.filter(usuario=request.user).exclude(slug='').exclude(slug__isnull=True)
-        categorias = Categoria.objects.filter(usuario=request.user).order_by('nombre')
-        if not perfil:
-            perfil = getattr(request.user, 'perfil', None)
+        # ✨ Solo productos activos y visibles para el cliente
+        productos = Producto.objects.filter(usuario=request.user, activo=True, mostrar_en_catalogo=True).exclude(slug='').exclude(slug__isnull=True)
+        categorias = Categoria.objects.filter(usuario=perfil.user if perfil else request.user).order_by('nombre')
     elif perfil:
-        productos = Producto.objects.filter(usuario=perfil.user).exclude(slug='').exclude(slug__isnull=True)
+        productos = Producto.objects.filter(usuario=perfil.user, activo=True, mostrar_en_catalogo=True).exclude(slug='').exclude(slug__isnull=True)
         categorias = Categoria.objects.filter(usuario=perfil.user).order_by('nombre')
     else:
         productos = Producto.objects.none()
@@ -147,6 +151,8 @@ def detalle_producto(request, id, slug):
         Producto,
         id=id,
         slug=slug,
+        activo=True,
+        mostrar_en_catalogo=True
     )
 
     perfil_tienda = Perfil.objects.filter(

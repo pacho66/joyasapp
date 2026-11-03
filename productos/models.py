@@ -200,7 +200,6 @@ class Categoria(models.Model):
     def __str__(self):
         return self.nombre
 
-
 class Producto(models.Model):
     # --- Campos Base ---
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
@@ -210,6 +209,14 @@ class Producto(models.Model):
     descripcion = models.TextField()
     categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE)
     destacado = models.BooleanField(default=False)
+    
+    # 🌟 NUEVO CAMPO DE VISIBILIDAD EN EL CATÁLOGO PÚBLICO
+    mostrar_en_catalogo = models.BooleanField(
+        default=True, 
+        verbose_name="Mostrar en el catálogo",
+        help_text="Desmarca esta casilla si es una pieza privada o encargo especial que no deseas mostrar en la web."
+    )
+    
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     stock = models.PositiveIntegerField(default=0)
     color = models.CharField(max_length=50, null=True, blank=True)
@@ -335,8 +342,6 @@ class Producto(models.Model):
             self.slug = slug
         super().save(*args, **kwargs)
 
-        # Si NO tiene variantes, aseguramos que el stock principal mande. 
-        # Si TIENE variantes, el stock principal puede ser la suma de ellas opcionalmente.
         if self.variantes.exists():
             total_var = self.variantes.aggregate(total=Sum('stock'))['total'] or 0
             if self.stock != total_var:
