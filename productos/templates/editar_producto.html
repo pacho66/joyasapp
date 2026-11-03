@@ -498,7 +498,7 @@
         contenedor.appendChild(div);
         actualizarMetadatos(idUnico);
     }    
-    
+
     function ejecutarGeneradorMasivo() {
         const rawColores = document.getElementById('gen_colores').value.split(',').map(s => s.trim()).filter(Boolean);
         const rawTallas = document.getElementById('gen_tallas').value.split(',').map(s => s.trim()).filter(Boolean);
@@ -506,14 +506,62 @@
         const listaColores = rawColores.length ? rawColores : [''];
         const listaTallas = rawTallas.length ? rawTallas : [''];
 
+        const contenedor = document.getElementById('contenedor-tarjetas-variantes');
+        const fragmento = document.createDocumentFragment();
+
         listaColores.forEach(color => {
             listaTallas.forEach(talla => {
-                agregarTarjetaManual(color, talla, 1, '', '0.00', '');
+                contadorVariantes++;
+                const idUnico = 'var_row_' + contadorVariantes;
+                const precioBase = document.getElementById('precio_detal')?.value || '0';
+
+                const div = document.createElement('div');
+                div.className = 'variante-card';
+                div.id = idUnico;
+
+                let htmlContenido = '';
+                htmlContenido += '<div class="variante-header">';
+                htmlContenido += '    <div>';
+                htmlContenido += '        <span class="badge-sku" id="sku_badge_' + idUnico + '">VAR-' + String(contadorVariantes).padStart(3, '0') + '</span>';
+                htmlContenido += '        <span id="txt_status_' + idUnico + '" class="badge-status" style="margin-left: 8px;">🟢 Disponible</span>';
+                htmlContenido += '    </div>';
+                htmlContenido += '    <div>';
+                htmlContenido += '        <span id="badge_utilidad_' + idUnico + '" class="badge-utilidad">Utilidad: $0</span>';
+                htmlContenido += '        <button type="button" class="btn-action-card" title="Duplicar" onclick="duplicarTarjeta(\'' + idUnico + '\')">📋</button>';
+                htmlContenido += '        <button type="button" class="btn-action-card" title="Eliminar" onclick="document.getElementById(\'' + idUnico + '\').remove();">🗑️</button>';
+                htmlContenido += '    </div>';
+                htmlContenido += '</div>';
+                htmlContenido += '<div style="display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap;">';
+                htmlContenido += '    <div style="text-align: center; width: 85px; flex-shrink: 0;">';
+                htmlContenido += '        <div style="width: 85px; height: 85px; border: 2px dashed #ccc; border-radius: 8px; position: relative; background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden;" id="preview_container_' + idUnico + '">';
+                htmlContenido += '            <span style="font-size:24px; color:#94a3b8;">📷</span>';
+                htmlContenido += '        </div>';
+                htmlContenido += '        <label style="display: block; margin-top: 5px; font-size: 11px; color: #2563eb; cursor: pointer; font-weight: bold;">';
+                htmlContenido += '            Subir Foto';
+                htmlContenido += '            <input type="file" name="v_foto[]" accept="image/*" style="display: none;" onchange="previsualizarFotoVariante(this, \'' + idUnico + '\')">';
+                htmlContenido += '        </label>';
+                htmlContenido += '    </div>';
+                htmlContenido += '    <div style="flex: 1; min-width: 200px;" class="grid-4-col">';
+                htmlContenido += '        <div class="form-group" style="margin-bottom:0;"><label style="font-size:11px;">Color</label><input type="text" name="v_color[]" value="' + color + '" placeholder="Oro" oninput="actualizarMetadatos(\'' + idUnico + '\')"></div>';
+                htmlContenido += '        <div class="form-group" style="margin-bottom:0;"><label style="font-size:11px;">Talla</label><input type="text" name="v_talla[]" value="' + talla + '" placeholder="7" oninput="actualizarMetadatos(\'' + idUnico + '\')"></div>';
+                htmlContenido += '        <div class="form-group" style="margin-bottom:0;"><label style="font-size:11px;">⚖️ Peso (g)</label><input type="number" name="v_peso[]" value="0.00" step="0.01" placeholder="4.2" oninput="actualizarMetadatos(\'' + idUnico + '\')"></div>';
+                htmlContenido += '        <div class="form-group" style="margin-bottom:0;"><label style="font-size:11px;">📦 Stock</label><input type="number" name="v_stock[]" value="1" min="0" oninput="actualizarMetadatos(\'' + idUnico + '\')" id="stock_input_' + idUnico + '"></div>';
+                htmlContenido += '        <div class="form-group" style="margin-bottom:0; grid-column: span 2;"><label style="font-size:11px;">💰 Precio ($)</label><input type="number" name="v_precio[]" value="' + precioBase + '" oninput="actualizarMetadatos(\'' + idUnico + '\')" id="precio_input_' + idUnico + '"></div>';
+                htmlContenido += '        <div class="form-group" style="margin-bottom:0; grid-column: span 2;"><label style="font-size:11px;">🏷️ SKU / Código</label><input type="text" name="v_codigo[]" value="" placeholder="REF-01" oninput="actualizarMetadatos(\'' + idUnico + '\')"></div>';
+                htmlContenido += '    </div>';
+                htmlContenido += '</div>';
+
+                div.innerHTML = htmlContenido;
+                fragmento.appendChild(div);
             });
         });
 
+        contenedor.appendChild(fragmento);
+
         document.getElementById('gen_colores').value = '';
         document.getElementById('gen_tallas').value = '';
+        
+        recalcularTodasLasTarjetas();
     }
 
     function duplicarTarjeta(idTarget) {
