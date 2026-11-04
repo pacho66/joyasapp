@@ -160,16 +160,9 @@
 
         <input type="hidden" id="whatsapp-numero" value="{{ perfil_tienda.whatsapp }}">
 
-        {% if tiene_stock or stock_disponible > 0 %}
-            <button type="submit" id="btn-carrito" style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;width:100%;">
-                🛒 Agregar al carrito
-            </button>
-        {% else %}
-            <button type="submit" id="btn-carrito" style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;width:100%;opacity:0.5;" disabled>
-                🛒 Agregar al carrito
-            </button>
-            <p id="mensaje-agotado-backend" style="color:red;font-weight:bold;padding:12px 0;margin:0;">❌ Producto agotado temporalmente</p>
-        {% endif %}
+        <button type="submit" id="btn-carrito" style="background:black;color:white;padding:12px 20px;border:none;border-radius:6px;cursor:pointer;width:100%;">
+            🛒 Agregar al carrito
+        </button>
 
     </form>
 
@@ -212,35 +205,44 @@ const variantesDataElem = document.getElementById("variantes-data");
 const variantes = variantesDataElem ? JSON.parse(variantesDataElem.textContent) : [];
 
 function actualizarStockDisponible() {
-    if (!variantes || variantes.length === 0) return;
-
     let color = document.getElementById("color")?.value || "";
     let talla = document.getElementById("talla")?.value || "";
-
-    let variante = variantes.find(v => v.color === color && v.talla === talla);
     let inputCantidad = document.getElementById("cantidad");
     let boton = document.getElementById("btn-carrito");
     let stockInfo = document.getElementById("stock-info");
 
+    let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
+
+    // Si tiene tallas y no ha seleccionado color/talla
+    if (variantes.length > 0) {
+        if (!color || (hayTallas && !talla)) {
+            if (stockInfo) stockInfo.innerHTML = "⚠️ Por favor, seleccione las opciones de color y talla.";
+            if (boton) {
+                boton.disabled = true;
+                boton.style.opacity = "0.5";
+            }
+            return;
+        }
+    }
+
+    let variante = variantes.find(v => v.color === color && (!hayTallas || v.talla === talla));
+
     if (variante) {
         if (inputCantidad) {
             inputCantidad.max = variante.stock;
-            if (parseInt(inputCantidad.value) > variante.stock) {
+            if (parseInt(inputCantidad.value) > variante.stock && variante.stock > 0) {
                 inputCantidad.value = variante.stock;
             }
         }
         if (stockInfo) {
-            stockInfo.innerHTML = variante.stock > 0 ? "✅ Disponibles: " + variante.stock : "❌ Agotado";
+            stockInfo.innerHTML = variante.stock > 0 ? "✅ Disponibles: " + variante.stock : "❌ Agotado temporalmente";
         }
         if (boton) {
             boton.disabled = variante.stock <= 0;
             boton.style.opacity = variante.stock > 0 ? "1" : "0.5";
         }
     } else {
-        let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
-        if (stockInfo) {
-            stockInfo.innerHTML = (hayTallas && color && !talla) ? "Por favor, seleccione una talla" : "Seleccione una combinación válida";
-        }
+        if (stockInfo) stockInfo.innerHTML = "❌ Combinación no disponible";
         if (boton) {
             boton.disabled = true;
             boton.style.opacity = "0.5";
@@ -280,20 +282,18 @@ function comprarWhatsApp(){
 }
 
 // =================================================================
-// 💎 CONFIGURACIÓN DE PRECIOS DINÁMICOS CON ESCALAS (Detal, Semi, Mayor)
+// 💎 PRECIOS SEGUROS (Evita errores si Python inyecta formato local)
 // =================================================================
 let tipoVenta = "{{ producto.tipo_venta }}";
-let pesoProducto = parseFloat("{{ producto.peso_producto|default_if_none:'0' }}".replace(',', '.')) || 0;
+let pesoProducto = parseFloat("{{ producto.peso_producto|default_if_none:'0' }}".toString().replace(',', '.')) || 0;
 
-// Precios estándar por pieza
-let pDetal = parseFloat("{{ producto.precio_detal|default:0 }}".replace(/\./g, '').replace(',', '.')) || 0;
-let pSemimayor = parseFloat("{{ producto.precio_semimayor|default:0 }}".replace(/\./g, '').replace(',', '.')) || 0;
-let pMayor = parseFloat("{{ producto.precio_mayor|default:0 }}".replace(/\./g, '').replace(',', '.')) || 0;
+let pDetal = parseFloat("{{ producto.precio_detal|default:0 }}".toString().replace(',', '.')) || 0;
+let pSemimayor = parseFloat("{{ producto.precio_semimayor|default:0 }}".toString().replace(',', '.')) || 0;
+let pMayor = parseFloat("{{ producto.precio_mayor|default:0 }}".toString().replace(',', '.')) || 0;
 
-// Precios por gramo
-let gDetal = parseFloat("{{ producto.precio_por_gramo_detal|default_if_none:'0' }}".replace(/\./g, '').replace(',', '.')) || 0;
-let gSemimayor = parseFloat("{{ producto.precio_por_gramo_semimayor|default_if_none:'0' }}".replace(/\./g, '').replace(',', '.')) || 0;
-let gMayor = parseFloat("{{ producto.precio_por_gramo_mayor|default_if_none:'0' }}".replace(/\./g, '').replace(',', '.')) || 0;
+let gDetal = parseFloat("{{ producto.precio_por_gramo_detal|default_if_none:'0' }}".toString().replace(',', '.')) || 0;
+let gSemimayor = parseFloat("{{ producto.precio_por_gramo_semimayor|default_if_none:'0' }}".toString().replace(',', '.')) || 0;
+let gMayor = parseFloat("{{ producto.precio_por_gramo_mayor|default_if_none:'0' }}".toString().replace(',', '.')) || 0;
 
 function actualizarPrecio(){
     let cantidad = parseInt(document.getElementById("cantidad").value) || 1;
@@ -369,17 +369,11 @@ function validarCantidad(){
 }
 
 function actualizarTallas(){
-    if (!variantes.some(v => v.talla && v.talla.trim() !== "")) return;
     const colorSelect = document.getElementById("color");
     const tallaSelect = document.getElementById("talla");
     if(!colorSelect || !tallaSelect) return;
 
     let colorSeleccionado = colorSelect.value;
-    if (!colorSeleccionado) {
-        tallaSelect.innerHTML = '<option value="">Seleccione un color primero</option>';
-        return;
-    }
-
     let tallasDisponibles = [...new Set(variantes.filter(v => v.color === colorSeleccionado && v.stock > 0).map(v => v.talla))];
     tallasDisponibles.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
@@ -401,16 +395,20 @@ function actualizarTallas(){
 document.addEventListener("DOMContentLoaded", function() {
     actualizarPrecio();
     actualizarTallas();  
-    if (typeof actualizarStockDisponible === "function") actualizarStockDisponible();
-    if (typeof actualizarStockGeneral === "function") actualizarStockGeneral();
+    actualizarStockDisponible();
+    actualizarStockGeneral();
 
     document.getElementById("color")?.addEventListener("change", function() {
         actualizarTallas();
-        if (typeof actualizarStockDisponible === "function") actualizarStockDisponible();
+        actualizarStockDisponible();
     });
 
     document.getElementById("talla")?.addEventListener("change", function() {
-        if (typeof actualizarStockDisponible === "function") actualizarStockDisponible();
+        actualizarStockDisponible();
+    });
+
+    document.getElementById("cantidad")?.addEventListener("input", function() {
+        actualizarPrecio();
     });
 });
 
