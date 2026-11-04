@@ -206,6 +206,7 @@ class Producto(models.Model):
     nombre = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, blank=True, null=True)
     referencia = models.CharField(max_length=50, blank=True, null=True, verbose_name="SKU")
+    etiquetas = models.CharField(max_length=255, blank=True, null=True, help_text="Palabras clave separadas por comas, ej: pulsera, chakras, oro")
     descripcion = models.TextField()
     categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE)
     destacado = models.BooleanField(default=False)
