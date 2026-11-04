@@ -36,19 +36,18 @@ class ProductoService:
         return f"{ref_base}-{color_prefijo}-{talla_prefijo}"
 
     @classmethod
-    def guardar(cls, data, files, pk=None, user=None, *args, **kwargs):
+    def guardar(cls, request, pk=None):
         """Guarda o actualiza un producto junto con sus variantes e imágenes."""
+        data = request.POST
+        files = request.FILES
+        usuario = request.user
+
         if pk:
             producto = get_object_or_404(Producto, pk=pk)
         else:
             producto = Producto()
+            producto.usuario = usuario
 
-        # AQUÍ ESTABA EL ERROR: No intentes usar 'request'. 
-        # 'data' ya es request.POST y 'files' ya es request.FILES
-        # Si necesitas el usuario, puedes recibirlo o usar el que venga en el objeto si ya existía:
-        if user and not producto.pk:
-            producto.usuario = user
-            
         with transaction.atomic():
             # 1. Datos Generales
             producto.nombre = data.get('nombre')
@@ -67,9 +66,9 @@ class ProductoService:
 
             producto.descripcion = data.get('descripcion', '')
             producto.destacado = 'destacado' in data
-            producto.mostrar_en_catalogo = 'mostrar_en_catalogo' in data  # 👈 Guardado del interruptor de catálogo
+            producto.mostrar_en_catalogo = 'mostrar_en_catalogo' in data
 
-            # 🛡️ Precios blindados: Si vienen vacíos, mantienen el valor actual en lugar de borrarlo
+            # 🛡️ Precios blindados
             def obtener_decimal_o_mantener(valor_raw, valor_actual):
                 if valor_raw not in [None, '']:
                     return cls.decimal_seguro(valor_raw)
@@ -135,7 +134,6 @@ class ProductoService:
 
             for i, index_js in enumerate(indices):
                 try:
-                     # Extracción segura con validación de tamaño para evitar IndexError
                     v_color = colores[i] if i < len(colores) else ''
                     v_talla = tallas[i] if i < len(tallas) else ''
         
@@ -159,13 +157,12 @@ class ProductoService:
                     raw_precio = precios[i] if i < len(precios) else None
                     v_precio = cls.decimal_seguro(raw_precio, defecto=precio_defecto)
 
-                    # Búsqueda ultra segura de la variante
+                    # Búsqueda segura de la variante
                     variante = None
                     if v_id:
                         variante = ProductoVariante.objects.filter(pk=v_id, producto=producto).first()
         
                     if not variante and v_codigo:
-                        # Si no hay ID, buscar por código dentro de este producto
                         variante = ProductoVariante.objects.filter(producto=producto, codigo=v_codigo).first()
 
                     if not variante:
@@ -180,15 +177,16 @@ class ProductoService:
                     variante.peso = v_peso
                     variante.activo = True  
 
-                    # Captura correcta y segura del archivo de foto de la variante
+                    # 📷 Captura limpia y segura de la foto de la variante (reseteada por ciclo)
+                    foto_archivo = None
                     if files:
                         foto_archivo = files.get(f'v_foto_var_row_{index_js}') or files.get(f'v_foto_{index_js}')
+                    
                     if foto_archivo:
                         variante.foto = foto_archivo
 
                     variante.save()
                 except Exception as var_error:
-                    # exc_info=True imprimirá el rastro exacto en los logs de Render si algo falla
                     logger.error(f"❌ Error crítico procesando variante indexada {index_js} (ítem {i}): {str(var_error)}", exc_info=True)
                     continue
 

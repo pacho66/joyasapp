@@ -151,7 +151,7 @@ def guardar_producto_view(request, pk=None):
     if request.method == 'POST':
         try:
             # 🚀 AQUÍ ESTÁ EL CAMBIO CLAVE: Pasamos explícitamente request.POST y request.FILES
-            producto_guardado = ProductoService.guardar(request.POST, request.FILES, pk)
+            producto_guardado = ProductoService.guardar(request, pk=pk) 
             
             messages.success(request, f"¡Producto '{producto_guardado.nombre}' {accion} con éxito rotundo!")
             return redirect('mis_productos')
