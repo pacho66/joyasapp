@@ -80,6 +80,7 @@ CLOUDINARY_STORAGE = {
     'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
     'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
     'TRANSFORMATION': {'quality': 'auto', 'fetch_format': 'auto'},
+    'SECURE': True,  # 👈 FUERZA HTTPS para evitar errores de contenido mixto en el navegador
 }
 
 STORAGES = {
@@ -91,9 +92,7 @@ STORAGES = {
     },
 }
 
-# 👈 AGREGA ESTA LÍNEA EXPLÍCITAMENTE para calmar a django-cloudinary-storage en Django 6.0:
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
-#DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -147,13 +147,19 @@ def buscar_productos(request):
     })
 
 def detalle_producto(request, id, slug):
+    # 🔍 Buscamos el producto solo por id, slug y activo=True (sin bloquear por catálogo aquí)
     producto = get_object_or_404(
         Producto,
         id=id,
         slug=slug,
-        activo=True,
-        mostrar_en_catalogo=True
+        activo=True
     )
+
+    # 🛡️ Validación de visibilidad en catálogo:
+    # Si el producto está oculto del catálogo, solo permitimos verlo si el usuario logueado es el dueño
+    if not producto.mostrar_en_catalogo:
+        if not request.user.is_authenticated or producto.usuario != request.user:
+            raise Http404("Este producto no está disponible en este momento.")
 
     perfil_tienda = Perfil.objects.filter(
         user=producto.usuario
@@ -195,7 +201,7 @@ def detalle_producto(request, id, slug):
         'tiene_stock': tiene_stock,
         'productos_relacionados': productos_relacionados,
     })
-
+    
 @login_required
 def productos_por_categoria(request, categoria_id):
     categoria = get_object_or_404(
