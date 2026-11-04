@@ -18,9 +18,16 @@
 
             <div class="form-group">
                 <label for="referencia">SKU / Referencia (Código de Barras)</label>
-                <input type="text" id="referencia" name="referencia" 
-                    value="{{ producto.referencia|default:'' }}" 
-                    placeholder="Escanea o escribe el SKU..." autocomplete="off">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="referencia" name="referencia" 
+                        value="{{ producto.referencia|default:'' }}" 
+                        placeholder="Escanea o escribe el SKU..." autocomplete="off" style="flex: 1;">
+                    <button type="button" class="btn-escanear-camara" onclick="abrirEscanerCamara('referencia')" style="padding: 8px 12px; cursor: pointer;">
+                        📷 Cámara
+                    </button>
+                </div>
+                <!-- Contenedor donde aparecerá la cámara cuando se active -->
+                <div id="reader" style="width: 100%; max-width: 300px; margin-top: 10px; display: none;"></div>
             </div>
 
             <div class="form-group">
