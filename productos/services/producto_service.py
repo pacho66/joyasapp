@@ -118,7 +118,7 @@ class ProductoService:
                         continue
                     ProductoImagen.objects.create(producto=producto, imagen=f)
 
-            # 5. MOTOR DE VARIANTES BLINDADO
+            # 5. MOTOR DE VARIANTES BLINDADO Y SEGURO
             indices = data.getlist('v_index[]')
             colores = data.getlist('v_color[]')
             tallas = data.getlist('v_talla[]')
@@ -126,49 +126,49 @@ class ProductoService:
             stocks = data.getlist('v_stock[]')
             precios = data.getlist('v_precio[]')
             codigos = data.getlist('v_codigo[]')
-            # Si agregas un input oculto v_id[] en tus tarjetas para variantes existentes:
             ids_variantes = data.getlist('v_id[]') if 'v_id[]' in data else []
 
             codigos_procesados = []
 
             for i, index_js in enumerate(indices):
                 try:
+                     # Extracción segura con validación de tamaño para evitar IndexError
                     v_color = colores[i] if i < len(colores) else ''
                     v_talla = tallas[i] if i < len(tallas) else ''
-                    v_codigo = codigos[i].strip() if (i < len(codigos) and codigos[i]) else cls.generar_sku_inteligente(producto, v_color, v_talla, i+1)
+        
+                    raw_codigo = codigos[i] if i < len(codigos) else ''
+                    v_codigo = raw_codigo.strip() if raw_codigo else cls.generar_sku_inteligente(producto, v_color, v_talla, i+1)
                     codigos_procesados.append(v_codigo)
 
-                    v_stock = cls.entero_seguro(stocks[i])
-                    v_peso = cls.decimal_seguro(pesos[i])
+                    raw_stock = stocks[i] if i < len(stocks) else '0'
+                    v_stock = cls.entero_seguro(raw_stock)
+
+                    raw_peso = pesos[i] if i < len(pesos) else '0'
+                    v_peso = cls.decimal_seguro(raw_peso)
+
                     v_id = ids_variantes[i] if i < len(ids_variantes) and ids_variantes[i] else None
 
                     if producto.tipo_venta == 'gramo':
                         precio_defecto = producto.precio_por_gramo_detal
                     else:
                         precio_defecto = producto.precio_detal
-                    
-                    v_precio = cls.decimal_seguro(precios[i] if i < len(precios) else None, defecto=precio_defecto)
+        
+                    raw_precio = precios[i] if i < len(precios) else None
+                    v_precio = cls.decimal_seguro(raw_precio, defecto=precio_defecto)
 
-                    # Buscar por ID si existe, de lo contrario por código o crear
+                    # Búsqueda ultra segura de la variante
                     variante = None
                     if v_id:
                         variante = ProductoVariante.objects.filter(pk=v_id, producto=producto).first()
-                    
-                    if not variante:
-                        variante, _ = ProductoVariante.objects.get_or_create(
-                            producto=producto,
-                            codigo=v_codigo,
-                            defaults={
-                                'color': v_color,
-                                'talla': v_talla,
-                                'stock': v_stock,
-                                'precio_venta': v_precio,
-                                'peso': v_peso,
-                                'activo': True
-                            }
-                        )
+        
+                    if not variante and v_codigo:
+                        # Si no hay ID, buscar por código dentro de este producto
+                        variante = ProductoVariante.objects.filter(producto=producto, codigo=v_codigo).first()
 
-                    # Actualizar datos incluyendo el SKU (código) de forma segura
+                    if not variante:
+                        variante = ProductoVariante(producto=producto)
+
+                    # Asignación de datos
                     variante.codigo = v_codigo
                     variante.color = v_color
                     variante.talla = v_talla
@@ -177,17 +177,19 @@ class ProductoService:
                     variante.peso = v_peso
                     variante.activo = True  
 
-                    # Captura correcta del archivo de foto de la variante
-                    foto_archivo = files.get(f'v_foto_var_row_{index_js}') or files.get(f'v_foto_{index_js}')
+                    # Captura correcta y segura del archivo de foto de la variante
+                    if files:
+                        foto_archivo = files.get(f'v_foto_var_row_{index_js}') or files.get(f'v_foto_{index_js}')
                     if foto_archivo:
                         variante.foto = foto_archivo
 
                     variante.save()
                 except Exception as var_error:
-                    logger.error(f"Error procesando variante indexada {index_js}: {str(var_error)}")
+                    # exc_info=True imprimirá el rastro exacto en los logs de Render si algo falla
+                    logger.error(f"❌ Error crítico procesando variante indexada {index_js} (ítem {i}): {str(var_error)}", exc_info=True)
                     continue
 
-            # Soft Delete limpio
+            # Soft Delete limpio de variantes inactivas
             producto.variantes.exclude(codigo__in=codigos_procesados).update(activo=False)
 
         return producto

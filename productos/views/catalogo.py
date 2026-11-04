@@ -70,7 +70,7 @@ def catalogo_tienda(request):
     else:
         # 🌐 Petición desde el dominio principal (joyasapp.com), reutiliza la vista inicio limpia
         return inicio(request)
-        
+
 def inicio(request):
     try:
         # 1. Obtener el perfil exclusivamente desde el middleware de subdominio
@@ -184,7 +184,7 @@ def detalle_producto(request, id, slug):
         tiene_stock = producto.variantes.filter(stock__gt=0).exists()
         stock_disponible = None
     else:
-        stock_disponible = producto.stock - cantidad_en_carrito
+        stock_disponible = (producto.stock or 0) - cantidad_en_carrito
         tiene_stock = stock_disponible > 0
 
     return render(request, 'detalle_producto.html', {

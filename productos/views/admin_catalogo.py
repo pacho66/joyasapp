@@ -146,37 +146,35 @@ def guardar_producto_view(request, pk=None):
                 f"⚠️ Has alcanzado el límite de {perfil.limite_productos} productos de tu Plan {perfil.get_plan_display()}. "
                 "¡Actualiza tu suscripción para seguir subiendo más joyas!"
             )
-            return redirect('gestionar_planes') # Redirige a la vista de planes que hicimos antes
+            return redirect('gestionar_planes')
 
     if request.method == 'POST':
         try:
-            # Delegamos toda la lógica interna (Slug, variantes, transacciones) al servicio
-            producto_guardado = ProductoService.guardar(request, pk=pk)
+            # 🚀 AQUÍ ESTÁ EL CAMBIO CLAVE: Pasamos explícitamente request.POST y request.FILES
+            producto_guardado = ProductoService.guardar(request.POST, request.FILES, pk, user=request.user)
             
             messages.success(request, f"¡Producto '{producto_guardado.nombre}' {accion} con éxito rotundo!")
             return redirect('mis_productos')
 
         except Exception as e:
-            logger.error(f"Error crítico en controlador al procesar producto: {str(e)}")
+            logger.error(f"Error crítico en controlador al procesar producto: {str(e)}", exc_info=True)
             messages.error(request, f"⚠️ Error interno: No se guardaron los cambios. Motivo: {str(e)}")
             
-            # ✨ Siempre renderiza la plantilla unificada de edición/creación
             return render(request, 'editar_producto.html', {
                 'producto': producto,
                 'valores': request.POST,  
                 'categorias': Categoria.objects.filter(usuario=request.user)
             })
 
-    # 🔄 Carga por petición GET normal (Edición o Creación limpia)
+    # 🔄 Carga por petición GET normal
     valores_iniciales = producto if pk else None
 
-    # ✨ Siempre renderiza la plantilla unificada
     return render(request, 'editar_producto.html', {
         'producto': producto,
         'valores': valores_iniciales,
         'categorias': Categoria.objects.filter(usuario=request.user)
     })
-
+    
 @login_required
 def eliminar_producto(request, id):
     # Uso seguro de get_object_or_404 para evitar el 500 si no existe
