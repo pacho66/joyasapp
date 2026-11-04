@@ -131,7 +131,8 @@ class ProductoService:
                 for f in imagenes_galeria:
                     print(f"📁 Procesando archivo: {f.name} (Tamaño: {f.size} bytes)")
                     
-                    if producto.imagen_principal and f.name == producto.imagen_principal.name:
+                    # Solución segura para evitar el error con CloudinaryResource
+                    if producto.imagen_principal and str(producto.imagen_principal) and f.name in str(producto.imagen_principal):
                         print(f"⚠️ Omitiendo {f.name} porque coincide con la imagen principal.")
                         continue
                         
