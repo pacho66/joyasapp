@@ -43,10 +43,12 @@ class ProductoService:
         else:
             producto = Producto()
 
-        data = request.POST
-        files = request.FILES
-        usuario = request.user
-
+        # AQUÍ ESTABA EL ERROR: No intentes usar 'request'. 
+        # 'data' ya es request.POST y 'files' ya es request.FILES
+        # Si necesitas el usuario, puedes recibirlo o usar el que venga en el objeto si ya existía:
+        if user and not producto.pk:
+            producto.usuario = user
+            
         with transaction.atomic():
             # 1. Datos Generales
             producto.nombre = data.get('nombre')
