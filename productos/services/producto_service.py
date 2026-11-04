@@ -64,6 +64,8 @@ class ProductoService:
                 producto.categoria = get_object_or_404(Categoria, id=categoria_id)
             
             producto.tipo_venta = data.get('tipo_venta', 'unidad')
+
+            producto.etiquetas = data.get('etiquetas', '')
             
             stock_raw = data.get('stock')
             if stock_raw not in [None, '']:
@@ -141,7 +143,7 @@ class ProductoService:
             else:
                 print("❌ 'galeria' NO viene en request.FILES.")
             print("------------------------")
-            
+
             # 5. MOTOR DE VARIANTES BLINDADO Y SEGURO
             indices = data.getlist('v_index[]')
             colores = data.getlist('v_color[]')
