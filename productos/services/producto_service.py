@@ -40,6 +40,13 @@ class ProductoService:
         """Guarda o actualiza un producto junto con sus variantes e imágenes."""
         data = request.POST
         files = request.FILES
+
+        # 🔍 IMPRESIÓN DE DEPURACIÓN EN LOGS DE RENDER
+        print("--- 📥 DATOS RECIBIDOS EN FILES ---")
+        print("Keys en request.FILES:", list(files.keys()))
+        print("Galeria FILES:", files.getlist('galeria'))
+        print("-----------------------------------")
+
         usuario = request.user
 
         if pk:
@@ -114,12 +121,26 @@ class ProductoService:
             producto.save()
 
             # 4. Galería
+            print("--- 🔍 DEBUG GALERÍA ---")
+            print("¿ 'galeria' está en files?:", 'galeria' in files)
+            
             if 'galeria' in files:
-                for f in files.getlist('galeria'):
+                imagenes_galeria = files.getlist('galeria')
+                print(f"📸 Total de imágenes de galería recibidas: {len(imagenes_galeria)}")
+                
+                for f in imagenes_galeria:
+                    print(f"📁 Procesando archivo: {f.name} (Tamaño: {f.size} bytes)")
+                    
                     if producto.imagen_principal and f.name == producto.imagen_principal.name:
+                        print(f"⚠️ Omitiendo {f.name} porque coincide con la imagen principal.")
                         continue
-                    ProductoImagen.objects.create(producto=producto, imagen=f)
-
+                        
+                    nueva_img = ProductoImagen.objects.create(producto=producto, imagen=f)
+                    print(f"✅ Imagen de galería guardada exitosamente en BD con ID: {nueva_img.id}")
+            else:
+                print("❌ 'galeria' NO viene en request.FILES.")
+            print("------------------------")
+            
             # 5. MOTOR DE VARIANTES BLINDADO Y SEGURO
             indices = data.getlist('v_index[]')
             colores = data.getlist('v_color[]')
