@@ -37,7 +37,7 @@ class ProductoService:
 
     @classmethod
     def guardar(cls, data, files, pk=None, user=None, *args, **kwargs):
-        """
+        """Guarda o actualiza un producto junto con sus variantes e imágenes."""
         if pk:
             producto = get_object_or_404(Producto, pk=pk)
         else:
