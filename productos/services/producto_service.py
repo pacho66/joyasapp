@@ -36,7 +36,8 @@ class ProductoService:
         return f"{ref_base}-{color_prefijo}-{talla_prefijo}"
 
     @classmethod
-    def guardar(cls, request, pk=None):
+    def guardar(cls, data, files, pk=None, user=None, *args, **kwargs):
+        """
         if pk:
             producto = get_object_or_404(Producto, pk=pk)
         else:

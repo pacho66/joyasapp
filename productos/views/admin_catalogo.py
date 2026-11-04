@@ -151,7 +151,7 @@ def guardar_producto_view(request, pk=None):
     if request.method == 'POST':
         try:
             # 🚀 AQUÍ ESTÁ EL CAMBIO CLAVE: Pasamos explícitamente request.POST y request.FILES
-            producto_guardado = ProductoService.guardar(request.POST, request.FILES, pk, user=request.user)
+            producto_guardado = ProductoService.guardar(request.POST, request.FILES, pk)
             
             messages.success(request, f"¡Producto '{producto_guardado.nombre}' {accion} con éxito rotundo!")
             return redirect('mis_productos')
@@ -174,7 +174,7 @@ def guardar_producto_view(request, pk=None):
         'valores': valores_iniciales,
         'categorias': Categoria.objects.filter(usuario=request.user)
     })
-    
+
 @login_required
 def eliminar_producto(request, id):
     # Uso seguro de get_object_or_404 para evitar el 500 si no existe
