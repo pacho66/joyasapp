@@ -180,8 +180,7 @@ class ProductoService:
                     # Captura correcta del archivo de foto de la variante
                     foto_archivo = files.get(f'v_foto_var_row_{index_js}') or files.get(f'v_foto_{index_js}')
                     if foto_archivo:
-                        if not (producto.imagen_principal and foto_archivo.name == producto.imagen_principal.name):
-                            variante.foto = foto_archivo
+                        variante.foto = foto_archivo
 
                     variante.save()
                 except Exception as var_error:
@@ -190,5 +189,5 @@ class ProductoService:
 
             # Soft Delete limpio
             producto.variantes.exclude(codigo__in=codigos_procesados).update(activo=False)
-            
+
         return producto
