@@ -210,8 +210,8 @@ const variantesDataElem = document.getElementById("variantes-data");
 const variantes = variantesDataElem ? JSON.parse(variantesDataElem.textContent) : [];
 
 function actualizarStockDisponible() {
-    let color = document.getElementById("color")?.value || "";
-    let talla = document.getElementById("talla")?.value || "";
+    let color = document.getElementById("color")?.value.trim() || "";
+    let talla = document.getElementById("talla")?.value.trim() || "";
     let inputCantidad = document.getElementById("cantidad");
     let boton = document.getElementById("btn-carrito");
     let stockInfo = document.getElementById("stock-info");
@@ -230,7 +230,11 @@ function actualizarStockDisponible() {
         }
     }
 
-    let variante = variantes.find(v => v.color === color && (!hayTallas || v.talla === talla));
+    // Búsqueda robusta aplicando .trim() para evitar errores por espacios en blanco
+    let variante = variantes.find(v => 
+        (v.color || "").trim() === color && 
+        (!hayTallas || (v.talla || "").trim() === talla)
+    );
 
     if (variante) {
         if (inputCantidad) {
@@ -265,8 +269,8 @@ function actualizarStockGeneral() {
 
 function comprarWhatsApp(){
     let cantidad = document.getElementById("cantidad").value;
-    let color = document.getElementById("color")?.value || "";
-    let talla = document.getElementById("talla")?.value || "";
+    let color = document.getElementById("color")?.value.trim() || "";
+    let talla = document.getElementById("talla")?.value.trim() || "";
     let campoWhatsapp = document.getElementById("whatsapp-numero");
     let numero = campoWhatsapp ? campoWhatsapp.value : "";
     let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
@@ -378,8 +382,8 @@ function actualizarTallas(){
     const tallaSelect = document.getElementById("talla");
     if(!colorSelect || !tallaSelect) return;
 
-    let colorSeleccionado = colorSelect.value;
-    let tallasDisponibles = [...new Set(variantes.filter(v => v.color === colorSeleccionado && v.stock > 0).map(v => v.talla))];
+    let colorSeleccionado = colorSelect.value.trim();
+    let tallasDisponibles = [...new Set(variantes.filter(v => (v.color || "").trim() === colorSeleccionado && v.stock > 0).map(v => v.talla))];
     tallasDisponibles.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
     tallaSelect.innerHTML = '<option value="">Seleccione talla</option>';
@@ -397,14 +401,42 @@ function actualizarTallas(){
     });
 }
 
+// ==========================================
+// INICIALIZACIÓN AUTOMÁTICA AL CARGAR LA PÁGINA
+// ==========================================
 document.addEventListener("DOMContentLoaded", function() {
+    // 1. Auto-seleccionar la primera variante válida con stock para evitar bloqueos iniciales
+    if (variantes && variantes.length > 0) {
+        let primeraValida = variantes.find(v => v.stock > 0) || variantes[0];
+        const colorSelect = document.getElementById("color");
+        const tallaSelect = document.getElementById("talla");
+
+        if (colorSelect && primeraValida && primeraValida.color) {
+            colorSelect.value = primeraValida.color.trim();
+        }
+        
+        actualizarTallas(); // Rellena las tallas correspondientes a este color
+
+        if (tallaSelect && primeraValida && primeraValida.talla) {
+            let optionExists = Array.from(tallaSelect.options).some(opt => opt.value.trim() === primeraValida.talla.trim());
+            if (optionExists) {
+                tallaSelect.value = primeraValida.talla.trim();
+            }
+        }
+    }
+
     actualizarPrecio();
     actualizarTallas();  
     actualizarStockDisponible();
     actualizarStockGeneral();
 
+    // 2. Eventos de cambio en los selects
     document.getElementById("color")?.addEventListener("change", function() {
         actualizarTallas();
+        const tallaSelect = document.getElementById("talla");
+        if (tallaSelect && tallaSelect.options.length > 1) {
+            tallaSelect.selectedIndex = 1; 
+        }
         actualizarStockDisponible();
     });
 
@@ -440,5 +472,4 @@ new Swiper(".mySwiper", {
 .swiper-slide img { width:100%; height:100%; object-fit:contain; }
 @media(max-width:768px){ .swiper { height:320px; } }
 </style>
-
 {% endblock %}
