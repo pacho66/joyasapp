@@ -17,7 +17,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from ..models import (
     Producto,
     Categoria,
-    VarianteProducto,
+    ProductoVariante,
     ProductoImagen,
 )
 
@@ -158,7 +158,7 @@ def guardar_producto_view(request, pk=None):
                 if ids_eliminados:
                     ids_list = [int(i) for i in ids_eliminados.split(',') if i.isdigit()]
                     # Asegúrate de que el nombre del modelo coincida (ej. VarianteProducto)
-                    VarianteProducto.objects.filter(id__in=ids_list, producto=producto).delete()
+                    ProductoVariante.objects.filter(id__in=ids_list, producto=producto).delete()
 
             # 🚀 2. Continuamos con el guardado habitual del servicio
             producto_guardado = ProductoService.guardar(request, pk=pk) 
