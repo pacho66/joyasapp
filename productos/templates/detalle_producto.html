@@ -408,42 +408,34 @@ function actualizarTallas(){
 // INICIALIZACIÓN AUTOMÁTICA AL CARGAR LA PÁGINA
 // ==========================================
 document.addEventListener("DOMContentLoaded", function() {
-    // 1. Auto-seleccionar la primera variante válida con stock para evitar bloqueos iniciales
-    if (variantes && variantes.length > 0) {
-        let primeraValida = variantes.find(v => v.stock > 0) || variantes[0];
-        const colorSelect = document.getElementById("color");
-        const tallaSelect = document.getElementById("talla");
+    // 1. Asegurar que si hay opciones de color, se seleccione la primera real disponible
+    const colorSelect = document.getElementById("color");
+    const tallaSelect = document.getElementById("talla");
 
-        if (colorSelect && primeraValida && primeraValida.color) {
-            colorSelect.value = primeraValida.color.trim();
-        }
-        
-        actualizarTallas(); // Rellena las tallas correspondientes a este color
+    if (colorSelect && colorSelect.options.length > 1) {
+        colorSelect.selectedIndex = 1; // Selecciona el primer color real
+    }
 
-        if (tallaSelect && primeraValida && primeraValida.talla) {
-            let optionExists = Array.from(tallaSelect.options).some(opt => opt.value.trim() === primeraValida.talla.trim());
-            if (optionExists) {
-                tallaSelect.value = primeraValida.talla.trim();
-            }
-        }
+    actualizarTallas();  // Rellena las tallas del color seleccionado
+
+    if (tallaSelect && tallaSelect.options.length > 1) {
+        tallaSelect.selectedIndex = 1; // Selecciona la primera talla real
     }
 
     actualizarPrecio();
-    actualizarTallas();  
     actualizarStockDisponible();
     actualizarStockGeneral();
 
     // 2. Eventos de cambio en los selects
-    document.getElementById("color")?.addEventListener("change", function() {
+    colorSelect?.addEventListener("change", function() {
         actualizarTallas();
-        const tallaSelect = document.getElementById("talla");
         if (tallaSelect && tallaSelect.options.length > 1) {
             tallaSelect.selectedIndex = 1; 
         }
         actualizarStockDisponible();
     });
 
-    document.getElementById("talla")?.addEventListener("change", function() {
+    tallaSelect?.addEventListener("change", function() {
         actualizarStockDisponible();
     });
 
