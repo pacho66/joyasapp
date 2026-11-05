@@ -213,6 +213,21 @@ jsonText = jsonText.replace(/http:\/\/res\.cloudinary\.com/g, "https://res.cloud
 const variantes = JSON.parse(jsonText);
 
 function actualizarStockDisponible() {
+    // 💎 SI EL PRODUCTO NO TIENE VARIANTES: Habilitar compra directa global
+    if (!variantes || variantes.length === 0) {
+        let boton = document.getElementById("btn-carrito");
+        let stockInfo = document.getElementById("stock-info");
+        let inputCantidad = document.getElementById("cantidad");
+        
+        if (stockInfo) stockInfo.innerHTML = "✅ Disponible";
+        if (boton) {
+            boton.disabled = false;
+            boton.style.opacity = "1";
+        }
+        // Si manejas stock global en el producto, puedes poner un máximo opcional aquí
+        return;
+    }
+
     let color = document.getElementById("color")?.value.trim() || "";
     let talla = document.getElementById("talla")?.value.trim() || "";
     let inputCantidad = document.getElementById("cantidad");
