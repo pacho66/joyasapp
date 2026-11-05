@@ -213,18 +213,24 @@ jsonText = jsonText.replace(/http:\/\/res\.cloudinary\.com/g, "https://res.cloud
 const variantes = JSON.parse(jsonText);
 
 function actualizarStockDisponible() {
-    // 💎 SI EL PRODUCTO NO TIENE VARIANTES: Habilitar compra directa global
-    if (!variantes || variantes.length === 0) {
+    // 💎 DETECCIÓN INTELIGENTE: Si no hay variantes, o si la única variante creada no tiene color ni talla (es una variante fantasma/por defecto)
+    let esProductoSimple = variantes.length === 0 || variantes.every(v => !v.color.trim() && !v.talla.trim());
+
+    if (esProductoSimple) {
         let boton = document.getElementById("btn-carrito");
         let stockInfo = document.getElementById("stock-info");
-        let inputCantidad = document.getElementById("cantidad");
         
+        // Ocultar visualmente los selectores de color/talla si están en el DOM
+        let seccionVariantes = document.getElementById("color")?.closest("div[style*='margin-bottom']");
+        if (seccionVariantes) seccionVariantes.style.display = "none";
+        let contenedorTalla = document.getElementById("contenedor-talla");
+        if (contenedorTalla) contenedorTalla.style.display = "none";
+
         if (stockInfo) stockInfo.innerHTML = "✅ Disponible";
         if (boton) {
             boton.disabled = false;
             boton.style.opacity = "1";
         }
-        // Si manejas stock global en el producto, puedes poner un máximo opcional aquí
         return;
     }
 
@@ -236,19 +242,17 @@ function actualizarStockDisponible() {
 
     let hayTallas = variantes.some(v => v.talla && v.talla.trim() !== "");
 
-    // Si tiene tallas y no ha seleccionado color/talla
-    if (variantes.length > 0) {
-        if (!color || (hayTallas && !talla)) {
-            if (stockInfo) stockInfo.innerHTML = "⚠️ Por favor, seleccione las opciones de color y talla.";
-            if (boton) {
-                boton.disabled = true;
-                boton.style.opacity = "0.5";
-            }
-            return;
+    // Si tiene tallas reales y no ha seleccionado color/talla
+    if (!color || (hayTallas && !talla)) {
+        if (stockInfo) stockInfo.innerHTML = "⚠️ Por favor, seleccione las opciones de color y talla.";
+        if (boton) {
+            boton.disabled = true;
+            boton.style.opacity = "0.5";
         }
+        return;
     }
 
-    // Búsqueda robusta aplicando .trim() para evitar errores por espacios en blanco
+    // Búsqueda robusta aplicando .trim()
     let variante = variantes.find(v => 
         (v.color || "").trim() === color && 
         (!hayTallas || (v.talla || "").trim() === talla)
