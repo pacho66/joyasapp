@@ -17,6 +17,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from ..models import (
     Producto,
     Categoria,
+    VarianteProducto,
     ProductoImagen,
 )
 
@@ -150,7 +151,16 @@ def guardar_producto_view(request, pk=None):
 
     if request.method == 'POST':
         try:
-            # 🚀 AQUÍ ESTÁ EL CAMBIO CLAVE: Pasamos explícitamente request.POST y request.FILES
+            # 🟢 1. PROCESAR Y BORRAR VARIANTES ELIMINADAS DESDE EL FRONTEND
+            # (Solo aplica si el producto ya existe y se están editando sus variantes)
+            if producto:
+                ids_eliminados = request.POST.get('ids_eliminados', '')
+                if ids_eliminados:
+                    ids_list = [int(i) for i in ids_eliminados.split(',') if i.isdigit()]
+                    # Asegúrate de que el nombre del modelo coincida (ej. VarianteProducto)
+                    VarianteProducto.objects.filter(id__in=ids_list, producto=producto).delete()
+
+            # 🚀 2. Continuamos con el guardado habitual del servicio
             producto_guardado = ProductoService.guardar(request, pk=pk) 
             
             messages.success(request, f"¡Producto '{producto_guardado.nombre}' {accion} con éxito rotundo!")
@@ -174,7 +184,6 @@ def guardar_producto_view(request, pk=None):
         'valores': valores_iniciales,
         'categorias': Categoria.objects.filter(usuario=request.user)
     })
-
 @login_required
 def eliminar_producto(request, id):
     # Uso seguro de get_object_or_404 para evitar el 500 si no existe

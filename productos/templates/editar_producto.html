@@ -144,6 +144,8 @@
                         <button type="button" class="btn-submit" style="padding: 6px; font-size: 13px; background-color: #444;" onclick="ejecutarGeneradorMasivo()">Combinar</button>
                     </div>
                 </div>
+                <!-- 🟢 Input oculto que almacena los IDs de las variantes eliminadas -->
+                <input type="hidden" name="ids_eliminados" id="ids_eliminados" value="">
 
                 <div id="contenedor-tarjetas-variantes" style="display: flex; flex-direction: column; gap: 12px;">
                     <!-- Se cargan las variantes existentes mediante JS -->
@@ -319,7 +321,7 @@
         htmlContenido += '    <div>';
         htmlContenido += '        <span id="badge_utilidad_' + idUnico + '" class="badge-utilidad">Utilidad: $0</span>';
         htmlContenido += '        <button type="button" class="btn-action-card" title="Duplicar" onclick="duplicarTarjeta(\'' + idUnico + '\')">📋</button>';
-        htmlContenido += '        <button type="button" class="btn-action-card" title="Eliminar" onclick="document.getElementById(\'' + idUnico + '\').remove();">🗑️</button>';
+        htmlContenido += '        <button type="button" class="btn-action-card" title="Eliminar" onclick="eliminarTarjeta(\'' + idUnico + '\', \'' + idVariante + '\')">🗑️</button>';
         htmlContenido += '    </div>';
         htmlContenido += '</div>';
         htmlContenido += '<div style="display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap;">';
@@ -369,7 +371,22 @@
         div.innerHTML = htmlContenido;
         contenedor.appendChild(div);
         actualizarMetadatos(idUnico);
-    }    
+    }
+    
+    function eliminarTarjeta(idUnico, idVariante) {
+        if (idVariante && idVariante !== '' && idVariante !== 'None') {
+            // Si la variante ya existía en la BD, guardamos su ID para borrarla en el backend
+            const inputEliminados = document.getElementById('ids_eliminados');
+            if (inputEliminados) {
+                inputEliminados.value += (inputEliminados.value ? ',' : '') + idVariante;
+            }
+        }
+        // Borramos la tarjeta visualmente de la pantalla
+        const tarjeta = document.getElementById(idUnico);
+        if (tarjeta) {
+         tarjeta.remove();
+        }
+    }
 
     function ejecutarGeneradorMasivo() {
         const rawColores = document.getElementById('gen_colores').value.split(',').map(s => s.trim()).filter(Boolean);
