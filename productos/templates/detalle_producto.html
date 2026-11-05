@@ -207,7 +207,10 @@
 
 <script>
 const variantesDataElem = document.getElementById("variantes-data");
-const variantes = variantesDataElem ? JSON.parse(variantesDataElem.textContent) : [];
+let jsonText = variantesDataElem ? variantesDataElem.textContent : "[]";
+// 🔒 Forzar HTTPS en las URLs de Cloudinary para evitar bloqueos por Mixed Content
+jsonText = jsonText.replace(/http:\/\/res\.cloudinary\.com/g, "https://res.cloudinary.com");
+const variantes = JSON.parse(jsonText);
 
 function actualizarStockDisponible() {
     let color = document.getElementById("color")?.value.trim() || "";
