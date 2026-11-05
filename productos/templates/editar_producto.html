@@ -276,6 +276,10 @@
     .btn-action-card { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 5px; }
 </style>
 
+<!-- 1. Librería para lectura de códigos por cámara -->
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<!-- 2. Scripts propios (Variantes, Pistola Láser y Cámara) -->
 <script>
     let contadorVariantes = 0;
 
@@ -304,7 +308,6 @@
         div.id = idUnico;
 
         let htmlContenido = '';
-        // Input oculto para conservar el ID real de la variante en la BD y evitar duplicados o pérdida de SKU
         htmlContenido += '<input type="hidden" name="v_id[]" value="' + idVariante + '">';
         htmlContenido += '<input type="hidden" name="v_index[]" value="' + contadorVariantes + '">';
 
@@ -446,7 +449,6 @@
         const precio = cardTarget.querySelector('input[name="v_precio[]"]').value;
         const codigo = cardTarget.querySelector('input[name="v_codigo[]"]').value;
 
-        // Al duplicar es una variante nueva, por lo que va sin ID ('')
         agregarTarjetaManual('', color, talla, stock, precio, peso, codigo, '');
     }
 
@@ -483,6 +485,60 @@
         document.querySelectorAll('.variante-card').forEach(card => actualizarMetadatos(card.id));
     }
 
+    // Escucha global inteligente para pistolas láser
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            const target = e.target;
+            if (target.id === 'referencia' || target.matches('input[name="v_codigo[]"]')) {
+                e.preventDefault();
+                const form = target.form;
+                if (form) {
+                    const index = Array.prototype.indexOf.call(form.elements, target);
+                    if (form.elements[index + 1]) {
+                        form.elements[index + 1].focus();
+                    }
+                }
+            }
+        }
+    });
+
+    // Función para activar la cámara del celular/tablet
+    let html5QrCode = null;
+
+    function abrirEscanerCamara(targetInputId) {
+        const readerDiv = document.getElementById('reader');
+        
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+                readerDiv.style.display = 'none';
+            }).catch(err => console.error("Error al cerrar cámara", err));
+            return;
+        }
+
+        readerDiv.style.display = 'block';
+        html5QrCode = new Html5Qrcode("reader");
+        
+        const config = { fps: 10, qrbox: { width: 250, height: 100 } };
+
+        html5QrCode.start(
+            { facingMode: "environment" }, 
+            config, 
+            (decodedText, decodedResult) => {
+                document.getElementById(targetInputId).value = decodedText;
+                html5QrCode.stop().then(() => {
+                    readerDiv.style.display = 'none';
+                }).catch(err => console.error(err));
+            },
+            (errorMessage) => {
+                // Ignorar errores de escaneo continuo mientras enfoca
+            }
+        ).catch(err => {
+            alert("No se pudo acceder a la cámara. Asegúrate de dar permisos de video en tu navegador.");
+            readerDiv.style.display = 'none';
+            console.error(err);
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('precio_costo')?.addEventListener('input', recalcularTodasLasTarjetas);
 
@@ -503,84 +559,6 @@
             agregarTarjetaManual('', '', '', 1, '', '0.00', '', '');
         {% endif %}
     });
-
-    <!-- Librería para lectura de códigos por cámara -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-
-    // Escucha global inteligente para pistolas láser (funciona también con elementos dinámicos)
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            const target = e.target;
-        
-            // Verifica si el enter viene del SKU principal o de cualquier código de variante dinámico
-            if (target.id === 'referencia' || target.matches('input[name="v_codigo[]"]')) {
-                e.preventDefault(); // Evita que se envíe el formulario por error
-            
-                // Salta automáticamente al siguiente input de la fila o del formulario
-                const form = target.form;
-                if (form) {
-                    const index = Array.prototype.indexOf.call(form.elements, target);
-                    if (form.elements[index + 1]) {
-                        form.elements[index + 1].focus();
-                    }
-                }
-            }
-        }
-    });
-
-    // Tu script anterior de la pistola láser
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                const target = e.target;
-                if (target.id === 'referencia' || target.matches('input[name="v_codigo[]"]')) {
-                    e.preventDefault();
-                    const form = target.form;
-                    if (form) {
-                        const index = Array.prototype.indexOf.call(form.elements, target);
-                        if (form.elements[index + 1]) {
-                            form.elements[index + 1].focus();
-                        }
-                    }
-                }
-            }
-        });
-
-        // Función para activar la cámara del celular/tablet
-        let html5QrCode = null;
-
-        function abrirEscanerCamara(targetInputId) {
-            const readerDiv = document.getElementById('reader');
-            
-            if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop().then(() => {
-                    readerDiv.style.display = 'none';
-                }).catch(err => console.error("Error al cerrar cámara", err));
-                return;
-            }
-
-            readerDiv.style.display = 'block';
-            html5QrCode = new Html5Qrcode("reader");
-            
-            const config = { fps: 10, qrbox: { width: 250, height: 100 } };
-
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                config, 
-                (decodedText, decodedResult) => {
-                    document.getElementById(targetInputId).value = decodedText;
-                    html5QrCode.stop().then(() => {
-                        readerDiv.style.display = 'none';
-                    }).catch(err => console.error(err));
-                },
-                (errorMessage) => {
-                    // Ignorar errores de escaneo continuo mientras enfoca
-                }
-            ).catch(err => {
-                alert("No se pudo acceder a la cámara. Asegúrate de dar permisos de video en tu navegador.");
-                readerDiv.style.display = 'none';
-                console.error(err);
-            });
-        }
 </script>
 
 {% endblock %}
