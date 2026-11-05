@@ -129,24 +129,28 @@
             </div>
         </div>
 
-        <div style="margin-bottom: 15px;">
-            <label><strong>Color / Variante:</strong></label>
-            <select id="color" name="color" required style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
-              <option value="">Seleccione color</option>
-              {% for variante in producto.variantes.all|dictsort:"color" %}
-                {% ifchanged variante.color %}
-                  <option value="{{ variante.color }}">{{ variante.color }}</option>
-                {% endifchanged %}
-              {% endfor %}
-            </select>
-        </div>
+        <!-- 🔥 CONDICIONAL CLAVE: Solo mostrar selectores si el producto tiene variantes -->
+        {% if producto.variantes.exists %}
+            <div style="margin-bottom: 15px;">
+                <label><strong>Color / Variante:</strong></label>
+                <select id="color" name="color" required style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
+                  <option value="">Seleccione color</option>
+                  {% for variante in producto.variantes.all|dictsort:"color" %}
+                    {% ifchanged variante.color %}
+                      <option value="{{ variante.color }}">{{ variante.color }}</option>
+                    {% endifchanged %}
+                  {% endfor %}
+                </select>
+            </div>
 
-        <div id="contenedor-talla" style="margin-bottom: 15px;">
-            <label id="label-talla"><strong>Talla:</strong></label>
-            <select id="talla" name="talla" style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
-              <option value="">Seleccione un color primero</option>
-            </select>
-        </div>
+            <div id="contenedor-talla" style="margin-bottom: 15px;">
+                <label id="label-talla"><strong>Talla:</strong></label>
+                <select id="talla" name="talla" style="padding:10px; border-radius:6px; width:100%; border: 1px solid #ccc; font-size: 15px; margin-top:5px;">
+                  <option value="">Seleccione un color primero</option>
+                </select>
+            </div>
+        {% endif %}
+        <!-- Fin condicional de variantes -->
 
         <p id="stock-info" style="font-weight:bold; margin-top:5px; font-size:14px; min-height:20px;"></p>
 
