@@ -31,6 +31,7 @@ urlpatterns = [
     path('login/', auth.iniciar_sesion, name='login'),
     path('logout/', auth.cerrar_sesion, name='logout'),
     path('planes/', views.gestionar_planes, name='gestionar_planes'),
+    path('manual-usuario/', auth_views.manual_usuario, name='manual_usuario'),
 
      # 📜 Páginas Legales (Habeas Data y Términos SaaS)
     path('terminos-y-condiciones/', TemplateView.as_view(template_name='terminos.html'), name='terminos_y_condiciones'),

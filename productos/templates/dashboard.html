@@ -201,7 +201,7 @@ td {
                 <a href="{% url 'inventario' %}">📦 Inventario</a>
                 <a href="{% url 'gastos' %}">📊 Gastos</a>
                 <a href="{% url 'configurar_negocio' %}">⚙️ Configurar</a>
-                <a href="#manual-seccion" style="color: var(--azul); font-weight: 700;">📖 Manual</a>
+                <a href="{% url 'manual_usuario' %}" target="_blank" class="text-gold fw-bold">📖 Manual de Usuario</a>
                 <a href="{% url 'logout' %}" class="btn" style="background: #dc2626; color: white;">🚪 Salir</a>
             </div>
         </div>
@@ -462,96 +462,6 @@ td {
                     {% endfor %}
                 </tbody>
             </table>
-        </div>
-    </div>
-
-    <!-- 9. MANUAL DE USUARIO INTEGRADO DIRECTAMENTE EN EL DASHBOARD -->
-    <div id="manual-seccion" class="seccion-card" style="border-top: 4px solid var(--azul);">
-        <div class="d-flex align-items-center gap-2 mb-4 pb-3 border-bottom">
-            <span style="font-size: 28px;">📖</span>
-            <div>
-                <h3 style="margin: 0; font-size: 20px;">Manual de Usuario & Guía de Operación</h3>
-                <p style="margin: 2px 0 0 0; font-size: 13px; color: var(--muted);">Todo lo que necesitas saber para operar tu joyería, taller y catálogo en JoyasApp.</p>
-            </div>
-        </div>
-
-        <!-- Cap 1 -->
-        <div style="margin-bottom: 24px;">
-            <h4 style="font-size: 15px; font-weight: 700; color: var(--azul); margin-bottom: 8px;">01. Inicio Rápido y Selección de Planes</h4>
-            <p style="font-size: 14px; color: var(--texto); line-height: 1.6; margin-bottom: 12px;">
-                El panel de control (Dashboard) es el centro de mando de tu negocio joyero. Al ingresar, verás la vista previa del banner de tu catálogo, los botones de navegación rápida, el acceso a categorías, la sección de gastos y el panel principal con el resumen global de pedidos y tu <strong>utilidad real en tiempo real</strong>.
-            </p>
-            <div style="background: var(--gris-soft); padding: 14px; border-radius: 10px; border-left: 4px solid var(--azul);">
-                <strong style="font-size: 13px; color: var(--texto);">💎 Gestión de Planes desde el Dashboard:</strong>
-                <p style="font-size: 13px; color: var(--muted); margin: 4px 0 8px 0;">Tu suscripción se gestiona directamente desde el panel con precios de lanzamiento especiales:</p>
-                <ul style="font-size: 13px; color: var(--texto); margin: 0; padding-left: 20px;">
-                    <li><strong>Plan Básico ($49.900/mes):</strong> Catálogo ilimitado, CRM y pedidos rápidos por WhatsApp.</li>
-                    <li><strong>Plan Semi ($89.900/mes - Más Popular):</strong> Inventario por gramos, calculadora de taller con merma, variantes y conexión con Siigo.</li>
-                    <li><strong>Plan Premium ($149.900/mes):</strong> Subdominio exclusivo, control avanzado de gastos y usuarios ilimitados.</li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Cap 2 -->
-        <div style="margin-bottom: 24px;">
-            <h4 style="font-size: 15px; font-weight: 700; color: var(--azul); margin-bottom: 8px;">02. Configuración del Negocio</h4>
-            <p style="font-size: 14px; color: var(--texto); line-height: 1.6; margin-bottom: 8px;">
-                Configura la identidad legal y comercial de tu joyería para que los comprobantes, impuestos y pasarelas de pago operen con precisión en Colombia.
-            </p>
-            <ul style="font-size: 13px; color: var(--texto); margin: 0; padding-left: 20px; line-height: 1.6;">
-                <li><strong>Subdominio y Datos Fiscales:</strong> Configura el nombre de tu tienda online (ej. <code>tu-joyeria.joyasapp.com</code>), NIT o cédula, dirección y teléfonos.</li>
-                <li><strong>Impuestos (IVA y Retefuente):</strong> Define los porcentajes aplicables a tus facturas según tu régimen tributario.</li>
-                <li><strong>Pasarelas de Pago:</strong> Conecta tus credenciales de <strong>Wompi</strong> y <strong>Mercado Pago</strong> para recibir pagos seguros en línea.</li>
-                <li><strong>Integración Contable (Siigo):</strong> Sincroniza tus ventas y terceros directamente con tu cuenta de Siigo.</li>
-                <li><strong>Envíos:</strong> Configura tarifas fijas o zonas de cobertura para despachos nacionales.</li>
-            </ul>
-        </div>
-
-        <!-- Cap 3 -->
-        <div style="margin-bottom: 24px;">
-            <h4 style="font-size: 15px; font-weight: 700; color: var(--azul); margin-bottom: 8px;">03. Módulo CRM, Banner y Taller</h4>
-            <div style="margin-bottom: 12px;">
-                <strong style="font-size: 13px; color: var(--texto);">🤖 Módulo CRM:</strong>
-                <p style="font-size: 13px; color: var(--muted); margin: 2px 0 6px 0;">Centraliza la información de tus clientes. Los contactos se crean automáticamente al registrar pedidos y cada ficha guarda historial de compras.</p>
-                <div style="background: #fffbeb; border: 1px solid #fde68a; color: #b45309; padding: 8px 12px; border-radius: 8px; font-size: 12px;">
-                    <strong>Nota CRM - Botón WA VIP:</strong> Permite iniciar una conversación preferencial por WhatsApp con clientes frecuentes o VIP para enviarles promociones exclusivas.
-                </div>
-            </div>
-
-            <div style="margin-bottom: 12px;">
-                <strong style="font-size: 13px; color: var(--texto);">🎨 Botón Banner (Marketing Visual):</strong>
-                <p style="font-size: 13px; color: var(--muted); margin: 2px 0 6px 0;">Configura la vitrina móvil de tu tienda: nombre, enlaces de redes (Instagram, Facebook, TikTok) y estilo visual.</p>
-                <div style="background: var(--gris-soft); padding: 8px 12px; border-radius: 8px; font-size: 12px;">
-                    <strong>Recomendación Imagen de Fondo:</strong> Sube imágenes en formato horizontal <strong>16:9</strong> con resolución ideal de <strong>1920 x 1080 píxeles</strong>.
-                </div>
-            </div>
-
-            <div>
-                <strong style="font-size: 13px; color: var(--texto);">⚙️ Botón Fabricación & Taller:</strong>
-                <p style="font-size: 13px; color: var(--muted); margin: 2px 0 0 0;">Exclusivo para joyeros fabricantes en Plata y Oro de 18k. Calcula automáticamente el costo del metal, aplica el porcentaje de merma por fundición y suma la mano de obra.</p>
-            </div>
-        </div>
-
-        <!-- Cap 4 -->
-        <div style="margin-bottom: 24px;">
-            <h4 style="font-size: 15px; font-weight: 700; color: var(--azul); margin-bottom: 8px;">04. Categorías, Gastos y Creación de Productos</h4>
-            <ul style="font-size: 13px; color: var(--texto); margin: 0; padding-left: 20px; line-height: 1.6;">
-                <li><strong>📂 Categorías:</strong> Organiza tu catálogo en secciones como pulseras, cadenas, anillos y juegos.</li>
-                <li><strong>💳 Centro Financiero de Gastos (Botón Rojo):</strong> Registra y categoriza gastos fijos, marketing y logística.</li>
-                <li><strong>➕ Creación de Productos y Precios por Escala (1-6-12):</strong> Define SKU, categoría y precios de costo, detal (1-5), semimayorista (6-11) y mayorista (12+).</li>
-                <li><strong>Configuración por Gramos:</strong> Ingresa el gramaje total y los precios por gramo en cada escala.</li>
-                <li><strong>Variantes y Generador en Masa:</strong> Usa el generador separado por comas para crear subcódigos y stock independiente por variante.</li>
-            </ul>
-        </div>
-
-        <!-- Cap 5 -->
-        <div>
-            <h4 style="font-size: 15px; font-weight: 700; color: var(--azul); margin-bottom: 8px;">05. Balances, Clientes y Pedidos</h4>
-            <ul style="font-size: 13px; color: var(--texto); margin: 0; padding-left: 20px; line-height: 1.6;">
-                <li><strong>📊 Paneles Analíticos:</strong> Muestra el balance financiero operativo, valorización de inventario y gráficas de ventas recientes.</li>
-                <li><strong>👥 Gestión de Clientes y Cobros:</strong> Filtra el estado de tus compradores (VIP, nuevos, dormidos, morosos) con acceso directo a WhatsApp.</li>
-                <li><strong>📦 Control de Pedidos y Facturación:</strong> Visualiza órdenes, montos, estados de pago y acceso directo a facturas.</li>
-            </ul>
         </div>
     </div>
 

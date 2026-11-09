@@ -213,3 +213,15 @@ def gestionar_planes(request):
         'dias_restantes': dias_restantes,
     }
     return render(request, 'autenticacion/planes.html', context)
+
+# =========================================================================
+# 📖 MANUAL DE USUARIO DEL SAAS
+# =========================================================================
+
+@login_required
+def manual_usuario(request):
+    """Vista dedicada para el manual completo de usuario de JoyasApp."""
+    context = {
+        'precios_planes': PRECIOS_PLANES,
+    }
+    return render(request, 'manual_usuario.html', context)
