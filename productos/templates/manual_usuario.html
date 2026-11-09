@@ -1,200 +1,188 @@
-html
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Usuario & Guía de Operación | JoyasApp</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --azul: #0f172a;
+            --azul-soft: #f1f5f9;
+            --gold: #d4af37;
+            --gold-soft: #fffdf4;
+            --borde: #e2e8f0;
+            --texto: #334155;
+            --muted: #64748b;
+        }
+        body {
+            background-color: #f8fafc;
+            color: var(--texto);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+        }
+        .manual-container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 20px;
+            border: 1px solid var(--borde);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            padding: 40px;
+        }
+        .chapter-box {
+            margin-bottom: 35px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid var(--borde);
+        }
+        .chapter-box:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        h1, h2, h3, h4 {
+            color: var(--azul);
+        }
+        .badge-gold {
+            background: var(--gold-soft);
+            color: #92400e;
+            border: 1px solid #fde68a;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        code {
+            background: var(--azul-soft);
+            color: #d97706;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
 
-{% block content %}
 <div class="container my-5">
-    <!-- Encabezado Principal -->
-    <div class="card shadow-lg border-0 mb-4">
-        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
-            <h3 class="mb-0 fs-4 fw-bold text-warning">📖 Manual Oficial de Usuario y Documentación Técnica — JoyasApp SaaS</h3>
-            <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-sm fw-semibold">← Volver al Dashboard</a>
+    <div class="manual-container">
+        
+        <!-- ENCABEZADO INSTITUCIONAL -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4 pb-4 border-bottom">
+            <div>
+                <span class="badge-gold mb-2 d-inline-block">Documentación Oficial v2.7</span>
+                <h1 class="fw-extrabold mb-1" style="font-size: 28px;">📖 Manual de Usuario & Guía de Operación</h1>
+                <p class="text-muted mb-0">Todo lo que necesitas saber para operar tu joyería, taller y catálogo digital en JoyasApp.</p>
+            </div>
+            <a href="javascript:window.close();" class="btn btn-outline-dark btn-sm fw-bold">✕ Cerrar Manual</a>
         </div>
-        <div class="card-body p-4 p-md-5" style="line-height: 1.8; color: #2d3748;">
-            
-            <p class="lead">
-                Bienvenido a la documentación oficial de <strong>JoyasApp</strong>. Este manual constituye la guía paso a paso para la configuración comercial, control de inventarios por gramos y variantes, automatización de talleres de joyería y gestión financiera de tu plataforma SaaS.
+
+        <!-- CAPÍTULO 1 -->
+        <div class="chapter-box">
+            <h3 class="h5 fw-bold text-primary mb-3">01. Inicio Rápido y Selección de Planes</h3>
+            <p>
+                El panel de control (Dashboard) es el centro de mando de tu negocio joyero. Al ingresar, verás la vista previa del banner de tu catálogo, los botones de navegación rápida, el acceso a categorías, la sección de gastos y el panel principal con el resumen global de pedidos y tu <strong>utilidad real en tiempo real</strong>.
             </p>
+            <div class="p-3 rounded bg-light border-start border-4 border-primary">
+                <strong class="text-dark">💎 Gestión de Planes desde el Dashboard:</strong>
+                <p class="text-muted small mt-1 mb-2">Tu suscripción se gestiona directamente desde el panel con precios de lanzamiento especiales:</p>
+                <ul class="small mb-0 ps-3">
+                    <li><strong>Plan Básico ($49.900/mes):</strong> Catálogo ilimitado, CRM y pedidos rápidos por WhatsApp.</li>
+                    <li><strong>Plan Semi ($89.900/mes - Más Popular):</strong> Inventario por gramos, calculadora de taller con merma, variantes y conexión con Siigo.</li>
+                    <li><strong>Plan Premium ($149.900/mes):</strong> Subdominio exclusivo, control avanzado de gastos y usuarios ilimitados.</li>
+                </ul>
+            </div>
+        </div>
 
-            <hr class="my-4">
+        <!-- CAPÍTULO 2 -->
+        <div class="chapter-box">
+            <h3 class="h5 fw-bold text-primary mb-3">02. Configuración del Negocio</h3>
+            <p>
+                Configura la identidad legal y comercial de tu joyería para que los comprobantes, impuestos y pasarelas de pago operen con precisión en Colombia.
+            </p>
+            <ul class="small ps-3 mb-0" style="line-height: 1.8;">
+                <li><strong>Subdominio y Datos Fiscales:</strong> Configura el nombre de tu tienda online (ej. <code>tu-joyeria.joyasapp.com</code>), NIT o cédula, dirección y teléfonos.</li>
+                <li><strong>Impuestos (IVA y Retefuente):</strong> Define los porcentajes aplicables a tus facturas según tu régimen tributario.</li>
+                <li><strong>Pasarelas de Pago:</strong> Conecta tus credenciales de <strong>Wompi</strong> y <strong>Mercado Pago</strong> para recibir pagos seguros en línea.</li>
+                <li><strong>Integración Contable (Siigo):</strong> Sincroniza tus ventas y terceros directamente con tu cuenta de Siigo.</li>
+                <li><strong>Envíos:</strong> Configura tarifas fijas o zonas de cobertura para despachos nacionales.</li>
+            </ul>
+        </div>
 
-            <!-- CAPÍTULO 1 -->
-            <section class="mb-5">
-                <h2 class="text-primary border-bottom pb-2 fw-bold">CAPÍTULO 1: Inicio Rápido y Selección de Planes</h2>
-                
-                <h4 class="mt-4 text-dark fw-bold">1. Acceso a la Plataforma y Prueba Gratuita</h4>
-                <ol>
-                    <li>Ingresa desde cualquier navegador a <a href="https://www.joyasapp.com" target="_blank" class="fw-bold text-decoration-none">www.joyasapp.com</a>.</li>
-                    <li><strong>Prueba Gratuita (Recomendado):</strong> Antes de seleccionar un plan de pago, haz clic en el botón <strong>"Crear mi tienda gratis"</strong>. Esta opción te otorga <strong>15 días de acceso total sin tarjeta de crédito</strong> para construir tu catálogo y probar las herramientas del taller.</li>
-                    <li>Diligencia el formulario de registro:
-                        <ul>
-                            <li>Nombre de usuario</li>
-                            <li>Correo electrónico corporativo</li>
-                            <li>Contraseña segura</li>
-                            <li>Nombre de tu joyería o tienda</li>
-                            <li>Número de WhatsApp comercial</li>
-                        </ul>
-                    </li>
-                    <li>Acepta los <em>Términos y Condiciones</em> y haz clic en <strong>Registrarse</strong> para acceder al Dashboard Principal.</li>
-                </ol>
-
-                <h4 class="mt-4 text-dark fw-bold">2. Estructura de Planes Comerciales</h4>
-                <div class="row g-3 mt-2">
-                    <div class="col-md-4">
-                        <div class="card h-100 border-primary shadow-sm">
-                            <div class="card-body">
-                                <h5 class="card-title fw-bold text-primary">Plan Básico</h5>
-                                <h6 class="card-subtitle mb-2 text-muted fw-bold">$59.900 / mes</h6>
-                                <span class="badge bg-danger mb-2">Precio de Lanzamiento</span>
-                                <ul class="small ps-3">
-                                    <li>Catálogo de productos ilimitado.</li>
-                                    <li>CRM básico para gestión de clientes.</li>
-                                    <li>Pedidos directos a WhatsApp.</li>
-                                    <li>Control de inventario estándar por unidades.</li>
-                                    <li>Soporte técnico por WhatsApp.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card h-100 border-warning shadow-sm">
-                            <div class="card-body">
-                                <h5 class="card-title fw-bold text-warning text-dark">Plan Semi / Pro</h5>
-                                <h6 class="card-subtitle mb-2 text-muted fw-bold">$109.900 / mes</h6>
-                                <span class="badge bg-danger mb-2">Precio de Lanzamiento</span>
-                                <ul class="small ps-3">
-                                    <li><strong>Todo lo del Plan Básico.</strong></li>
-                                    <li>Inventario avanzado por gramos y variantes (Oro 18k, Plata 925).</li>
-                                    <li>Calculadora de taller y mermas de fundición.</li>
-                                    <li>Integración con facturación Siigo.</li>
-                                    <li>Hasta 3 usuarios administradores.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card h-100 border-success shadow-sm">
-                            <div class="card-body">
-                                <h5 class="card-title fw-bold text-success">Plan Premium</h5>
-                                <h6 class="card-subtitle mb-2 text-muted fw-bold">$179.900 / mes</h6>
-                                <span class="badge bg-danger mb-2">Precio de Lanzamiento</span>
-                                <ul class="small ps-3">
-                                    <li><strong>Todo lo del Plan Semi / Pro.</strong></li>
-                                    <li>Subdominio personalizado exclusivo (ej: <code>tudominio.joyasapp.com</code>).</li>
-                                    <li>Módulo financiero completo de control de gastos.</li>
-                                    <li>Usuarios y accesos ilimitados.</li>
-                                    <li>Soporte prioritario 24/7.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
+        <!-- CAPÍTULO 3 -->
+        <div class="chapter-box">
+            <h3 class="h5 fw-bold text-primary mb-3">03. Módulo CRM, Banner y Taller</h3>
+            
+            <div class="mb-3">
+                <strong class="text-dark">🤖 Módulo CRM:</strong>
+                <p class="text-muted small mb-2">Centraliza la información de tus clientes. Los contactos se crean automáticamente al registrar pedidos y cada ficha guarda historial de compras.</p>
+                <div class="p-2 rounded bg-warning bg-opacity-10 border border-warning text-dark small">
+                    <strong>Nota CRM - Botón WA VIP:</strong> Permite iniciar una conversación preferencial por WhatsApp con clientes frecuentes o VIP para enviarles promociones exclusivas.
                 </div>
-            </section>
-
-            <!-- CAPÍTULO 2 -->
-            <section class="mb-5">
-                <h2 class="text-primary border-bottom pb-2 fw-bold">CAPÍTULO 2: Inicio de Sesión y Configuración del Negocio</h2>
-                <p>Al ingresar al Dashboard Principal, haz clic en el botón <strong>"Configurar Negocio"</strong> para parametrizar la identidad visual, fiscal y logística de tu tienda SaaS:</p>
-                
-                <h5 class="fw-bold mt-3">Paso 1: Identidad de Marca</h5>
-                <ul>
-                    <li><strong>Subdominio:</strong> Enlace e identificador único en Google (ej: <code>mijoyeria.joyasapp.com</code>). Escribir sin espacios ni tildes.</li>
-                    <li><strong>Nombre, NIT/Cédula, WhatsApp y Correo Comercial.</strong></li>
-                    <li><strong>Colores de Marca:</strong> Selección de códigos hexadecimales para botones y cabeceras.</li>
-                    <li><strong>Logo & Banner Principal:</strong> Carga de logotipo y fotografía de portada (formato sugerido 16:9 - 1920x1080 px, menor a 1 MB) con texto promocional sobre la imagen.</li>
-                </ul>
-
-                <h5 class="fw-bold mt-3">Paso 2: Configuración Fiscal y Facturación</h5>
-                <ul>
-                    <li><strong>IVA:</strong> Activar casilla si eres responsable e ingresar porcentaje (ej: 19%). Opción para discriminar el valor del IVA en las facturas generadas en PDF.</li>
-                    <li><strong>Retefuente:</strong> Marcar si aplicas retención e ingresar porcentaje (ej: 2.5%).</li>
-                    <li><strong>Prefijos y Consecutivos:</strong> Asignación del prefijo autorizado (ej: <code>SETT</code>) y número consecutivo inicial.</li>
-                    <li><strong>Texto Legal:</strong> Espacio para resoluciones oficiales de la DIAN o términos de garantía del taller.</li>
-                </ul>
-
-                <h5 class="fw-bold mt-3">Paso 3: Integraciones, Pasarelas de Pago y Envíos</h5>
-                <ul>
-                    <li><strong>Siigo:</strong> Sincronización API en tiempo real para inventario y facturación contable.</li>
-                    <li><strong>Pasarelas Wompi & Mercado Pago:</strong> Ingresa tu <code>Public Key</code> de Wompi o <code>Access Token</code> de Mercado Pago para recibir el dinero de tus ventas directo a tus cuentas bancarias.</li>
-                    <li><strong>Logística de Envíos:</strong> Tarifa fija estándar, envío gratis o envío sin costo a partir de compras mínimas (ej: mayores a $50.000).</li>
-                </ul>
-            </section>
-
-            <!-- CAPÍTULO 3 -->
-            <section class="mb-5">
-                <h2 class="text-primary border-bottom pb-2 fw-bold">CAPÍTULO 3: El Dashboard y Módulos Principales</h2>
-                
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="p-3 bg-light rounded border">
-                            <h5 class="fw-bold text-dark">1. Módulo CRM (Clientes)</h5>
-                            <p class="small mb-1">Captura automáticamente los datos de los compradores al realizar pedidos en el catálogo. Preserva la integridad histórica sin borrar clientes.</p>
-                            <span class="badge bg-success">WA VIP</span> <small class="text-muted">Inicia chats preferenciales para fidelización y seguimiento.</small>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="p-3 bg-light rounded border">
-                            <h5 class="fw-bold text-dark">2. Banner & Marketing Visual</h5>
-                            <p class="small mb-1">Configuración de redes sociales (Instagram, Facebook, TikTok) y esquemas cromáticos (<em>Negro Elegante, Dorado Premium, Azul Corporativo, Verde Esmeralda</em>).</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="p-3 bg-light rounded border">
-                            <h5 class="fw-bold text-dark">3. Módulo Ganancias & KPIs</h5>
-                            <p class="small mb-0">Cruza costos directos contra el precio final de venta. Deduce costos fijos, gramaje de metal, mermas y mano de obra para calcular la <strong>Utilidad Neta Real</strong>.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="p-3 bg-light rounded border">
-                            <h5 class="fw-bold text-dark">4. Taller de Joyería (Fabricación)</h5>
-                            <p class="small mb-0">Diseñado para joyeros en Oro 18k y Plata 925: calcula costo de metal + merma (porcentaje de fundición), mano de obra de orfebres y saldo de pagos acumulados.</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- CAPÍTULO 4 -->
-            <section class="mb-5">
-                <h2 class="text-primary border-bottom pb-2 fw-bold">CAPÍTULO 4: Gastos, Categorías y Creación Avanzada de Productos</h2>
-                
-                <h4 class="mt-4 text-dark fw-bold">1. Centro Financiero de Gastos (Botón Rojo)</h4>
-                <p>Permite registrar todos los costos operacionales del negocio clasificados en: <em>Gastos Fijos, Marketing, Logística, Financieros y Administrativos</em>. Cada fila cuenta con opciones para Editar, Duplicar (para egresos recurrentes) o Eliminar.</p>
-
-                <h4 class="mt-4 text-dark fw-bold">2. Creación Avanzada de Productos (`Productos +`)</h4>
-                <ul>
-                    <li><strong>SKU y Lector de Código de Barras por Cámara:</strong> Formato sugerido <code>TIPO-METAL-REF</code> (ej: <code>PUL-OB18-RIO01</code>). Incluye escáner por cámara para búsqueda o despacho rápido.</li>
-                    <li><strong>Tipo de Venta:</strong> Venta por Unidad (piezas terminadas) o Venta por Gramos (joyas según peso de metal).</li>
-                    <li><strong>Escala Comercial Psicológica:</strong>
-                        <br><small class="text-muted">Define precios para <strong>Detal</strong> (1-5 unids), <strong>Semimayorista</strong> (6-11 unids) y <strong>Mayorista</strong> (12+ unids). Incentiva a los compradores a añadir más artículos para alcanzar el precio con descuento.</small>
-                    </li>
-                    <li><strong>Generador Masivo de Variantes (Botón Combinar):</strong> Permite ingresar metales (ej: <em>Oro Blanco, Oro Amarillo</em>) y tallas (ej: <em>6, 7, 8</em>) para que el sistema genere automáticamente todas las permutaciones y sub-SKUs correspondientes.</li>
-                    <li><strong>Confianza Digital:</strong> Carga de fotografías (1080x1080 px), videos del brillo de la joya y el <strong>Certificado Digital de Autenticidad</strong> (respaldo Ley 750/18k) para elevar la tasa de conversión en línea.</li>
-                </ul>
-
-                <h4 class="mt-3 text-dark fw-bold">3. Excel Contable</h4>
-                <p>Exporta en formato <code>.xlsx</code> la totalidad de las ventas, inventario en gramos, valorización de stock y egresos para entregar informes limpios al contador o realizar balances de cierre de mes.</p>
-            </section>
-
-            <!-- CAPÍTULO 5 -->
-            <section class="mb-5">
-                <h2 class="text-primary border-bottom pb-2 fw-bold">CAPÍTULO 5: Métricas Avanzadas, Control de Suscripción y Despliegue</h2>
-                
-                <h5 class="fw-bold mt-3">1. Panel Central Operativo</h5>
-                <ul>
-                    <li><strong>Balance Financiero Operativo:</strong> Proyección en vivo de la Utilidad Real cruzando ventas, costos y gastos.</li>
-                    <li><strong>Valorización de Inventario & Vitrina Real:</strong> Métricas en dinero ($) y gramos (gr) de las existencias totales versus la mercancía activa visible para venta inmediata.</li>
-                    <li><strong>Segmentación Inteligente de Clientes:</strong> Clasificación automática entre clientes <em>VIP, Nuevos, Dormidos (+60 días sin compra) y Morosos</em>, con botón de contacto directo vía WhatsApp.</li>
-                    <li><strong>Pedidos en Vivo & Facturación:</strong> Seguimiento del estado de órdenes y generación inmediata de comprobantes en PDF.</li>
-                </ul>
-
-                <h5 class="fw-bold mt-3">2. Gestión y Upgrade de Plan</h5>
-                <p>Ubicado en la cabecera del Dashboard, el botón de gestión de suscripción permite ver los días restantes de la prueba de 15 días o del plan contratado y ejecutar la actualización (*upgrade*) de forma transparente a medida que crece tu negocio.</p>
-            </section>
-
-            <div class="alert alert-info text-center mt-5" role="alert">
-                💎 <strong>JoyasApp SaaS</strong> — Potenciando la transformación digital de los talleres y joyerías.
             </div>
 
+            <div class="mb-3">
+                <strong class="text-dark">🎨 Botón Banner (Marketing Visual):</strong>
+                <p class="text-muted small mb-2">Configura la vitrina móvil de tu tienda: nombre, enlaces de redes (Instagram, Facebook, TikTok) y estilo visual.</p>
+                <div class="p-2 rounded bg-light border small text-muted">
+                    <strong>Recomendación Imagen de Fondo:</strong> Sube imágenes en formato horizontal <strong>16:9</strong> con resolución ideal de <strong>1920 x 1080 píxeles</strong>.
+                </div>
+            </div>
+
+            <div>
+                <strong class="text-dark">⚙️ Botón Fabricación & Taller:</strong>
+                <p class="text-muted small mb-0">Exclusivo para joyeros fabricantes en Plata y Oro de 18k. Calcula automáticamente el costo del metal, aplica el porcentaje de merma por fundición y suma la mano de obra.</p>
+            </div>
         </div>
+
+        <!-- CAPÍTULO 4 -->
+        <div class="chapter-box">
+            <h3 class="h5 fw-bold text-primary mb-3">04. Categorías, Gastos y Creación de Productos</h3>
+            <ul class="small ps-3 mb-0" style="line-height: 1.8;">
+                <li><strong>📂 Categorías:</strong> Organiza tu catálogo en secciones como pulseras, cadenas, anillos y juegos.</li>
+                <li><strong>💳 Centro Financiero de Gastos (Botón Rojo):</strong> Registra y categoriza gastos fijos, marketing y logística.</li>
+                <li><strong>➕ Creación de Productos y Precios por Escala (1-6-12):</strong> Define SKU, categoría y precios de costo, detal (1-5), semimayorista (6-11) y mayorista (12+).</li>
+                <li><strong>Configuración por Gramos:</strong> Ingresa el gramaje total y los precios por gramo en cada escala.</li>
+                <li><strong>Variantes y Generador en Masa:</strong> Usa el generador separado por comas para crear subcódigos y stock independiente por variante.</li>
+            </ul>
+        </div>
+
+        <!-- CAPÍTULO 5 -->
+        <div class="chapter-box">
+            <h3 class="h5 fw-bold text-primary mb-3">05. Balances, Clientes y Pedidos</h3>
+            <ul class="small ps-3 mb-0" style="line-height: 1.8;">
+                <li><strong>📊 Paneles Analíticos:</strong> Muestra el balance financiero operativo, valorización de inventario y gráficas de ventas recientes.</li>
+                <li><strong>👥 Gestión de Clientes y Cobros:</strong> Filtra el estado de tus compradores (VIP, nuevos, dormidos, morosos) con acceso directo a WhatsApp.</li>
+                <li><strong>📦 Control de Pedidos y Facturación:</strong> Visualiza órdenes, montos, estados de pago y acceso directo a facturas.</li>
+            </ul>
+        </div>
+
+        <!-- CAPÍTULO 6 (NUEVO) -->
+        <div class="chapter-box">
+            <h3 class="h5 fw-bold text-primary mb-3">06. Pasarelas de Pago y Cobros Online (Wompi y Mercado Pago)</h3>
+            <p>
+                Automatiza la recepción de dinero de tus clientes de manera segura y sin intermediarios manuales mediante la integración de pasarelas de pago digitales.
+            </p>
+            <ul class="small ps-3 mb-3" style="line-height: 1.8;">
+                <li><strong>Integración con Wompi (Bancolombia):</strong> Permite recibir pagos con Tarjetas de Crédito, PSE, Nequi y Corresponcales Bancarios directamente reflejados en tu cuenta comercial.</li>
+                <li><strong>Llaves Públicas y Privadas:</strong> Configura tus credenciales de producción en la sección <code>Configurar Negocio</code> para habilitar el botón de pago automático en el checkout de tu tienda.</li>
+                <li><strong>Webhook y Confirmación de Pagos:</strong> El sistema actualiza de manera automática el estado del pedido a <em>"Pagado"</em> y descuenta el stock del inventario en cuanto la pasarela confirma la transacción exitosa.</li>
+                <li><strong>Cobros por Suscripción SaaS:</strong> Utiliza los enlaces oficiales dentro de tu panel (Plan Básico, Semi o Premium) para mantener tu cuenta activa mes a mes sin interrupciones.</li>
+            </ul>
+            <div class="p-3 rounded bg-light border-start border-4 border-warning">
+                <strong class="text-dark">💡 Recomendación de Seguridad:</strong> 
+                <p class="text-muted small mb-0 mt-1">Nunca compartas tus llaves privadas (Secret Keys) de Wompi o Mercado Pago con terceros. Verifica siempre que tu dominio opere bajo protocolo seguro HTTPS.</p>
+            </div>
+        </div>
+
+        <!-- PIE DEL MANUAL -->
+        <div class="text-center pt-3 text-muted small border-top">
+            &copy; 2026 <strong>JoyasApp</strong>. Todos los derechos reservados. Desarrollado para potenciar la joyería moderna.
+        </div>
+
     </div>
 </div>
-{% endblock %}
+
+</body>
+</html>
