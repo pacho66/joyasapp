@@ -15,6 +15,7 @@ from django.views.generic import TemplateView
 from .views.dashboard import crear_empleado_tienda
 from .views import checkout 
 from productos.views.landing import registrar_evento_embudo
+from .views import manual_usuario
 
 urlpatterns = [
 
