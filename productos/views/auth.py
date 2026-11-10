@@ -57,8 +57,8 @@ def index_saas(request):
     
     seo_config, _ = ConfiguracionSEO.objects.get_or_create(id=1)
     
-    # ⚙️ Garantiza la existencia del registro con valores por defecto
-    config_promo, _ = ConfiguracionPromocion.objects.get_or_create(
+    # ⚙️ Usa update_or_create para asegurar que siempre esté activo y con los precios correctos
+    config_promo, _ = ConfiguracionPromocion.objects.update_or_create(
         pk=1,
         defaults={
             'en_promocion': True,

@@ -20,20 +20,18 @@ from .views import manual_usuario
 urlpatterns = [
 
     # ===============================
-    # 🔓 ENRUTADOR RAÍZ / MULTI-TENANT
+    # 🔓 ENRUTADOR RAÍZ & LANDING SAAS (Con soporte multi-tenant)
     # ===============================
-    path('', catalogo.catalogo_tienda, name='inicio'),
+    path('', views.index_saas, name='home'),
 
     # ===============================
     # 🔓 AUTENTICACIÓN
     # ===============================
-    path('', views.index_saas, name='home'),
     path('registro/', auth.registro, name='registro'),
     path('login/', auth.iniciar_sesion, name='login'),
     path('logout/', auth.cerrar_sesion, name='logout'),
     path('planes/', views.gestionar_planes, name='gestionar_planes'),
     path('manual-usuario/', manual_usuario, name='manual_usuario'),
-
      # 📜 Páginas Legales (Habeas Data y Términos SaaS)
     path('terminos-y-condiciones/', TemplateView.as_view(template_name='terminos.html'), name='terminos_y_condiciones'),
     path('politica-de-privacidad/', TemplateView.as_view(template_name='privacidad.html'), name='politica_privacidad'),
