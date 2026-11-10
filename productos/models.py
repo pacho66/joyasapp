@@ -18,7 +18,7 @@ from django.utils.text import slugify
 # =========================================================================
 class ConfiguracionPromocion(models.Model):
     """
-    Modelo Singleton (Global) para controlar los precios psicológicos y 
+    Modelo Singleton (Global) blindado para controlar los precios psicológicos y 
     ofertas de lanzamiento en la Landing Page principal (landing_saaS.html).
     """
     en_promocion = models.BooleanField(
@@ -38,6 +38,17 @@ class ConfiguracionPromocion(models.Model):
     precio_premium_actual = models.DecimalField(max_digits=10, decimal_places=0, default=149900, verbose_name="Premium - Precio Oferta")
     precio_premium_tachado = models.DecimalField(max_digits=10, decimal_places=0, default=179900, verbose_name="Premium - Precio Tachado")
 
+    def save(self, *args, **kwargs):
+        # 🔒 Forzar siempre que la clave primaria sea 1 (Singleton estricto)
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        # Método auxiliar para cargar la configuración global rápidamente
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
     def __str__(self):
         estado = "ACTIVA 🔥" if self.en_promocion else "INACTIVA (Precios Regulares)"
         return f"Configuración Global de Promoción SaaS ({estado})"
@@ -45,8 +56,7 @@ class ConfiguracionPromocion(models.Model):
     class Meta:
         verbose_name = "Configuración de Promoción SaaS"
         verbose_name_plural = "Configuración de Promoción SaaS"
-
-
+        
 # =========================================================================
 # ⚙️ CENTRO DE CONTROL DE TARIFAS DEL SAAS
 # =========================================================================

@@ -415,10 +415,17 @@ class CategoriaAdmin(admin.ModelAdmin):
 @admin.register(ConfiguracionPromocion)
 class ConfiguracionPromocionAdmin(admin.ModelAdmin):
     list_display = (
-        '__str__', 
+        '_str_', 
         'en_promocion', 
         'precio_basico_actual', 
         'precio_semi_actual', 
         'precio_premium_actual'
     )
-    list_editable = ('en_promocion',) 
+    
+    # 🚫 Oculta el botón de "Añadir" si ya existe el registro único (pk=1)
+    def has_add_permission(self, request):
+        return not ConfiguracionPromocion.objects.exists()
+
+    # 🚫 Evita que el usuario borre el registro único por accidente
+    def has_delete_permission(self, request, obj=None):
+        return False
