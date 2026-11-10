@@ -17,6 +17,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from .models import ConfiguracionSEO
 from .models import EventoEmbudo
+from .models import ConfiguracionPromocion
 
 # =====================================
 # 🔥 1. FUNCIÓN MASIVA (AQUÍ VA)
@@ -406,3 +407,18 @@ class CategoriaAdmin(admin.ModelAdmin):
         count = queryset.count()
         queryset.delete()
         self.message_user(request, f"Se eliminaron {count} categorías correctamente.", messages.SUCCESS)
+
+# =========================================================================
+# 🚀 ADMINISTRACIÓN DE PROMOCIONES Y PRECIOS DE LA LANDING SAAS
+# =========================================================================
+
+@admin.register(ConfiguracionPromocion)
+class ConfiguracionPromocionAdmin(admin.ModelAdmin):
+    list_display = (
+        '_str_', 
+        'en_promocion', 
+        'precio_basico_actual', 
+        'precio_semi_actual', 
+        'precio_premium_actual'
+    )
+    list_editable = ('en_promocion',) 

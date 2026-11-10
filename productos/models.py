@@ -14,6 +14,40 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 # =========================================================================
+# 🚀 CONFIGURACIÓN GLOBAL DE PROMOCIONES Y TARIFAS DE LA LANDING SAAS
+# =========================================================================
+class ConfiguracionPromocion(models.Model):
+    """
+    Modelo Singleton (Global) para controlar los precios psicológicos y 
+    ofertas de lanzamiento en la Landing Page principal (landing_saaS.html).
+    """
+    en_promocion = models.BooleanField(
+        default=True, 
+        verbose_name="¿Activar Precio de Lanzamiento / Promoción?"
+    )
+    
+    # Precios Plan Básico
+    precio_basico_actual = models.DecimalField(max_digits=10, decimal_places=0, default=49900, verbose_name="Básico - Precio Oferta")
+    precio_basico_tachado = models.DecimalField(max_digits=10, decimal_places=0, default=59900, verbose_name="Básico - Precio Tachado")
+    
+    # Precios Plan Semi
+    precio_semi_actual = models.DecimalField(max_digits=10, decimal_places=0, default=89900, verbose_name="Semi - Precio Oferta")
+    precio_semi_tachado = models.DecimalField(max_digits=10, decimal_places=0, default=109900, verbose_name="Semi - Precio Tachado")
+    
+    # Precios Plan Premium
+    precio_premium_actual = models.DecimalField(max_digits=10, decimal_places=0, default=149900, verbose_name="Premium - Precio Oferta")
+    precio_premium_tachado = models.DecimalField(max_digits=10, decimal_places=0, default=179900, verbose_name="Premium - Precio Tachado")
+
+    def __str__(self):
+        estado = "ACTIVA 🔥" if self.en_promocion else "INACTIVA (Precios Regulares)"
+        return f"Configuración Global de Promoción SaaS ({estado})"
+
+    class Meta:
+        verbose_name = "Configuración de Promoción SaaS"
+        verbose_name_plural = "Configuración de Promoción SaaS"
+
+
+# =========================================================================
 # ⚙️ CENTRO DE CONTROL DE TARIFAS DEL SAAS
 # =========================================================================
 PRECIOS_PLANES = {
