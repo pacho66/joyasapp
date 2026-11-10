@@ -448,11 +448,18 @@
 <section id="planes" class="py-5 bg-gray-custom border-top">
     <div class="container py-4">
         <div class="text-center mb-5">
-            <span class="badge bg-dark text-gold px-3 py-2 rounded-pill mb-2">🎉 CAMPAÑA DE LANZAMIENTO - FUNDADORES (1 MES)</span>
-            <h2 class="fw-extrabold text-dark display-6">Planes para cada etapa de tu negocio</h2>
-            <p class="text-secondary mx-auto" style="max-width: 600px;">
-                Aprovecha 15 días gratis y el precio especial de lanzamiento activo por tiempo limitado. Sin cláusulas de permanencia.
-            </p>
+            {% if en_promocion %}
+                <span class="badge bg-dark text-gold px-3 py-2 rounded-pill mb-2">🎉 CAMPAÑA DE LANZAMIENTO - FUNDADORES (1 MES)</span>
+                <h2 class="fw-extrabold text-dark display-6">Planes para cada etapa de tu negocio</h2>
+                <p class="text-secondary mx-auto" style="max-width: 600px;">
+                    Aprovecha 15 días gratis y el precio especial de lanzamiento activo por tiempo limitado. Sin cláusulas de permanencia.
+                </p>
+            {% else %}
+                <h2 class="fw-extrabold text-dark display-6">Planes para cada etapa de tu negocio</h2>
+                <p class="text-secondary mx-auto" style="max-width: 600px;">
+                    Comienza con 15 días gratis y elige la suscripción mensual que mejor se adapte a tu taller. Sin cláusulas de permanencia.
+                </p>
+            {% endif %}
         </div>
 
         <div class="row g-4 justify-content-center">
@@ -464,8 +471,12 @@
                     <p class="text-muted small">Para joyerías que inician su digitalización</p>
                     
                     <div class="my-3">
-                        <span class="text-muted text-decoration-line-through fs-5 me-2">$59.900</span>
-                        <span class="h1 fw-bold text-dark">$49.900</span>
+                        {% if en_promocion %}
+                            <span class="text-muted text-decoration-line-through fs-5 me-2">${{ plan_basico_tachado|floatformat:0 }}</span>
+                            <span class="h1 fw-bold text-dark">${{ plan_basico_actual|floatformat:0 }}</span>
+                        {% else %}
+                            <span class="h1 fw-bold text-dark">${{ plan_basico_actual|floatformat:0 }}</span>
+                        {% endif %}
                         <span class="text-muted">/mes</span>
                     </div>
 
@@ -491,8 +502,12 @@
                     <p class="text-muted small">Inventario por gramos, taller y Siigo</p>
                     
                     <div class="my-3">
-                        <span class="text-muted text-decoration-line-through fs-5 me-2">$109.900</span>
-                        <span class="h1 fw-bold text-dark">$89.900</span>
+                        {% if en_promocion %}
+                            <span class="text-muted text-decoration-line-through fs-5 me-2">${{ plan_semi_tachado|floatformat:0 }}</span>
+                            <span class="h1 fw-bold text-dark">${{ plan_semi_actual|floatformat:0 }}</span>
+                        {% else %}
+                            <span class="h1 fw-bold text-dark">${{ plan_semi_actual|floatformat:0 }}</span>
+                        {% endif %}
                         <span class="text-muted">/mes</span>
                     </div>
 
@@ -518,8 +533,12 @@
                     <p class="text-muted small">Solución corporativa para grandes talleres</p>
                     
                     <div class="my-3">
-                        <span class="text-muted text-decoration-line-through fs-5 me-2">$179.900</span>
-                        <span class="h1 fw-bold text-dark">$149.900</span>
+                        {% if en_promocion %}
+                            <span class="text-muted text-decoration-line-through fs-5 me-2">${{ plan_premium_tachado|floatformat:0 }}</span>
+                            <span class="h1 fw-bold text-dark">${{ plan_premium_actual|floatformat:0 }}</span>
+                        {% else %}
+                            <span class="h1 fw-bold text-dark">${{ plan_premium_actual|floatformat:0 }}</span>
+                        {% endif %}
                         <span class="text-muted">/mes</span>
                     </div>
 
@@ -539,7 +558,6 @@
         </div>
     </div>
 </section>
-
 <!-- FOOTER MAJESTUOSO E INSTITUCIONAL -->
 <footer class="saas-footer">
     <div class="container">

@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from ..forms import RegistroForm
-from ..models import Perfil,Producto,ConfiguracionSEO
+from ..models import Perfil, Producto, ConfiguracionSEO, ConfiguracionPromocion
 
 
 # =========================================================================
@@ -67,14 +67,22 @@ def index_saas(request):
             })
     
     # 4. SI VIENE DE LA RAÍZ PURA (joyasapp.com)
-    # Obtenemos la configuración SEO y de visibilidad desde el Admin de Django
+    # Obtenemos la configuración SEO y la configuración de precios desde el Django Admin
     seo_config, _ = ConfiguracionSEO.objects.get_or_create(id=1)
+    config_promo, _ = ConfiguracionPromocion.objects.get_or_create(pk=1) # 👈 Obtenemos la promo global
     
-    # Muestra la Landing Page limpia con sus metadatos administrables
+    # Muestra la Landing Page con metadatos SEO y precios administrables
     return render(request, 'landing_saas.html', {
-        'seo': seo_config
+        'seo': seo_config,
+        'en_promocion': config_promo.en_promocion,
+        'plan_basico_actual': config_promo.precio_basico_actual,
+        'plan_basico_tachado': config_promo.precio_basico_tachado,
+        'plan_semi_actual': config_promo.precio_semi_actual,
+        'plan_semi_tachado': config_promo.precio_semi_tachado,
+        'plan_premium_actual': config_promo.precio_premium_actual,
+        'plan_premium_tachado': config_promo.precio_premium_tachado,
+        'precios_planes': PRECIOS_PLANES,
     })
-
 def registro(request):
     # 1. Capturar el plan desde los parámetros GET (ej: ?plan=semi), por defecto 'basico'
     plan_seleccionado = request.GET.get('plan', 'basico')
