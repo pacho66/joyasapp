@@ -415,7 +415,7 @@ class CategoriaAdmin(admin.ModelAdmin):
 @admin.register(ConfiguracionPromocion)
 class ConfiguracionPromocionAdmin(admin.ModelAdmin):
     list_display = (
-        '_str_', 
+        '__str__', 
         'en_promocion', 
         'precio_basico_actual', 
         'precio_semi_actual', 
