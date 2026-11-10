@@ -71,7 +71,7 @@ def index_saas(request):
         }
     )
     
-    return render(request, 'landing_saaS.html', {
+    return render(request, 'landing_saas.html', {
         'seo': seo_config,
         'en_promocion': config_promo.en_promocion,
         'plan_basico_actual': config_promo.precio_basico_actual,
