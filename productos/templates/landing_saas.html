@@ -472,10 +472,10 @@
                     
                     <div class="my-3">
                         {% if en_promocion %}
-                            <span class="text-muted text-decoration-line-through fs-5 me-2">${{ plan_basico_tachado|floatformat:0 }}</span>
-                            <span class="h1 fw-bold text-dark">${{ plan_basico_actual|floatformat:0 }}</span>
+                            <span class="text-muted text-decoration-line-through fs-5 me-2">${{ plan_basico_tachado|default:59900|floatformat:0 }}</span>
+                            <span class="h1 fw-bold text-dark">${{ plan_basico_actual|default:49900|floatformat:0 }}</span>
                         {% else %}
-                            <span class="h1 fw-bold text-dark">${{ plan_basico_actual|floatformat:0 }}</span>
+                            <span class="h1 fw-bold text-dark">${{ plan_basico_actual|default:49900|floatformat:0 }}</span>
                         {% endif %}
                         <span class="text-muted">/mes</span>
                     </div>
@@ -503,10 +503,10 @@
                     
                     <div class="my-3">
                         {% if en_promocion %}
-                            <span class="text-muted text-decoration-line-through fs-5 me-2">${{ plan_semi_tachado|floatformat:0 }}</span>
-                            <span class="h1 fw-bold text-dark">${{ plan_semi_actual|floatformat:0 }}</span>
+                            <span class="text-muted text-decoration-line-through fs-5 me-2">${{ plan_semi_tachado|default:109900|floatformat:0 }}</span>
+                            <span class="h1 fw-bold text-dark">${{ plan_semi_actual|default:89900|floatformat:0 }}</span>
                         {% else %}
-                            <span class="h1 fw-bold text-dark">${{ plan_semi_actual|floatformat:0 }}</span>
+                            <span class="h1 fw-bold text-dark">${{ plan_semi_actual|default:89900|floatformat:0 }}</span>
                         {% endif %}
                         <span class="text-muted">/mes</span>
                     </div>
@@ -534,10 +534,10 @@
                     
                     <div class="my-3">
                         {% if en_promocion %}
-                            <span class="text-muted text-decoration-line-through fs-5 me-2">${{ plan_premium_tachado|floatformat:0 }}</span>
-                            <span class="h1 fw-bold text-dark">${{ plan_premium_actual|floatformat:0 }}</span>
+                            <span class="text-muted text-decoration-line-through fs-5 me-2">${{ plan_premium_tachado|default:179900|floatformat:0 }}</span>
+                            <span class="h1 fw-bold text-dark">${{ plan_premium_actual|default:149900|floatformat:0 }}</span>
                         {% else %}
-                            <span class="h1 fw-bold text-dark">${{ plan_premium_actual|floatformat:0 }}</span>
+                            <span class="h1 fw-bold text-dark">${{ plan_premium_actual|default:149900|floatformat:0 }}</span>
                         {% endif %}
                         <span class="text-muted">/mes</span>
                     </div>
@@ -558,6 +558,7 @@
         </div>
     </div>
 </section>
+
 <!-- FOOTER MAJESTUOSO E INSTITUCIONAL -->
 <footer class="saas-footer">
     <div class="container">

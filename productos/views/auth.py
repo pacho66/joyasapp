@@ -45,34 +45,33 @@ PRECIOS_PLANES = {
 }
 
 def index_saas(request):
-    # 1. Obtener el dominio/host desde el que entra el cliente
     host = request.get_host().split(':')[0].lower()
-    
-    # 2. Dominios que pertenecen a la sala principal del SaaS
     dominios_saas = ['joyasapp.com', 'www.joyasapp.com', '127.0.0.1', 'localhost']
     
-    # 3. SI VIENE DE UN SUBDOMINIO (ejemplo: pgjoyas.joyasapp.com)
     if host not in dominios_saas and '.joyasapp.com' in host:
         subdominio_actual = host.split('.')[0]
-        
-        # Buscamos la tienda asignada a ese subdominio
         perfil_tienda = Perfil.objects.filter(subdominio=subdominio_actual, activa=True).first()
-        
         if perfil_tienda:
-            # Renderiza la tienda del cliente con sus productos
             productos = Producto.objects.filter(usuario=perfil_tienda.user, activo=True)
-            return render(request, 'index.html', {
-                'perfil': perfil_tienda,
-                'productos': productos
-            })
+            return render(request, 'index.html', {'perfil': perfil_tienda, 'productos': productos})
     
-    # 4. SI VIENE DE LA RAÍZ PURA (joyasapp.com)
-    # Obtenemos la configuración SEO y la configuración de precios desde el Django Admin
     seo_config, _ = ConfiguracionSEO.objects.get_or_create(id=1)
-    config_promo, _ = ConfiguracionPromocion.objects.get_or_create(pk=1) # 👈 Obtenemos la promo global
     
-    # Muestra la Landing Page con metadatos SEO y precios administrables
-    return render(request, 'landing_saas.html', {
+    # ⚙️ Garantiza la existencia del registro con valores por defecto
+    config_promo, _ = ConfiguracionPromocion.objects.get_or_create(
+        pk=1,
+        defaults={
+            'en_promocion': True,
+            'precio_basico_actual': 49900,
+            'precio_basico_tachado': 59900,
+            'precio_semi_actual': 89900,
+            'precio_semi_tachado': 109900,
+            'precio_premium_actual': 149900,
+            'precio_premium_tachado': 179900,
+        }
+    )
+    
+    return render(request, 'landing_saaS.html', {
         'seo': seo_config,
         'en_promocion': config_promo.en_promocion,
         'plan_basico_actual': config_promo.precio_basico_actual,
@@ -83,6 +82,7 @@ def index_saas(request):
         'plan_premium_tachado': config_promo.precio_premium_tachado,
         'precios_planes': PRECIOS_PLANES,
     })
+
 def registro(request):
     # 1. Capturar el plan desde los parámetros GET (ej: ?plan=semi), por defecto 'basico'
     plan_seleccionado = request.GET.get('plan', 'basico')
