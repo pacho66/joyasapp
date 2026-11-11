@@ -104,14 +104,6 @@ def registro(request):
             if plan_elegido not in ['basico', 'semi', 'premium']:
                 plan_elegido = 'basico'
 
-            # ⚙️ Mapeo exacto de límites y permisos según el plan elegido
-            config_planes = {
-                'basico': {'usuarios': 1, 'wompi': False, 'siigo': False},
-                'semi': {'usuarios': 3, 'wompi': True, 'siigo': True},
-                'premium': {'usuarios': 999999, 'wompi': True, 'siigo': True}
-            }
-            conf = config_planes.get(plan_elegido, config_planes['basico'])
-
             # 🌐 Generar subdominio único automáticamente
             base_subdominio = slugify(nombre_tienda)
             subdominio = base_subdominio
@@ -128,16 +120,13 @@ def registro(request):
                     password=password
                 )
 
-                # 2. Crear el Perfil con el plan correcto y sus restricciones lógicas
+                # 2. Crear el Perfil (solo con los campos reales almacenados en la BD)
                 Perfil.objects.create(
                     user=user,
                     nombre_tienda=nombre_tienda,
                     whatsapp=whatsapp,
                     subdominio=subdominio,
                     plan=plan_elegido,
-                    usuarios_permitidos=conf['usuarios'],
-                    permite_wompi=conf['wompi'],
-                    permite_siigo=conf['siigo'],
                     activa=True,
                     plan_vence=timezone.localdate() + timedelta(days=15)
                 )
