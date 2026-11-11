@@ -113,22 +113,27 @@ def registro(request):
                 contador += 1
 
             with transaction.atomic():
-                # 1. Crear el usuario de Django
-                user = User.objects.create_user(
+                # 1. Crear el usuario de Django (o reutilizar si ya existía pero falló el perfil)
+                user, created = User.objects.get_or_create(
                     username=username,
-                    email=email,
-                    password=password
+                    defaults={'email': email}
                 )
+                if not created:
+                    user.set_password(password)
+                    user.email = email
+                    user.save()
 
-                # 2. Crear el Perfil (solo con los campos reales almacenados en la BD)
-                Perfil.objects.create(
+                # 2. Usar update_or_create para asegurar que si el perfil ya existe, solo se actualice
+                Perfil.objects.update_or_create(
                     user=user,
-                    nombre_tienda=nombre_tienda,
-                    whatsapp=whatsapp,
-                    subdominio=subdominio,
-                    plan=plan_elegido,
-                    activa=True,
-                    plan_vence=timezone.localdate() + timedelta(days=15)
+                    defaults={
+                        'nombre_tienda': nombre_tienda,
+                        'whatsapp': whatsapp,
+                        'subdominio': subdominio,
+                        'plan': plan_elegido,
+                        'activa': True,
+                        'plan_vence': timezone.localdate() + timedelta(days=15)
+                    }
                 )
 
             # 3. Autenticar y enviar al dashboard
