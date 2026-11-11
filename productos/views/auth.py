@@ -226,7 +226,6 @@ def gestionar_planes(request):
 # 📖 MANUAL DE USUARIO DEL SAAS
 # =========================================================================
 
-@login_required
 def manual_usuario(request):
     """Vista dedicada para el manual completo de usuario de JoyasApp."""
     context = {

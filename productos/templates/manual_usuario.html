@@ -91,12 +91,18 @@
                 <h1 class="fw-extrabold mb-1" style="font-size: 28px;">📖 Manual del Usuario — JoyasApp SaaS</h1>
                 <p class="text-muted mb-0">Gestión comercial, inventarios por gramos y variantes, automatización de talleres y contabilidad simplificada.</p>
             </div>
-            <!-- Botón inteligente: si viene de una app logueada lo devuelve, si no, redirige al inicio o landing -->
-            <a href="javascript:history.length > 1 ? history.back() : window.location.href='/'; " class="btn btn-outline-dark btn-sm fw-bold px-3 py-2">
-                ← Regresar al Dashboard
-            </a>
+            
+            {% if request.user.is_authenticated %}
+                <a href="{% url 'dashboard' %}" class="btn btn-outline-dark btn-sm fw-bold px-3 py-2">
+                    ← Regresar al Dashboard
+                </a>
+            {% else %}
+                <a href="{% url 'landing' %}" class="btn btn-outline-dark btn-sm fw-bold px-3 py-2">
+                    ← Volver a JoyasApp
+                </a>
+            {% endif %}
         </div>
-
+        
         <p class="lead text-dark mb-5" style="font-size: 16px;">
             Bienvenido al manual oficial de <strong>JoyasApp</strong>, la plataforma integral diseñada para la gestión comercial, control de inventarios por gramos y variantes, automatización de talleres de joyería y contabilidad simplificada.
         </p>
