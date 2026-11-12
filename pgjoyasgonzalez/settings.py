@@ -1,7 +1,7 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-
+from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -263,3 +263,12 @@ X_FRAME_OPTIONS = 'DENY'
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
+
+# ==========================================
+# 🧾 CONFIGURACIÓN API SIIGO (FACTURACIÓN ELECTRÓNICA)
+# ==========================================
+SIIGO_USERNAME = config('SIIGO_USERNAME', default='')
+SIIGO_ACCESS_KEY = config('SIIGO_ACCESS_KEY', default='')
+SIIGO_PARTNER_ID = config('SIIGO_PARTNER_ID', default='')
+SIIGO_DOCUMENT_TYPE_ID = config('SIIGO_DOCUMENT_TYPE_ID', default='1234')  # Reemplaza con el ID de tu tipo de factura en Siigo
+SIIGO_PAYMENT_METHOD_ID = config('SIIGO_PAYMENT_METHOD_ID', default='1')  # Reemplaza con el ID del medio de pago en Siigo
