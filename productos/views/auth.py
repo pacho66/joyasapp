@@ -53,11 +53,11 @@ def index_saas(request):
         perfil_tienda = Perfil.objects.filter(subdominio=subdominio_actual, activa=True).first()
         if perfil_tienda:
             productos = Producto.objects.filter(usuario=perfil_tienda.user, activo=True)
-            return render(request, 'index.html', {'perfil': perfil_tienda, 'productos': productos})
+            # 💡 Cambia 'index.html' por el nombre de la plantilla de tu catálogo (ej. 'catalogo.html')
+            return render(request, 'catalogo.html', {'perfil': perfil_tienda, 'productos': productos})
     
     seo_config, _ = ConfiguracionSEO.objects.get_or_create(id=1)
     
-    # ⚙️ Usa update_or_create para asegurar que siempre esté activo y con los precios correctos
     config_promo, _ = ConfiguracionPromocion.objects.update_or_create(
         pk=1,
         defaults={
