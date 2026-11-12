@@ -136,8 +136,9 @@ def registro(request):
                     }
                 )
 
-            # 3. Autenticar y enviar al dashboard
-            login(request, user)
+            # 3. Autenticar y enviar al dashboard de forma segura
+            backend = 'django.contrib.auth.backends.ModelBackend'
+            login(request, user, backend=backend)
             return redirect('dashboard')
 
     else:
