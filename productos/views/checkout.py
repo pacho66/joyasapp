@@ -7,6 +7,8 @@ import traceback
 import urllib.parse
 from decimal import Decimal
 from urllib.parse import quote
+from datetime import timedelta
+import uuid
 
 # =========================================================================
 # ⚡ DJANGO
@@ -19,6 +21,8 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from django.contrib.auth.models import User
 
 # =========================================================================
 # 🏪 MODELOS
@@ -32,6 +36,7 @@ from ..models import (
     PedidoItem,
     Cliente,
     ConfiguracionEmpresa,
+    PagoLog,
 )
 from ..utils import generar_pdf_pedido
 # =========================================================================
@@ -759,11 +764,11 @@ def pago_fallido(request, token):
 PLANES_SAAS = {
     'basico': {
         'nombre': 'Plan Básico - JoyasApp',
-        'precio_centavos': 4990000, # $49.900 COP
+        'precio_centavos': 4990000,  # $49.900 COP
     },
     'semi': {
         'nombre': 'Plan Semi - JoyasApp',
-        'precio_centavos': 8990000, # $89.900 COP
+        'precio_centavos': 8990000,  # $89.900 COP
     },
     'premium': {
         'nombre': 'Plan Premium - JoyasApp',
@@ -772,27 +777,33 @@ PLANES_SAAS = {
 }
 
 def iniciar_pago_suscripcion_wompi(request, plan_slug):
-    """
-    Inicia el pago del plan SaaS de JoyasApp mediante el widget de Wompi.
-    Ruta sugerida: /suscripcion/pagar/<str:plan_slug>/
-    """
     if not request.user.is_authenticated:
         return redirect('login')
         
     if plan_slug not in PLANES_SAAS:
         messages.error(request, "El plan seleccionado no es válido.")
-        return redirect('dashboard') # O la vista de planes de tu SaaS
+        return redirect('dashboard')
 
     plan_info = PLANES_SAAS[plan_slug]
     perfil, _ = Perfil.objects.get_or_create(user=request.user)
     
-    # Generamos una referencia única para la suscripción
-    import uuid
-    referencia_suscripcion = f"SUB-{request.user.id}-{uuid.uuid4().hex[:8].upper()}"
+    # Referencia única: SUB-{user.id}-{plan_slug}-{hex}
+    referencia_suscripcion = f"SUB-{request.user.id}-{plan_slug}-{uuid.uuid4().hex[:6].upper()}"
     
-    # Guardamos temporalmente en sesión o en una tabla de pagos de suscripción si lo deseas,
-    # o usamos las credenciales globales de Wompi de la plataforma para recibir el pago del SaaS.
-    wompi_public_key = getattr(settings, 'WOMPI_PUBLIC_KEY_PLATAFORMA', 'pub_prod_TU_LLAVE_PUBLICA_AQUI')
+    # Registramos el intento de pago en PagoLog como PENDING
+    PagoLog.objects.create(
+        perfil=perfil,
+        referencia=referencia_suscripcion,
+        monto=Decimal(plan_info['precio_centavos']) / 100,
+        estado='PENDING',
+        metodo_pago='WOMPI',
+        plan_comprado=plan_slug
+    )
+
+    wompi_public_key = getattr(settings, 'WOMPI_PUBLIC_KEY_PLATAFORMA', '')
+    if not wompi_public_key:
+        messages.error(request, "La pasarela de pagos de la plataforma aún no está configurada.")
+        return redirect('dashboard')
     
     redirect_url = request.build_absolute_uri(reverse('suscripcion_exitosa'))
     redirect_url_encoded = quote(redirect_url, safe='')
@@ -806,21 +817,12 @@ def iniciar_pago_suscripcion_wompi(request, plan_slug):
         f"&redirect-url={redirect_url_encoded}"
         f"&collect-customer-email=true"
     )
-    
-    # Opcional: puedes guardar la referencia pendiente en el perfil o un modelo de TransaccionSuscripcion
-    perfil.ultima_referencia_pago = referencia_suscripcion
-    perfil.plan_pendiente = plan_slug
-    perfil.save()
 
     return redirect(checkout_url)
 
 
 @csrf_exempt
 def webhook_wompi_suscripciones(request):
-    """
-    Webhook exclusivo para recibir la confirmación de pago de las suscripciones de JoyasApp.
-    Actualiza la vigencia del perfil por 30 días adicionales de forma automática.
-    """
     if request.method != 'POST':
         return HttpResponse("Método no permitido", status=405)
         
@@ -828,49 +830,60 @@ def webhook_wompi_suscripciones(request):
         data = json.loads(request.body)
         transaccion = data.get('data', {}).get('transaction', {})
         referencia_orden = transaccion.get('reference', '')
-        estado_wompi = transaccion.get('status')
+        estado_wompi = transaccion.get('status', 'ERROR')
+        id_transaccion = transaccion.get('id', '')
+        monto_en_centavos = transaccion.get('amount_in_cents', 0)
+        monto_pesos = Decimal(monto_en_centavos) / 100
         
-        # Validamos que sea una referencia de suscripción de nuestro SaaS
-        if referencia_orden.startswith("SUB-") and estado_wompi == 'APPROVED':
-            # Extraemos el ID de usuario desde la referencia (ej: SUB-5-A1B2C3D4 -> ID 5)
+        if referencia_orden.startswith("SUB-"):
             partes = referencia_orden.split('-')
-            if len(partes) >= 2:
-                user_id = partes[1]
-                from django.contrib.auth.models import User
-                from django.utils import timezone
-                from datetime import timedelta
-                
-                usuario = User.objects.filter(id=user_id).first()
-                if usuario:
-                    perfil, _ = Perfil.objects.get_or_create(user=usuario)
+            user_id = partes[1] if len(partes) >= 2 else None
+            plan_en_ref = partes[2] if len(partes) >= 3 else None
+            
+            usuario = User.objects.filter(id=user_id).first() if user_id else None
+            perfil = Perfil.objects.filter(user=usuario).first() if usuario else None
+
+            # Determinar plan por monto o por referencia
+            plan_asignado = plan_en_ref if plan_en_ref in ['basico', 'semi', 'premium'] else 'basico'
+            if monto_en_centavos == 8990000:
+                plan_asignado = 'semi'
+            elif monto_en_centavos == 14990000:
+                plan_asignado = 'premium'
+            elif monto_en_centavos == 4990000:
+                plan_asignado = 'basico'
+
+            # Actualizar auditoría en PagoLog
+            PagoLog.objects.update_or_create(
+                referencia=referencia_orden,
+                defaults={
+                    'perfil': perfil,
+                    'transaccion_id': id_transaccion,
+                    'monto': monto_pesos,
+                    'estado': estado_wompi,
+                    'metodo_pago': 'WOMPI',
+                    'plan_comprado': plan_asignado,
+                    'raw_response': json.dumps(data)
+                }
+            )
+
+            # Activar suscripción si fue aprobada
+            if estado_wompi == 'APPROVED' and perfil:
+                hoy = timezone.localdate()
+                if perfil.plan_vence and perfil.plan_vence > hoy:
+                    perfil.plan_vence += timedelta(days=30)
+                else:
+                    perfil.plan_vence = hoy + timedelta(days=30)
                     
-                    # Determinamos qué plan pagó basándonos en el monto o en la referencia guardada
-                    monto_en_centavos = transaccion.get('amount_in_cents', 0)
-                    
-                    plan_asignado = 'basico'
-                    if monto_en_centavos == 8990000:
-                        plan_asignado = 'semi'
-                    elif monto_en_centavos == 14990000:
-                        plan_asignado = 'premium'
-                        
-                    # Actualizamos la vigencia sumando 30 días
-                    hoy = timezone.now()
-                    if perfil.fecha_expiracion_suscripcion and perfil.fecha_expiracion_suscripcion > hoy:
-                        perfil.fecha_expiracion_suscripcion += timedelta(days=30)
-                    else:
-                        perfil.fecha_expiracion_suscripcion = hoy + timedelta(days=30)
-                        
-                    perfil.plan_activo = plan_asignado
-                    perfil.suscripcion_activa = True
-                    perfil.save()
+                perfil.plan = plan_asignado
+                perfil.activa = True
+                perfil.save()
                     
         return HttpResponse("Webhook suscripción recibido", status=200)
         
     except Exception as e:
         print(f"💥 Error en Webhook Wompi Suscripciones: {str(e)}")
         return HttpResponse("Error interno procesado", status=200)
-
-
+    
 def suscripcion_exitosa(request):
     """Vista de retorno cuando el dueño de la joyería paga su plan de JoyasApp con éxito"""
     messages.success(request, "¡Felicidades! Tu suscripción ha sido activada/renovada exitosamente por 30 días.")

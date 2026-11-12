@@ -32,19 +32,22 @@ def configurar_negocio(request):
     perfil = request.user.perfil
 
     if request.method == 'POST':
-        form = ConfiguracionNegocioForm(request.POST, request.FILES, instance=perfil)
+        # ❌ Quitamos 'instance=perfil' porque es un form simple, no un ModelForm
+        form = ConfiguracionNegocioForm(request.POST, request.FILES)
+        
         if form.is_valid():
-            # 🌐 GUARDAR SUBDOMINIO (Limpiando espacios y pasándolo a minúsculas)
+            # 🌐 GUARDAR SUBDOMINIO (Limpiando espacios y minúsculas)
             perfil.subdominio = form.cleaned_data.get('subdominio', '').lower().strip()
 
-            # Tus mapeos básicos existentes
+            # Mapeos básicos
             perfil.nombre_tienda = form.cleaned_data['nombre_tienda']
             perfil.nit = form.cleaned_data['nit']
             perfil.whatsapp = form.cleaned_data['whatsapp']
             perfil.email_empresa = form.cleaned_data['correo_negocio']
             perfil.direccion = form.cleaned_data['direccion']
             perfil.ciudad = form.cleaned_data['ciudad']
-            perfil.wompi_public_key = form.cleaned_data.get('wompi_public_key', '').strip()
+            
+            # (Wompi ya no va aquí, ahora es global de la plataforma SaaS)
             perfil.mercadopago_access_token = form.cleaned_data.get('mercadopago_access_token', '').strip()
             perfil.costo_envio_estandar = form.cleaned_data.get('costo_envio_estandar') or Decimal('0.00')
 
@@ -71,7 +74,7 @@ def configurar_negocio(request):
             elif request.FILES.get('logo'):
                 perfil.logo = request.FILES['logo']
 
-            # 🗑️ MANEJO Y ELIMINACIÓN DEL BANNER (¡AQUÍ ESTABA EL FALTANTE!)
+            # 🗑️ MANEJO Y ELIMINACIÓN DEL BANNER
             eliminar_banner = request.POST.get('eliminar_banner')
             if eliminar_banner and perfil.banner:
                 perfil.banner.delete(save=False)
@@ -88,7 +91,7 @@ def configurar_negocio(request):
             messages.success(request, "Configuración actualizada correctamente")
             return redirect('dashboard')
     else:
-        # Pasa los datos iniciales al formulario (incluyendo el subdominio)
+        # Pasa los datos iniciales al formulario mediante 'initial'
         form = ConfiguracionNegocioForm(initial={
             'subdominio': perfil.subdominio,
             'nombre_tienda': perfil.nombre_tienda,
@@ -97,7 +100,6 @@ def configurar_negocio(request):
             'correo_negocio': perfil.email_empresa,
             'direccion': perfil.direccion,
             'ciudad': perfil.ciudad,
-            'wompi_public_key': perfil.wompi_public_key,
             'mercadopago_access_token': perfil.mercadopago_access_token,
             'costo_envio_estandar': perfil.costo_envio_estandar,
             'responsable_iva': perfil.responsable_iva,
