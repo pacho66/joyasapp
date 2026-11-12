@@ -23,7 +23,7 @@ urlpatterns = [
     # 🔓 ENRUTADOR RAÍZ & LANDING SAAS (Con soporte multi-tenant)
     # ===============================
     path('', views.index_saas, name='home'),
-
+    path('', views.index_saas, name='inicio')
     # ===============================
     # 🔓 AUTENTICACIÓN
     # ===============================
