@@ -54,7 +54,7 @@ def index_saas(request):
         if perfil_tienda:
             productos = Producto.objects.filter(usuario=perfil_tienda.user, activo=True)
             # 💡 Cambia 'index.html' por el nombre de la plantilla de tu catálogo (ej. 'catalogo.html')
-            return render(request, 'catalogo.html', {'perfil': perfil_tienda, 'productos': productos})
+            return render(request, 'inicio.html', {'perfil': perfil_tienda, 'productos': productos})
     
     seo_config, _ = ConfiguracionSEO.objects.get_or_create(id=1)
     

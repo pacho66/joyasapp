@@ -184,6 +184,7 @@ def guardar_producto_view(request, pk=None):
         'valores': valores_iniciales,
         'categorias': Categoria.objects.filter(usuario=request.user)
     })
+
 @login_required
 def eliminar_producto(request, id):
     # Uso seguro de get_object_or_404 para evitar el 500 si no existe

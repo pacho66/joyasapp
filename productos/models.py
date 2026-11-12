@@ -199,6 +199,7 @@ class Perfil(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.nombre_tienda} ({self.subdominio or 'Sin subdominio'})"
+    
 class ConfiguracionEmpresa(models.Model):
     class TipoEnvio(models.TextChoices):
         RECOGIDA = 'recogida', 'Recogida en tienda (Sin costo)'
