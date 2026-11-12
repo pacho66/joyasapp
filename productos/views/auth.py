@@ -53,9 +53,14 @@ def index_saas(request):
         perfil_tienda = Perfil.objects.filter(subdominio=subdominio_actual, activa=True).first()
         if perfil_tienda:
             productos = Producto.objects.filter(usuario=perfil_tienda.user, activo=True)
-            # 💡 Cambia 'index.html' por el nombre de la plantilla de tu catálogo (ej. 'catalogo.html')
-            return render(request, 'inicio.html', {'perfil': perfil_tienda, 'productos': productos})
-    
+            destacados = productos.filter(destacado=True)[:8] # O el filtro que uses para destacados
+            
+            return render(request, 'inicio.html', {
+                'perfil': perfil_tienda, 
+                'productos': productos,
+                'destacados': destacados,
+            })
+        
     seo_config, _ = ConfiguracionSEO.objects.get_or_create(id=1)
     
     config_promo, _ = ConfiguracionPromocion.objects.update_or_create(
