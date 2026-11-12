@@ -1066,3 +1066,17 @@ def devolver_inventario_por_eliminacion(sender, instance, **kwargs):
             instance.producto.save(update_fields=['stock'])
             
         instance.pedido.sincronizar_pedido()
+
+class PagoLog(models.Model):
+    perfil = models.ForeignKey(Perfil, on_delete=models.CASCADE, related_name='pagos_wompi', blank=True, null=True)
+    referencia = models.CharField(max_length=255, unique=True, verbose_name="Referencia de Pago")
+    transaccion_id = models.CharField(max_length=255, blank=True, null=True, verbose_name="ID Transacción Wompi")
+    monto = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto")
+    estado = models.CharField(max_length=50, default='PENDING', verbose_name="Estado") # APPROVED, DECLINED, etc.
+    metodo_pago = models.CharField(max_length=50, default='WOMPI', verbose_name="Pasarela")
+    plan_comprado = models.CharField(max_length=20, blank=True, null=True, verbose_name="Plan")
+    raw_response = models.TextField(blank=True, null=True, verbose_name="Respuesta JSON Completa")
+    fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Pago")
+
+    def _str_(self):
+        return f"{self.referencia} - {self.estado} (${self.monto})"
