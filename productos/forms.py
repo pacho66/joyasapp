@@ -4,50 +4,57 @@ from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from .models import Gasto, Producto
 
-
 class RegistroForm(forms.Form):
+    first_name = forms.CharField(
+        label='Nombre(s)',
+        max_length=50,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Tu nombre real'
+        })
+    )
+
+    last_name = forms.CharField(
+        label='Apellido(s)',
+        max_length=50,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Tu apellido real'
+        })
+    )
+
     username = forms.CharField(
-        label='Usuario',
+        label='Nombre de usuario (Seudónimo)',
         max_length=150,
         min_length=4,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Usuario único'
+            'placeholder': 'Ej: joyero_central'
         })
     )
 
     email = forms.EmailField(
-        label='Correo',
+        label='Correo electrónico',
         widget=forms.EmailInput(attrs={
             'class': 'form-control',
             'placeholder': 'correo@ejemplo.com'
         })
     )
 
-    password = forms.CharField(
-        label='Contraseña',
-        min_length=6,
-        widget=forms.PasswordInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Mínimo 6 caracteres'
-        })
-    )
-
-    confirmar_password = forms.CharField(
-        label='Confirmar contraseña',
-        widget=forms.PasswordInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Repite la contraseña'
-        })
-    )
-
-    nombre_tienda = forms.CharField(
-        label='Nombre de tienda',
-        max_length=120,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Ej: PG Joyas'
-        })
+    # Selector de Prefijo y Teléfono/WhatsApp
+    PREFIJOS_CHOICES = [
+        ('+57', '🇨🇴 Colombia (+57)'),
+        ('+52', '🇲🇽 México (+52)'),
+        ('+1', '🇺🇸 Estados Unidos (+1)'),
+        ('+54', '🇦🇷 Argentina (+54)'),
+        ('+56', '🇨🇱 Chile (+56)'),
+        ('+51', '🇵🇪 Perú (+51)'),
+    ]
+    prefijo = forms.ChoiceField(
+        choices=PREFIJOS_CHOICES,
+        initial='+57',
+        label='Prefijo',
+        widget=forms.Select(attrs={'class': 'form-control'})
     )
 
     whatsapp = forms.CharField(
@@ -61,11 +68,57 @@ class RegistroForm(forms.Form):
         ],
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '573001112233'
+            'placeholder': '3001112233'
         })
     )
 
-    # 📜 ACEPTACIÓN DE TÉRMINOS Y HABEAS DATA (NUEVO CAMPO)
+    ciudad = forms.CharField(
+        label='Ciudad',
+        max_length=100,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: Medellín'
+        })
+    )
+
+    direccion = forms.CharField(
+        label='Dirección del Taller / Local',
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: Calle 50 # 45-20'
+        })
+    )
+
+    nombre_tienda = forms.CharField(
+        label='Nombre de la tienda',
+        max_length=120,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: Joyería y Taller G&G'
+        })
+    )
+
+    password = forms.CharField(
+        label='Contraseña',
+        min_length=6,
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Mínimo 6 caracteres',
+            'id': 'id_password'
+        })
+    )
+
+    confirm_password = forms.CharField(
+        label='Confirmar contraseña',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Repite la contraseña',
+            'id': 'id_confirm_password'
+        })
+    )
+
+    # 📜 ACEPTACIÓN DE TÉRMINOS Y HABEAS DATA
     acepta_terminos = forms.BooleanField(
         required=True,
         error_messages={
@@ -91,16 +144,16 @@ class RegistroForm(forms.Form):
 
     def clean_whatsapp(self):
         whatsapp = self.cleaned_data['whatsapp'].strip()
-        if len(whatsapp) < 10:
-            raise ValidationError("Número inválido")
+        if len(whatsapp) < 7:
+            raise ValidationError("Número de teléfono inválido")
         return whatsapp
 
     def clean(self):
         cleaned_data = super().clean()
         password = cleaned_data.get('password')
-        confirmar = cleaned_data.get('confirmar_password')
+        confirm_password = cleaned_data.get('confirm_password')
 
-        if password and confirmar and password != confirmar:
+        if password and confirm_password and password != confirm_password:
             raise ValidationError("Las contraseñas no coinciden")
 
         return cleaned_data

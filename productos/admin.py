@@ -89,6 +89,13 @@ class PerfilAdmin(admin.ModelAdmin):
     )
     list_filter = ('plan', 'activa', 'responsable_iva', 'integracion_siigo_activa', 'aplicar_descuentos')
 
+# Agrega 'tiene_wompi' a tu list_display en PerfilAdmin
+    def tiene_wompi(self, obj):
+        if obj.wompi_public_key:
+            return mark_safe('<span style="color:green; font-weight:bold;">✔️ Configurado</span>')
+        return mark_safe('<span style="color:gray;">✖️ Pendiente</span>')
+    tiene_wompi.short_description = "Wompi"
+
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'telefono', 'tipo_cliente', 'porcentaje_descuento', 'total_compras', 'numero_pedidos', 'whatsapp_cliente')
@@ -428,4 +435,55 @@ class ConfiguracionPromocionAdmin(admin.ModelAdmin):
 
     # 🚫 Evita que el usuario borre el registro único por accidente
     def has_delete_permission(self, request, obj=None):
+        return False
+
+# =========================================================================
+# 💳 ADMINISTRACIÓN DE TRANSACCIONES Y PAGOS (WOMPI / PASARELAS)
+# =========================================================================
+
+from .models import PagoLog  # Asegúrate de importar tu modelo de historial de pagos/webhooks
+
+@admin.register(PagoLog)
+class PagoLogAdmin(admin.ModelAdmin):
+    list_display = (
+        'referencia', 
+        'perfil_tienda', 
+        'monto_formateado', 
+        'estado_badge', 
+        'metodo_pago', 
+        'transaccion_id', 
+        'fecha_creacion'
+    )
+    list_filter = ('estado', 'metodo_pago', 'fecha_creacion')
+    search_fields = ('referencia', 'transaccion_id', 'perfil_nombre_tienda', 'perfiluser_username')
+    ordering = ('-fecha_creacion',)
+    readonly_fields = ('referencia', 'transaccion_id', 'monto', 'estado', 'metodo_pago', 'raw_response', 'fecha_creacion')
+
+    def perfil_tienda(self, obj):
+        if obj.perfil:
+            return f"{obj.perfil.nombre_tienda} (@{obj.perfil.subdominio})"
+        return "Sin perfil asignado"
+    perfil_tienda.short_description = "Tienda / Joyería"
+
+    def monto_formateado(self, obj):
+        return f"${obj.monto:,.0f}".replace(",", ".")
+    monto_formateado.short_description = "Monto"
+
+    def estado_badge(self, obj):
+        colores = {
+            'APPROVED': '#28a745',
+            'DECLINED': '#dc3545',
+            'VOIDED': '#6c757d',
+            'PENDING': '#ffc107',
+            'ERROR': '#b21f2d'
+        }
+        color = colores.get(str(obj.estado).upper(), '#6c757d')
+        return format_html(
+            '<span style="color:white; background:{}; padding:4px 8px; border-radius:5px; font-weight:bold;">{}</span>',
+            color, str(obj.estado).upper()
+        )
+    estado_badge.short_description = "Estado Pago"
+
+    # Evita creación manual desde el admin para mantener la integridad técnica de los webhooks
+    def has_add_permission(self, request):
         return False

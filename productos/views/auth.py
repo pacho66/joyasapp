@@ -84,7 +84,6 @@ def index_saas(request):
     })
 
 def registro(request):
-    # 1. Capturar el plan desde los parámetros GET (ej: ?plan=semi), por defecto 'basico'
     plan_seleccionado = request.GET.get('plan', 'basico')
     if plan_seleccionado not in ['basico', 'semi', 'premium']:
         plan_seleccionado = 'basico'
@@ -96,10 +95,17 @@ def registro(request):
             username = form.cleaned_data['username']
             email = form.cleaned_data['email']
             password = form.cleaned_data['password']
+            first_name = form.cleaned_data['first_name']
+            last_name = form.cleaned_data['last_name']
+            
+            prefijo = form.cleaned_data['prefijo']
+            whatsapp_num = form.cleaned_data['whatsapp']
+            telefono_completo = f"{prefijo} {whatsapp_num}"
+            
+            ciudad = form.cleaned_data['ciudad']
+            direccion = form.cleaned_data['direccion']
             nombre_tienda = form.cleaned_data['nombre_tienda']
-            whatsapp = form.cleaned_data['whatsapp']
 
-            # Capturar el plan enviado por POST (o mantener el de la URL)
             plan_elegido = request.POST.get('plan', plan_seleccionado)
             if plan_elegido not in ['basico', 'semi', 'premium']:
                 plan_elegido = 'basico'
@@ -113,22 +119,33 @@ def registro(request):
                 contador += 1
 
             with transaction.atomic():
-                # 1. Crear el usuario de Django (o reutilizar si ya existía pero falló el perfil)
+                # 1. Crear el usuario de Django con nombres reales y seudónimo
                 user, created = User.objects.get_or_create(
                     username=username,
-                    defaults={'email': email}
+                    defaults={
+                        'email': email,
+                        'first_name': first_name,
+                        'last_name': last_name
+                    }
                 )
                 if not created:
                     user.set_password(password)
                     user.email = email
+                    user.first_name = first_name
+                    user.last_name = last_name
+                    user.save()
+                else:
+                    user.set_password(password)
                     user.save()
 
-                # 2. Usar update_or_create para asegurar que si el perfil ya existe, solo se actualice
+                # 2. Guardar o actualizar perfil completo
                 Perfil.objects.update_or_create(
                     user=user,
                     defaults={
                         'nombre_tienda': nombre_tienda,
-                        'whatsapp': whatsapp,
+                        'whatsapp': telefono_completo,
+                        'ciudad': ciudad,
+                        'direccion': direccion,
                         'subdominio': subdominio,
                         'plan': plan_elegido,
                         'activa': True,

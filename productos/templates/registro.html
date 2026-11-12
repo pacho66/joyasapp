@@ -1,13 +1,14 @@
 <div style="
-max-width:420px;
+max-width:480px;
 margin:40px auto;
 padding:25px;
 border:1px solid #ddd;
 border-radius:10px;
 background:white;
+box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 ">
 
-<h2 style="text-align:center;">Crear cuenta</h2>
+<h2 style="text-align:center; margin-bottom: 20px;">Crear cuenta en JoyasApp</h2>
 
 <form method="post">
     {% csrf_token %}
@@ -20,35 +21,93 @@ background:white;
         </p>
     {% endif %}
 
-    <p>Usuario</p>
-    {{ form.username }}
-    {% if form.username.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.username.errors.0 }}</p>{% endif %}
-    <hr>
+    {% if form.non_field_errors %}
+        <div style="background: #f8d7da; color: #721c24; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px;">
+            {{ form.non_field_errors }}
+        </div>
+    {% endif %}
 
-    <p>Correo</p>
-    {{ form.email }}
-    {% if form.email.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.email.errors.0 }}</p>{% endif %}
-    <hr>
+    <!-- NOMBRES Y APELLIDOS -->
+    <div style="display: flex; gap: 10px;">
+        <div style="flex: 1; margin-bottom: 15px;">
+            <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 500;">Nombre(s)</p>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.first_name.errors.0 }}</p>{% endif %}
+        </div>
+        <div style="flex: 1; margin-bottom: 15px;">
+            <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 500;">Apellido(s)</p>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.last_name.errors.0 }}</p>{% endif %}
+        </div>
+    </div>
 
-    <p>Contraseña</p>
-    {{ form.password }}
-    {% if form.password.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.password.errors.0 }}</p>{% endif %}
-    <hr>
+    <!-- USUARIO Y CORREO -->
+    <div style="margin-bottom: 15px;">
+        <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 500;">Nombre de Usuario (Seudónimo)</p>
+        {{ form.username }}
+        {% if form.username.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.username.errors.0 }}</p>{% endif %}
+    </div>
 
-    <p>Confirmar contraseña</p>
-    {{ form.confirmar_password }}
-    {% if form.confirmar_password.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.confirmar_password.errors.0 }}</p>{% endif %}
-    <hr>
+    <div style="margin-bottom: 15px;">
+        <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 500;">Correo Electrónico</p>
+        {{ form.email }}
+        {% if form.email.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.email.errors.0 }}</p>{% endif %}
+    </div>
 
-    <p>Nombre tienda</p>
-    {{ form.nombre_tienda }}
-    {% if form.nombre_tienda.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.nombre_tienda.errors.0 }}</p>{% endif %}
-    <hr>
+    <!-- PREFIJO Y WHATSAPP -->
+    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <div style="width: 130px;">
+            <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 500;">Prefijo</p>
+            {{ form.prefijo }}
+            {% if form.prefijo.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.prefijo.errors.0 }}</p>{% endif %}
+        </div>
+        <div style="flex: 1;">
+            <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 500;">WhatsApp</p>
+            {{ form.whatsapp }}
+            {% if form.whatsapp.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.whatsapp.errors.0 }}</p>{% endif %}
+        </div>
+    </div>
 
-    <p>WhatsApp</p>
-    {{ form.whatsapp }}
-    {% if form.whatsapp.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.whatsapp.errors.0 }}</p>{% endif %}
-    <hr>
+    <!-- CIUDAD Y DIRECCIÓN -->
+    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <div style="flex: 1;">
+            <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 500;">Ciudad</p>
+            {{ form.ciudad }}
+            {% if form.ciudad.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.ciudad.errors.0 }}</p>{% endif %}
+        </div>
+        <div style="flex: 1;">
+            <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 500;">Dirección del Taller/Local</p>
+            {{ form.direccion }}
+            {% if form.direccion.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.direccion.errors.0 }}</p>{% endif %}
+        </div>
+    </div>
+
+    <!-- NOMBRE DE LA TIENDA -->
+    <div style="margin-bottom: 15px;">
+        <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 500;">Nombre de tu Joyería (Tienda)</p>
+        {{ form.nombre_tienda }}
+        {% if form.nombre_tienda.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.nombre_tienda.errors.0 }}</p>{% endif %}
+    </div>
+
+    <!-- CONTRASEÑA CON VISOR -->
+    <div style="margin-bottom: 15px;">
+        <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 500;">Contraseña</p>
+        <div style="display: flex;">
+            {{ form.password }}
+            <button type="button" onclick="togglePassword('id_password', this)" style="padding: 0 12px; background: #eee; border: 1px solid #ccc; border-left: none; border-radius: 0 4px 4px 0; cursor: pointer;">👁️</button>
+        </div>
+        {% if form.password.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.password.errors.0 }}</p>{% endif %}
+    </div>
+
+    <!-- CONFIRMAR CONTRASEÑA CON VISOR -->
+    <div style="margin-bottom: 15px;">
+        <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 500;">Confirmar contraseña</p>
+        <div style="display: flex;">
+            {{ form.confirm_password }}
+            <button type="button" onclick="togglePassword('id_confirm_password', this)" style="padding: 0 12px; background: #eee; border: 1px solid #ccc; border-left: none; border-radius: 0 4px 4px 0; cursor: pointer;">👁️</button>
+        </div>
+        {% if form.confirm_password.errors %}<p style="color:red;font-size:12px;margin-top:2px;">{{ form.confirm_password.errors.0 }}</p>{% endif %}
+    </div>
 
     <!-- 📜 ACEPTACIÓN DE TÉRMINOS Y HABEAS DATA -->
     <div style="display:flex; align-items:flex-start; gap:10px; margin: 15px 0 20px 0;">
@@ -81,7 +140,7 @@ background:white;
     border-radius:6px;
     font-size:16px;
     cursor:pointer;">
-        Registrarme
+        Comenzar mis 15 días gratis
     </button>
 
 </form>
@@ -95,3 +154,16 @@ background:white;
 </p>
 
 </div>
+
+<script>
+function togglePassword(fieldId, btn) {
+    const field = document.getElementById(fieldId);
+    if (field.type === "password") {
+        field.type = "text";
+        btn.textContent = "🔒";
+    } else {
+        field.type = "password";
+        btn.textContent = "👁️";
+    }
+}
+</script>
