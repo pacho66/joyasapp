@@ -1,5 +1,6 @@
 import requests
 from django.conf import settings
+from ..siigo_service import enviar_factura_a_siigo
 
 def obtener_token_siigo():
     """Obtiene el token de acceso temporal desde la API de autenticación de Siigo."""
