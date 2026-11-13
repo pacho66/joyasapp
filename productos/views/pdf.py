@@ -144,9 +144,8 @@ def factura_publica(request, token):
             'qr_pago_url': qr_url,  
             'whatsapp_url': whatsapp_url,
             'estado': estado,
-            # 🚀 Flags para renderizado condicional en el HTML
-            'wompi_activo': wompi_activo,
-            'mercadopago_activo': mercadopago_activo,
+            'wompi_activo': perfil.wompi_disponible if perfil else False,
+            'mercadopago_activo': perfil.mercadopago_disponible if perfil else False,
         }
         context.update(totales)
         

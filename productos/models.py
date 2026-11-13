@@ -141,6 +141,14 @@ class Perfil(models.Model):
     # 💳 PASARELAS DE PAGO INDEPENDIENTES (SAAS)
     wompi_public_key = models.CharField(max_length=255, blank=True, null=True, verbose_name="Wompi Public Key")
     mercadopago_access_token = models.CharField(max_length=255, blank=True, null=True, verbose_name="Mercado Pago Access Token")
+
+    # 💳 PASARELAS DE PAGO INDEPENDIENTES (SAAS)
+    wompi_public_key = models.CharField(max_length=255, blank=True, null=True, verbose_name="Wompi Public Key")
+    mercadopago_access_token = models.CharField(max_length=255, blank=True, null=True, verbose_name="Mercado Pago Access Token")
+    
+    # 💳 Banderas de activación de pasarelas por tienda (AGREGAR AQUÍ)
+    wompi_activo = models.BooleanField(default=False, verbose_name="Activar Pasarela Wompi")
+    mercadopago_activo = models.BooleanField(default=False, verbose_name="Activar Pasarela Mercado Pago")
     
     # 🚚 CONFIGURACIÓN DE ENVÍOS 
     costo_envio_estandar = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name="Costo de Envío")
@@ -196,6 +204,16 @@ class Perfil(models.Model):
         elif self.plan == 'premium':
             return 999999  # Ilimitados
         return 1
+
+    @property
+    def wompi_disponible(self):
+        """Verifica si Wompi está configurado y listo para mostrarse en el checkout"""
+        return bool(self.wompi_public_key and str(self.wompi_public_key).strip())
+
+    @property
+    def mercadopago_disponible(self):
+        """Verifica si Mercado Pago está configurado y listo para mostrarse en el checkout"""
+        return bool(self.mercadopago_access_token and str(self.mercadopago_access_token).strip())
 
     def __str__(self):
         return f"{self.user.username} - {self.nombre_tienda} ({self.subdominio or 'Sin subdominio'})"
