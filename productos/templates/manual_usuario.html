@@ -87,7 +87,7 @@
         <!-- ENCABEZADO OFICIAL -->
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-5 pb-4 border-bottom">
             <div>
-                <span class="badge-saas mb-2 d-inline-block">Documentación SaaS Completa v3.5</span>
+                <span class="badge-saas mb-2 d-inline-block">Documentación SaaS Completa v3.6</span>
                 <h1 class="fw-extrabold mb-1" style="font-size: 28px;">📖 Manual del Usuario — JoyasApp SaaS</h1>
                 <p class="text-muted mb-0">Gestión comercial, inventarios por gramos y variantes, automatización de talleres y contabilidad simplificada.</p>
             </div>
@@ -97,7 +97,6 @@
                 ← Regresar al Dashboard
                  </a>
             {% else %}
-                <!-- Cambiado a 'index_saas' o a '/' directamente para evitar que falle -->
                 <a href="/" class="btn btn-outline-dark btn-sm fw-bold px-3 py-2">
                     ← Volver a JoyasApp
                 </a>
@@ -212,8 +211,15 @@
             <h5 class="mt-4">Paso 4: Campañas y Descuentos Temporales</h5>
             <p class="small">Activa la casilla e ingresa el porcentaje global de descuento (ej. 3%, 5%, 10%, 15%). Desmarca la casilla al finalizar la promoción.</p>
 
-            <h5 class="mt-4">Paso 5: Pasarelas de Pago</h5>
-            <p class="small">JoyasApp integra directamente las pasarelas <strong>Wompi</strong> y <strong>Mercado Pago</strong> para transferir fondos a tus cuentas bancarias. Copia tu <em>Public Key</em> de Wompi o tu <em>Access Token</em> de Mercado Pago y pégalos en la casilla respectiva.</p>
+            <h5 class="mt-4">Paso 5: Pasarelas de Pago Independientes</h5>
+            <p class="small">JoyasApp te permite recibir pagos directamente en tus propias cuentas bancarias configurando pasarelas seguras. Puedes registrar *ambas pasarelas* o *solo una* según tu preferencia:</p>
+            <ul class="small ps-3 mb-3" style="line-height: 1.8;">
+                <li><strong>Wompi:</strong> Copia y pega tu <code>Wompi Public Key</code> en la casilla correspondiente.</li>
+                <li><strong>Mercado Pago:</strong> Copia y pega tu <code>Mercado Pago Access Token</code> en la casilla correspondiente.</li>
+            </ul>
+            <div class="callout-box">
+                💡 <strong>Activación Inteligente en el Checkout:</strong> No necesitas botones adicionales de encendido. Tan solo con escribir y guardar la llave de la pasarela que desees utilizar, el sistema la activará automáticamente. Si dejas una pasarela vacía, el sistema la ocultará en la pasarela pública de pagos para que tus clientes finales solo vean las opciones disponibles y no se confundan.
+            </div>
 
             <h5 class="mt-4">Paso 6: Configuración de Envíos y Logística</h5>
             <ul class="small ps-3 mb-0" style="line-height: 1.8;">
