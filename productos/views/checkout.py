@@ -44,6 +44,7 @@ from ..utils import generar_pdf_pedido
 # =========================================================================
 from ..services.precios import calcular_precio_producto
 from ..services.motor_fiscal import MotorFiscal
+from ..siigo_service import enviar_factura_a_siigo
 
 # =========================================================================
 # 💳 PASARELAS
