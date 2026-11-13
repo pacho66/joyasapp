@@ -44,6 +44,7 @@ from ..utils import generar_pdf_pedido
 # =========================================================================
 from ..services.precios import calcular_precio_producto
 from ..services.motor_fiscal import MotorFiscal
+from .siigo_service import enviar_factura_a_siigo
 
 # =========================================================================
 # 💳 PASARELAS
@@ -820,6 +821,49 @@ def iniciar_pago_suscripcion_wompi(request, plan_slug):
 
     return redirect(checkout_url)
 
+def procesar_suscripcion_y_facturar_siigo(usuario, perfil, plan_slug, monto_pesos, metodo_pago, referencia):
+    """
+    Actualiza la vigencia del plan SaaS y emite la factura electrónica en Siigo de forma unificada.
+    """
+    # 1. Actualizar vigencia y activar el plan en el perfil de la joyería
+    hoy = timezone.localdate()
+    if perfil.plan_vence and perfil.plan_vence > hoy:
+        perfil.plan_vence += timedelta(days=30)
+    else:
+        perfil.plan_vence = hoy + timedelta(days=30)
+        
+    perfil.plan = plan_slug
+    perfil.activa = True
+    perfil.save()
+
+    # 2. Crear un adaptador estructurado (Mock) compatible con tu función enviar_factura_a_siigo()
+    class SuscripcionPedidoMock:
+        def __init__(self, user, total, fecha, ref, metodo, plan):
+            self.usuario = user
+            self.total = total
+            self.fecha_creacion = fecha
+            self.id = ref
+            self.metodo_pago = metodo
+            
+            class ItemMock:
+                def __init__(self, nombre_plan, precio):
+                    class ProductoMock:
+                        referencia = f"PLAN-{nombre_plan.upper()}"
+                        nombre = f"Suscripción Plan {nombre_plan.capitalize()} - JoyasApp"
+                    self.producto = ProductoMock()
+                    self.cantidad = 1
+                    self.precio_unitario = precio
+            
+            self.items = [ItemMock(plan, total)]
+
+    pedido_mock = SuscripcionPedidoMock(usuario, monto_pesos, timezone.now(), referencia, metodo_pago, plan_slug)
+
+    # 3. Llamar al servicio de Siigo de forma segura
+    try:
+        enviar_factura_a_siigo(pedido_mock)
+        print(f"🧾 Factura de suscripción SaaS generada en Siigo vía {metodo_pago} (Ref: {referencia})")
+    except Exception as e:
+        print(f"⚠️ Error al emitir factura de suscripción en Siigo: {str(e)}")
 
 @csrf_exempt
 def webhook_wompi_suscripciones(request):
@@ -853,7 +897,7 @@ def webhook_wompi_suscripciones(request):
                 plan_asignado = 'basico'
 
             # Actualizar auditoría en PagoLog
-            PagoLog.objects.update_or_create(
+            pago_log, created = PagoLog.objects.update_or_create(
                 referencia=referencia_orden,
                 defaults={
                     'perfil': perfil,
@@ -866,8 +910,10 @@ def webhook_wompi_suscripciones(request):
                 }
             )
 
-            # Activar suscripción si fue aprobada
-            if estado_wompi == 'APPROVED' and perfil:
+            # Activar suscripción y facturar si el pago fue aprobado
+            if estado_wompi == 'APPROVED' and perfil and usuario:
+                
+                # 1. Actualizar vigencia y activar el plan en el perfil
                 hoy = timezone.localdate()
                 if perfil.plan_vence and perfil.plan_vence > hoy:
                     perfil.plan_vence += timedelta(days=30)
@@ -877,6 +923,51 @@ def webhook_wompi_suscripciones(request):
                 perfil.plan = plan_asignado
                 perfil.activa = True
                 perfil.save()
+
+                # 2. Facturar en Siigo de forma segura (Solo si no se ha facturado antes)
+                if getattr(pago_log, 'facturado_siigo', False) is False:
+                    try:
+                        # Creamos un Pedido real en BD para que tu función de Siigo lo lea sin problemas
+                        pedido_saas = Pedido.objects.create(
+                            usuario=usuario,
+                            numero_orden=referencia_orden,
+                            cliente_nombre=f"{usuario.first_name} {usuario.last_name}".strip() or usuario.username,
+                            cliente_email=usuario.email or "suscripciones@joyasapp.com",
+                            total=float(monto_pesos),
+                            estado="pagado"
+                        )
+
+                        # Creamos el item asociado al plan SaaS
+                        Producto.objects.get_or_create(
+                            usuario=usuario,
+                            referencia=f"PLAN-{plan_asignado.upper()}",
+                            defaults={
+                                "nombre": f"Suscripción Plan {plan_asignado.capitalize()} - JoyasApp",
+                                "precio_detal": float(monto_pesos),
+                                "stock": 9999
+                            }
+                        )
+                        producto_plan = Producto.objects.filter(usuario=usuario, referencia=f"PLAN-{plan_asignado.upper()}").first()
+
+                        if producto_plan:
+                            PedidoItem.objects.create(
+                                pedido=pedido_saas,
+                                producto=producto_plan,
+                                cantidad=1,
+                                precio=float(monto_pesos),
+                                total_final=float(monto_pesos)
+                            )
+
+                        # 🧾 Llamamos a tu función original exactamente como fue diseñada
+                        enviar_factura_a_siigo(pedido_saas)
+                        
+                        # Marcamos como facturado para evitar duplicados
+                        pago_log.facturado_siigo = True
+                        pago_log.save()
+                        print(f"🧾 Factura de suscripción SaaS generada en Siigo (Ref: {referencia_orden})")
+
+                    except Exception as e:
+                        print(f"⚠️ Error al emitir factura de suscripción en Siigo: {str(e)}")
                     
         return HttpResponse("Webhook suscripción recibido", status=200)
         
