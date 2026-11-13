@@ -48,6 +48,11 @@ def factura_publica(request, token):
         color_primario = perfil.color_primario if perfil else "#000000"
         color_secundario = perfil.color_secundario if perfil else "#333333"
 
+        # 🛡️ VALIDACIÓN DE PASARELAS ACTIVAS (Evita botones rotos si la tienda no las configuró)
+        # Ajusta los nombres de los campos (ej: wompi_public_key, mercadopago_public_key) según tu modelo Perfil
+        wompi_activo = bool(getattr(perfil, 'wompi_public_key', None) or getattr(perfil, 'wompi_secret_key', None))
+        mercadopago_activo = bool(getattr(perfil, 'mercadopago_public_key', None) or getattr(perfil, 'mercadopago_access_token', None))
+
         # ⚡ 2. CÁLCULO SEGURO DE TOTALES (Con Fallback inteligente)
         try:
             totales = calcular_totales_pedido(pedido, perfil, items)
@@ -119,7 +124,7 @@ def factura_publica(request, token):
         c_nit = getattr(pedido, 'cliente_nit', None) or (pedido.cliente.nit if getattr(pedido, 'cliente', None) else '')
 
         context = {
-            'pedido': pedido_wrapp, # <--- Usamos el wrapper seguro
+            'pedido': pedido_wrapp,
             'items': items,
             'cliente_nombre': c_nombre,
             'cliente_email': c_email,
@@ -139,6 +144,9 @@ def factura_publica(request, token):
             'qr_pago_url': qr_url,  
             'whatsapp_url': whatsapp_url,
             'estado': estado,
+            # 🚀 Flags para renderizado condicional en el HTML
+            'wompi_activo': wompi_activo,
+            'mercadopago_activo': mercadopago_activo,
         }
         context.update(totales)
         
@@ -147,8 +155,7 @@ def factura_publica(request, token):
     except Exception as e:
         print(f"💥 ERROR EN FACTURA PÚBLICA: {str(e)}")
         return HttpResponse(f"Error al cargar la factura: {str(e)}", status=500)
-
-
+    
 def confirmar_pago_publico(request, token):
     """ El cliente avisa de forma anónima que ya transfirió """
     pedido = get_object_or_404(Pedido, token_publico=token)

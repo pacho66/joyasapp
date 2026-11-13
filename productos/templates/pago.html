@@ -40,16 +40,21 @@
     {% if pedido.id %}
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
             
-            <!-- Ahora le pasamos pedido.token_publico en vez de pedido.id -->
-            <a href="{% url 'pagar_wompi' pedido.token_publico %}" 
-               style="background:#121212; color:white; padding:12px 20px; border-radius:6px; text-decoration:none; display:inline-block; font-weight: bold;">
-                💳 Pagar con Wompi
-            </a>
+            <!-- 🛡️ Wompi: Se muestra ÚNICAMENTE si está activo/configurado -->
+            {% if wompi_activo %}
+                <a href="{% url 'pagar_wompi' pedido.token_publico %}" 
+                   style="background:#121212; color:white; padding:12px 20px; border-radius:6px; text-decoration:none; display:inline-block; font-weight: bold;">
+                    💳 Pagar con Wompi
+                </a>
+            {% endif %}
 
-            <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}" 
-               style="background:#009EE3; color:white; padding:12px 20px; border-radius:6px; text-decoration:none; display:inline-block; font-weight: bold;">
-                🔵 Pagar con Mercado Pago
-            </a>
+            <!-- 🛡️ Mercado Pago: Se muestra ÚNICAMENTE si está activo/configurado -->
+            {% if mercadopago_activo %}
+                <a href="{% url 'pagar_con_mercadopago' pedido.token_publico %}" 
+                   style="background:#009EE3; color:white; padding:12px 20px; border-radius:6px; text-decoration:none; display:inline-block; font-weight: bold;">
+                    🔵 Pagar con Mercado Pago
+                </a>
+            {% endif %}
 
         </div>
     {% endif %}
