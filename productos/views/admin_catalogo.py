@@ -64,7 +64,7 @@ def inventario(request):
     if q:
         productos_base = productos_base.filter(nombre__icontains=q)
 
-    total_productos = productos_base.count()
+    total_unidades_fisicas = 0  # 👈 Cambiamos el contador de filas por la suma de unidades
     productos_stock = 0
     stock_bajo = 0
     agotados = 0
@@ -76,6 +76,9 @@ def inventario(request):
         else:
             p.stock_real = p.stock or 0
 
+        # Sumamos al total global de unidades en inventario
+        total_unidades_fisicas += p.stock_real
+
         # Clasificación de métricas
         if p.stock_real > 5:
             productos_stock += 1
@@ -86,7 +89,7 @@ def inventario(request):
 
     context = {
         'productos': productos_base,
-        'total_productos': total_productos,
+        'total_productos': total_unidades_fisicas,  # 👈 Ahora mostrará la suma real (ej: 12 uds)
         'productos_stock': productos_stock,  
         'stock_bajo': stock_bajo,            
         'agotados': agotados,
