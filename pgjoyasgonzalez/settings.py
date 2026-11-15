@@ -276,4 +276,3 @@ SIIGO_PARTNER_ID = config('SIIGO_PARTNER_ID', default='')
 SIIGO_DOCUMENT_TYPE_ID = config('SIIGO_DOCUMENT_TYPE_ID', default='1234')  # Reemplaza con el ID de tu tipo de factura en Siigo
 SIIGO_PAYMENT_METHOD_ID = config('SIIGO_PAYMENT_METHOD_ID', default='1')  # Reemplaza con el ID del medio de pago en Siigo
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
