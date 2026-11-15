@@ -136,7 +136,10 @@ WSGI_APPLICATION = 'pgjoyasgonzalez.wsgi.application'
 import dj_database_url
 
 DATABASES = {
-    'default': dj_database_url.config(default='')
+    'default': dj_database_url.config(
+        default='sqlite:///db.sqlite3',  # 👈 Respaldo automático para que nunca falle en local
+        conn_max_age=600
+    )
 }
 
 
