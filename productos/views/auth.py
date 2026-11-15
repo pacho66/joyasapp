@@ -115,6 +115,11 @@ def registro(request):
             if plan_elegido not in ['basico', 'semi', 'premium']:
                 plan_elegido = 'basico'
 
+            # 🛡️ Validación previa: Evitar que un usuario duplicado rompa el flujo
+            if User.objects.filter(username=username).exists():
+                messages.error(request, 'El nombre de usuario ya está en uso. Por favor elige otro o inicia sesión.')
+                return render(request, 'registro.html', {'form': form, 'plan_seleccionado': plan_seleccionado})
+
             # 🌐 Generar subdominio único automáticamente
             base_subdominio = slugify(nombre_tienda)
             subdominio = base_subdominio
@@ -123,45 +128,37 @@ def registro(request):
                 subdominio = f"{base_subdominio}{contador}"
                 contador += 1
 
-            with transaction.atomic():
-                # 1. Crear el usuario de Django con nombres reales y seudónimo
-                user, created = User.objects.get_or_create(
-                    username=username,
-                    defaults={
-                        'email': email,
-                        'first_name': first_name,
-                        'last_name': last_name
-                    }
-                )
-                if not created:
-                    user.set_password(password)
-                    user.email = email
-                    user.first_name = first_name
-                    user.last_name = last_name
-                    user.save()
-                else:
-                    user.set_password(password)
-                    user.save()
+            try:
+                with transaction.atomic():
+                    # 1. Crear el usuario de Django de forma segura
+                    user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=password,
+                        first_name=first_name,
+                        last_name=last_name
+                    )
 
-                # 2. Guardar o actualizar perfil completo
-                Perfil.objects.update_or_create(
-                    user=user,
-                    defaults={
-                        'nombre_tienda': nombre_tienda,
-                        'whatsapp': telefono_completo,
-                        'ciudad': ciudad,
-                        'direccion': direccion,
-                        'subdominio': subdominio,
-                        'plan': plan_elegido,
-                        'activa': True,
-                        'plan_vence': timezone.localdate() + timedelta(days=15)
-                    }
-                )
+                    # 2. Crear obligatoriamente el perfil completo de la tienda
+                    Perfil.objects.create(
+                        user=user,
+                        nombre_tienda=nombre_tienda,
+                        whatsapp=telefono_completo,
+                        ciudad=ciudad,
+                        direccion=direccion,
+                        subdominio=subdominio,
+                        plan=plan_elegido,
+                        activa=True,
+                        plan_vence=timezone.localdate() + timedelta(days=15)
+                    )
 
-            # 3. Autenticar y enviar al dashboard de forma segura
-            backend = 'django.contrib.auth.backends.ModelBackend'
-            login(request, user, backend=backend)
-            return redirect('dashboard')
+                # 3. Autenticar y enviar al dashboard de forma segura
+                backend = 'django.contrib.auth.backends.ModelBackend'
+                login(request, user, backend=backend)
+                return redirect('dashboard')
+                
+            except Exception as e:
+                messages.error(request, f'Ocurrió un error al procesar tu registro: {e}')
 
     else:
         form = RegistroForm()
