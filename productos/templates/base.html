@@ -170,11 +170,12 @@
 </main>
 
 {% if perfil and perfil.whatsapp %}
-<a href="https://wa.me/57{{ perfil.whatsapp }}" class="btn-wa-flotante" target="_blank">
-    💬 WhatsApp
-</a>
+    {% with whatsapp_limpio=perfil.whatsapp|cut:' '|cut:'-'|cut:'+' %}
+    <a href="https://wa.me/{% if not whatsapp_limpio|slice:':2' == '57' %}57{% endif %}{{ whatsapp_limpio }}" class="btn-wa-flotante" target="_blank" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #25d366; color: white; padding: 10px 18px; border-radius: 50px; font-weight: bold; text-decoration: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+        💬 WhatsApp
+    </a>
+    {% endwith %}
 {% endif %}
-
 <!-- ========================================== -->
 <!-- 📍 PIE DE PÁGINA PÚBLICO DEL SUBDOMINIO     -->
 <!-- ========================================== -->

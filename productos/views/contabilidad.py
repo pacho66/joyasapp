@@ -21,6 +21,11 @@ from ..forms import GastoForm
 def gastos(request):
     usuario = request.user
 
+    # 1. Obtenemos el perfil/tienda activa (multitenant) igual que en tus otras vistas seguras
+    perfil_activo = getattr(request, 'tenant_perfil', None)
+    if not perfil_activo and hasattr(request.user, 'perfil'):
+        perfil_activo = request.user.perfil
+
     # 🛡️ REDIRECCIÓN DE SEGURIDAD: Si intentan entrar a la categoría vieja de fabricación
     if request.GET.get('categoria') == 'fabricacion':
         return redirect('fabricacion')
@@ -28,15 +33,17 @@ def gastos(request):
     if request.method == 'POST':
         nombre = request.POST.get('nombre')
         monto = request.POST.get('monto')
-        # ✅ Cambiamos el respaldo por defecto a 'fijo'
         categoria = request.POST.get('categoria', 'fijo')
         observaciones = request.POST.get('observaciones', '')
 
         if nombre and monto:
             try:
                 monto_limpio = str(monto).replace(',', '.')
+                
+                # ✅ CORRECCIÓN CLAVE: Asignamos el perfil_id para evitar el error de base de datos
                 Gasto.objects.create(
                     usuario=usuario,
+                    perfil=perfil_activo,  # <-- ¡Aquí asignamos el perfil que faltaba!
                     nombre=nombre,
                     monto=monto_limpio,
                     categoria=categoria,
@@ -49,8 +56,11 @@ def gastos(request):
             messages.error(request, "Por favor completa el concepto y el monto.")
         return redirect('gastos')
 
-    # 1. Queryset base para métricas de gastos generales (sin fabricacion)
-    base_query = Gasto.objects.filter(usuario=usuario)
+    # 2. Queryset base para métricas de gastos generales (filtrando por perfil o usuario)
+    if perfil_activo:
+        base_query = Gasto.objects.filter(perfil=perfil_activo)
+    else:
+        base_query = Gasto.objects.filter(usuario=usuario)
 
     metricas = base_query.aggregate(
         total_global=Sum('monto'),
@@ -66,7 +76,7 @@ def gastos(request):
     porcentaje_fijo = (total_fijo / total_global * 100) if total_global > 0 else 0
     porcentaje_mkt = (total_mkt / total_global * 100) if total_global > 0 else 0
 
-    # 2. Queryset independiente para la tabla
+    # 3. Queryset independiente para la tabla
     gastos_query = base_query
     buscar = request.GET.get('buscar')
     categoria_filtrada = request.GET.get('categoria')
@@ -84,6 +94,7 @@ def gastos(request):
         "total_gastos": total_global,
         "total_fijo": total_fijo, "porcentaje_fijo": porcentaje_fijo,
         "total_mkt": total_mkt, "porcentaje_mkt": porcentaje_mkt,
+        "perfil": perfil_activo,
     })
 
 @login_required
