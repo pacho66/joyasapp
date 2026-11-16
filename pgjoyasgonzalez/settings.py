@@ -198,17 +198,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # CONFIGURACIÓN EMAIL
 # ===============================
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 465
-EMAIL_USE_SSL = True
-EMAIL_USE_TLS = False
-
-EMAIL_HOST_USER = 'plateria.gonzalez73@gmail.com'
-EMAIL_HOST_PASSWORD = 'ndck visz rgcd dahf'
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-
+EMAIL_BACKEND = 'productos.email_backend.ResendEmailBackend'
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+DEFAULT_FROM_EMAIL = 'JoyasApp <onboarding@resend.dev>'
 
 # ===============================
 # 💳 PAGOS (STRIPE)
