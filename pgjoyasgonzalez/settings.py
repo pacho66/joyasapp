@@ -200,7 +200,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 EMAIL_BACKEND = 'productos.email_backend.ResendEmailBackend'
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
-DEFAULT_FROM_EMAIL = 'JoyasApp <onboarding@resend.dev>'
+DEFAULT_FROM_EMAIL = 'Soporte JoyasApp <soporte@joyasapp.com>'
 
 # ===============================
 # 💳 PAGOS (STRIPE)
