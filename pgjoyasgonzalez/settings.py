@@ -185,7 +185,7 @@ STATICFILES_DIRS = [
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # ✅ Configuración recomendada para WhiteNoise en producción
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
