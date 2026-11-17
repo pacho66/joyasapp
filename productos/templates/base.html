@@ -82,7 +82,7 @@
             {% if perfil and perfil.logo %}
                 <img src="{{ perfil.logo.url }}" alt="Logo {{ perfil.nombre_tienda }}" style="height: 32px; width: auto; object-fit: contain;">
             {% else %}
-                <img src="{% static 'images/logo.png' %}" alt="JoyasApp Logo" style="height: 32px; width: auto; object-fit: contain;">
+                <img src="{% static 'images/logo-joyas.png' %}" alt="JoyasApp Logo" style="height: 32px; width: auto; object-fit: contain;">
             {% endif %}
             <span class="fw-bold fs-5 text-white" style="letter-spacing: 0.5px;">
                 {{ perfil.nombre_tienda|default:"JoyasApp" }}
