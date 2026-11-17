@@ -173,7 +173,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
@@ -185,11 +184,8 @@ STATICFILES_DIRS = [
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# ❌ ELIMINA o comenta esta línea vieja si la tienes abajo:
-# STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
-
-# ✅ AGREGA ESTA LÍNEA (Es la clave para que WhiteNoise encuentre a Jazzmin):
-WHITENOISE_USE_FINDERS = True
+# ✅ Configuración recomendada para WhiteNoise en producción
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
