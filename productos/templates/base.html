@@ -84,6 +84,7 @@
                 <img src="{{ request.user.perfil.logo.url }}" alt="Logo {{ request.user.perfil.nombre_tienda }}" style="height: 32px; width: auto; object-fit: contain;">
                 <span class="fw-bold fs-5 text-white" style="letter-spacing: 0.5px;">{{ request.user.perfil.nombre_tienda }}</span>
             {% else %}
+                <!-- AQUÍ USAMOS EL NUEVO NOMBRE EXACTO -->
                 <img src="{% static 'images/logo-corporativo.png' %}" alt="JoyasApp Logo" style="height: 32px; width: auto; object-fit: contain;">
                 <span class="fw-bold fs-5 text-white" style="letter-spacing: 0.5px;">JoyasApp</span>
             {% endif %}
@@ -98,7 +99,6 @@
         {% endif %}
     </div>
 </nav>
-
 <!-- BANNER PRINCIPAL DE LA TIENDA (ÚNICO) -->
 {% if perfil %}
     <div class="tenant-banner-hero" style="{% if perfil.banner %}background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.75)), url('{{ perfil.banner.url }}'); background-size: cover; background-position: center;{% else %}background: linear-gradient(135deg, {{ perfil.color_primario|default:'#122216' }} 0%, {{ perfil.color_secundario|default:'#000000' }} 100%);{% endif %}">
