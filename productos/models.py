@@ -1097,5 +1097,5 @@ class PagoLog(models.Model):
     raw_response = models.TextField(blank=True, null=True, verbose_name="Respuesta JSON Completa")
     fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Pago")
 
-    def _str_(self):
+    def __str__(self):
         return f"{self.referencia} - {self.estado} (${self.monto})"
