@@ -142,10 +142,6 @@ class Perfil(models.Model):
     wompi_public_key = models.CharField(max_length=255, blank=True, null=True, verbose_name="Wompi Public Key")
     mercadopago_access_token = models.CharField(max_length=255, blank=True, null=True, verbose_name="Mercado Pago Access Token")
 
-    # 💳 PASARELAS DE PAGO INDEPENDIENTES (SAAS)
-    wompi_public_key = models.CharField(max_length=255, blank=True, null=True, verbose_name="Wompi Public Key")
-    mercadopago_access_token = models.CharField(max_length=255, blank=True, null=True, verbose_name="Mercado Pago Access Token")
-    
     # 💳 Banderas de activación de pasarelas por tienda (AGREGAR AQUÍ)
     wompi_activo = models.BooleanField(default=False, verbose_name="Activar Pasarela Wompi")
     mercadopago_activo = models.BooleanField(default=False, verbose_name="Activar Pasarela Mercado Pago")
